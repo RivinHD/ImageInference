@@ -14,10 +14,16 @@ import androidx.navigation.ui.setupWithNavController
 import com.example.imageinference.databinding.ActivityMainBinding
 import com.google.android.material.bottomnavigation.BottomNavigationView
 
+import org.pytorch.executorch.EValue
+
+import org.pytorch.executorch.Module
+
+import org.pytorch.executorch.Tensor
+
+
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
