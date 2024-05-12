@@ -24,8 +24,6 @@ import com.google.common.util.concurrent.ListenableFuture
 
 class VideoCameraFragment : Fragment(), DetailsConnector {
 
-    private val videoCameraViewModel = ViewModelProvider(this)[VideoCameraViewModel::class.java]
-
     private lateinit var cameraProviderFuture: ListenableFuture<ProcessCameraProvider>
 
     private var _binding: FragmentVideoCameraBinding? = null
@@ -46,6 +44,7 @@ class VideoCameraFragment : Fragment(), DetailsConnector {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
+        val videoCameraViewModel = ViewModelProvider(this)[VideoCameraViewModel::class.java]
         _binding = FragmentVideoCameraBinding.inflate(inflater, container, false)
         val root: View = binding.root
 
@@ -109,6 +108,7 @@ class VideoCameraFragment : Fragment(), DetailsConnector {
     }
 
     override fun getDetailViewModel(): DetailsViewModel {
+        val videoCameraViewModel = ViewModelProvider(this)[VideoCameraViewModel::class.java]
         return videoCameraViewModel.getDetailViewModel()
     }
 }
