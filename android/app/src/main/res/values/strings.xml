@@ -1,6 +1,36 @@
 <resources>
     <string name="app_name">ImageInference</string>
-    <string name="title_home">Home</string>
-    <string name="title_dashboard">Dashboard</string>
-    <string name="title_notifications">Notifications</string>
+    <string name="title_photo_camera">Photo Camera</string>
+    <string name="title_video_camera">Video Camera</string>
+    <string name="title_image">Image</string>
+    <string name="title_menu">Menu</string>
+    <!-- Preference Titles -->
+    <string name="messages_header">Messages</string>
+    <string name="sync_header">Sync</string>
+
+    <!-- Messages Preferences -->
+    <string name="signature_title">Your signature</string>
+    <string name="reply_title">Default reply action</string>
+
+    <!-- Sync Preferences -->
+    <string name="sync_title">Sync email periodically</string>
+    <string name="attachment_title">Download incoming attachments</string>
+    <string name="attachment_summary_on">Automatically download attachments for incoming emails
+    </string>
+    <string name="attachment_summary_off">Only download attachments when manually requested</string>
+    <string name="select_last_image">Select last image.</string>
+    <string name="select_next_image">Select next image.</string>
+    <string name="select_image_from_list">Select image from list.</string>
+    <string name="selected_image_for_inference">Selected image for inference.</string>
+    <string name="video_record">Record</string>
+    <string name="photo_capture">Capture</string>
+    <string name="captured_image_for_inference">Captured image for inference.</string>
+    <string name="selection_menu">Selection menu</string>
+    <string name="add">Add</string>
+    <string name="remove">Remove</string>
+    <string name="preview_to_capture">Preview of the image to capture</string>
+    <string name="photo_clear">Clear</string>
+    <string name="preview_real_time_inference">Preview of the real-time recording whereupon inference is executed.</string>
+    <string name="video_background_preview">The background image if the preview needs to load.</string>
+    <string name="stop">Stop</string>
 </resources>
