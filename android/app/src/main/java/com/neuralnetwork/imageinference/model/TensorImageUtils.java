@@ -3,15 +3,17 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree.
+ * executorch_BSD-LICENSE file in the root directory of this source tree.
  */
 
 package com.neuralnetwork.imageinference.model;
 
 import android.graphics.Bitmap;
 import android.util.Log;
-import java.nio.FloatBuffer;
+
 import org.pytorch.executorch.Tensor;
+
+import java.nio.FloatBuffer;
 
 /**
  * Contains utility functions for {@link Tensor} creation from {@link android.graphics.Bitmap} or

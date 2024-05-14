@@ -3,13 +3,14 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree.
+ * executorch_BSD-LICENSE file in the root directory of this source tree.
  */
 
 package org.pytorch.executorch;
 
 import com.facebook.soloader.nativeloader.NativeLoader;
 import com.facebook.soloader.nativeloader.SystemDelegate;
+
 import java.util.Map;
 
 /** Java wrapper for ExecuTorch Module. */

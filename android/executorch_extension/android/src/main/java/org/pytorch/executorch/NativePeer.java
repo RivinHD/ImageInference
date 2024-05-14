@@ -3,7 +3,7 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree.
+ * executorch_BSD-LICENSE file in the root directory of this source tree.
  */
 
 package org.pytorch.executorch;
@@ -11,6 +11,7 @@ package org.pytorch.executorch;
 import com.facebook.jni.HybridData;
 import com.facebook.jni.annotations.DoNotStrip;
 import com.facebook.soloader.nativeloader.NativeLoader;
+
 import java.util.Map;
 
 class NativePeer implements INativePeer {
