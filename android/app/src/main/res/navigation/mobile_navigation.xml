@@ -7,24 +7,24 @@
 
     <fragment
         android:id="@+id/navigation_photo_camera"
-        android:name="com.example.imageinference.ui.photoCamera.PhotoCameraFragment"
+        android:name="com.neuralnetwork.imageinference.ui.photoCamera.PhotoCameraFragment"
         android:label="@string/title_photo_camera"
         tools:layout="@layout/fragment_photo_camera" />
 
     <fragment
         android:id="@+id/navigation_video_camera"
-        android:name="com.example.imageinference.ui.videoCamera.VideoCameraFragment"
+        android:name="com.neuralnetwork.imageinference.ui.videoCamera.VideoCameraFragment"
         android:label="@string/title_video_camera"
         tools:layout="@layout/fragment_video_camera" />
 
     <fragment
         android:id="@+id/navigation_image"
-        android:name="com.example.imageinference.ui.image.ImageFragment"
+        android:name="com.neuralnetwork.imageinference.ui.image.ImageFragment"
         android:label="@string/title_image"
         tools:layout="@layout/fragment_image" />
     <fragment
         android:id="@+id/navigation_menu"
-        android:name="com.example.imageinference.ui.menu.MenuFragments"
+        android:name="com.neuralnetwork.imageinference.ui.menu.MenuFragments"
         android:label="@string/title_menu"
         tools:layout="@layout/fragment_menu_fragments_list" />
 </navigation>

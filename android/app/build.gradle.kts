@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.imageinference"
+    namespace = "com.neuralnetwork.imageinference"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.example.imageinference"
+        applicationId = "com.neuralnetwork.imageinference"
         minSdk = 29
         targetSdk = 34
         versionCode = 1
@@ -56,6 +56,7 @@ dependencies {
     implementation(libs.androidx.camera.lifecycle)
     implementation(libs.androidx.camera.camera2)
     implementation(libs.androidx.camera.core)
+    implementation(libs.com.github.loadingbutton)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
