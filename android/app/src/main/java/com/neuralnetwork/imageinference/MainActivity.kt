@@ -23,6 +23,9 @@ import android.app.Activity
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.system.ErrnoException
+import android.system.Os
+import android.util.Log
 import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
@@ -51,6 +54,18 @@ class MainActivity : AppCompatActivity(), ModelConnector {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Sets the library path for the Snapdragon Neural Processing Engine SDK.
+        // See https://developer.qualcomm.com/sites/default/files/docs/snpe/dsp_runtime.html for
+        // more information.
+        try {
+            Os.setenv("ADSP_LIBRARY_PATH", applicationInfo.nativeLibraryDir, true)
+        } catch (e: ErrnoException) {
+            Log.e(
+                "Snapdragon Neural Processing Engine SDK",
+                "Cannot set ADSP_LIBRARY_PATH",
+                e)
+        }
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)

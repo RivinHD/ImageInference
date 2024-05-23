@@ -41,7 +41,8 @@
             android:layout_height="0dp"
             android:layout_weight="0.5"
             android:contentDescription="@string/selected_image_for_inference"
-            android:src="@drawable/ic_image_google" />
+            android:src="@drawable/ic_image_google"
+            android:scaleType="centerCrop"/>
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
