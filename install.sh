@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # Set the base path
-BasePath="$(dirname -- "${BASH_SOURCE[0]}")"  # relative
-BasePath="$(cd -- "$BasePath" && pwd)"  # absolutized and normalized
-BasePath="$(dirname -- "$BasePath")" # go up one directory
+BasePath="$(dirname "${BASH_SOURCE[0]}")"  # relative
+BasePath="$(cd "$BasePath" && pwd)"  # absolutized and normalized
+BasePath="$(dirname "$BasePath")" # go up one directory
 echo "Installing needed software and dependencies in $BasePath"
 
 # Installing Miniconda
@@ -22,11 +22,12 @@ git submodule update --init --recursive
 conda create -yn imageinfernce python=3.10.0
 eval "$(conda shell.bash hook)"
 conda activate imageinfernce
-./submodules/executorch/install_requirements.sh
+cd submodules/executorch
+./install_requirements.sh
 
 # Fix excutorch installation which has some missing modules
-cp submodules/executorch/backends/ "${BasePath}/miniconda3/envs/imageinfernce/lib/python3.10/site-packages/executorch/" -n -r
-cp submodules/executorch/examples/ "${BasePath}/miniconda3/envs/imageinfernce/lib/python3.10/site-packages/executorch/" -n -r
+cp backends/ "${BasePath}/miniconda3/envs/imageinfernce/lib/python3.10/site-packages/executorch/" -n -r
+cp examples/ "${BasePath}/miniconda3/envs/imageinfernce/lib/python3.10/site-packages/executorch/" -n -r
 conda install -y numpy
 ulimit -n 4096
 
@@ -45,7 +46,7 @@ fi
 
 # Download Android 
 cd "${BasePath}"
-if [ ! -f "${BasePath}/android/ndk/android-ndk-r26d" ]; then
+if [ ! -d "${BasePath}/android/ndk/android-ndk-r26d" ]; then
     if [ ! -f "${BasePath}/android-ndk-r26d-linux.zip" ]; then
         rm android-ndk-r26d-linux.zip
     fi
@@ -56,4 +57,5 @@ if [ ! -f "${BasePath}/android/ndk/android-ndk-r26d" ]; then
     rm android-ndk-r26d-linux.zip
 fi
 
-./config.sh
+cd ImageInference
+source config.sh

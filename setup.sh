@@ -15,4 +15,4 @@ eval "$(conda shell.bash hook)"
 conda activate imageinfernce
 
 # Setup the configuartion
-./config.sh
+source config.sh

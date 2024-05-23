@@ -3,7 +3,7 @@
 Clone the repository
 
 ```
-git clone 
+git clone https://github.com/RivinHD/ImageInference.git
 ```
 
 Then the submodules needed to be installed.
@@ -15,16 +15,16 @@ git submodule update --init --recursive
 
 The `--init --recursive` is needed, because the submodule executorch also holds some submodules.
 
-Then run the `install.sh` to install the needed requirements.
-This may take some time.
+Then run the `install.sh` to install the needed requirements.\
+**INFO:** Additional files will be added to the parent directory of the project.
 
-*Note*: The `config.sh` holds the some path that you may need to set manually.
+**NOTE:** The `config.sh` holds the some path that you may need to set manually.
 For now the only variable that can vary on system is the `QNN_SDK_ROOT`.
 Which holds the path to the [Qualcomm AI Engine Direct SDK](https://www.qualcomm.com/developer/software/qualcomm-ai-engine-direct-sdk).
 For instruction on how to install see [Installing Qualcomm AI Engine Direct SDK](#installing-qualcomm-ai-engine-direct-sdk).
 
 # Every time setup
-To setup the project after shell has been closed.
+To setup the project after the shell has been closed.
 Use the `setup.sh` script.
 Then you are ready to work with the project again.
 
