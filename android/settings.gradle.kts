@@ -41,4 +41,4 @@ dependencyResolutionManagement {
 rootProject.name = "ImageInference"
 include(":app")
 
-includeBuild("executorch_extension/android")
+includeBuild("../submodules/executorch/extension/android")
