@@ -23,10 +23,14 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 
-class DetailsViewModel(modelDetail : MutableLiveData<ModelDetails>? = null) : ViewModel() {
+class DetailsViewModel(modelDetail : MutableLiveData<ModelDetails>? = null, modelSuccess : MutableLiveData<Boolean>? = null) : ViewModel() {
 
-    private val _detail = modelDetail ?: MutableLiveData<ModelDetails>()
+    private val _details = modelDetail ?: MutableLiveData<ModelDetails>()
 
-    val detail : LiveData<ModelDetails> = _detail
+    private val _success = modelSuccess ?: MutableLiveData<Boolean>()
+
+    val details : LiveData<ModelDetails> = _details
+
+    val success : LiveData<Boolean> = _success
 
 }

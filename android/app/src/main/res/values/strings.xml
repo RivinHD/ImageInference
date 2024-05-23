@@ -52,4 +52,6 @@
     <string name="preview_real_time_inference">Preview of the real-time recording whereupon inference is executed.</string>
     <string name="video_background_preview">The background image if the preview needs to load.</string>
     <string name="stop">Stop</string>
+    <string name="inference_failed">Inference Failed!</string>
+    <string name="no_data">No Data!</string>
 </resources>

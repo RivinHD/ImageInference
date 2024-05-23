@@ -45,11 +45,11 @@ class ModelAssets(assets: AssetManager) {
         private val _modelsValues: Map<String, String> =
             _modelsNames.map { it.value to it.key }.toMap()
 
-        const val Default: String = "None"
+        const val DEFAULT: String = "None"
 
         fun getModelName(fileName: String): String {
-            if (fileName == Default) {
-                return Default
+            if (fileName == DEFAULT) {
+                return DEFAULT
             }
 
             val path = Path(fileName)

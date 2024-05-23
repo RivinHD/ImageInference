@@ -47,7 +47,7 @@ class MainActivity : AppCompatActivity(), ModelConnector {
     private lateinit var binding: ActivityMainBinding
 
     private var module: Module? = null
-    private var moduleName: String = ModelAssets.Default
+    private var moduleName: String = ModelAssets.DEFAULT
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -105,7 +105,7 @@ class MainActivity : AppCompatActivity(), ModelConnector {
 
             override fun onNothingSelected(parent: AdapterView<*>?) {
                 module?.destroy()
-                moduleName = ModelAssets.Default
+                moduleName = ModelAssets.DEFAULT
             }
 
         }

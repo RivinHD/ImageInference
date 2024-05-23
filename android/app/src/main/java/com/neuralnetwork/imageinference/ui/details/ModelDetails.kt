@@ -21,7 +21,6 @@ package com.neuralnetwork.imageinference.ui.details
 
 import com.neuralnetwork.imageinference.ui.details.containers.ModelInputType
 import com.neuralnetwork.imageinference.ui.details.containers.ModelResult
-import java.lang.RuntimeException
 import java.text.DateFormat
 import kotlin.math.min
 
@@ -66,7 +65,7 @@ data class ModelDetails(val modelInputType: ModelInputType) {
             throw RuntimeException("Cannot return a negative amount of results.")
         }
         val transferArray: Array<ModelResult> = Array(count) { ModelResult.Default }
-        for (i in 0..min(count, _results.count())) {
+        for (i in 0..<min(count, _results.count())) {
             transferArray[i] = _results[i].copy()
         }
         return transferArray

@@ -21,20 +21,16 @@ package com.neuralnetwork.imageinference.ui.videoCamera
 
 import android.content.Context
 import android.os.Bundle
-import android.util.Size
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.camera.core.CameraSelector
-import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
-import androidx.camera.core.resolutionselector.ResolutionSelector
-import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import com.google.common.util.concurrent.ListenableFuture
+import com.neuralnetwork.imageinference.MainActivity
 import com.neuralnetwork.imageinference.R
 import com.neuralnetwork.imageinference.databinding.FragmentVideoCameraBinding
 import com.neuralnetwork.imageinference.model.ModelConnector
@@ -63,59 +59,47 @@ class VideoCameraFragment : Fragment(), DetailsConnector {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        val videoCameraViewModel = ViewModelProvider(this)[VideoCameraViewModel::class.java]
+        val vm = ViewModelProvider(this)[VideoCameraViewModel::class.java]
         _binding = FragmentVideoCameraBinding.inflate(inflater, container, false)
         val root: View = binding.root
+        vm.model = (activity as ModelConnector).getModel()
 
         val videoRecord = binding.videoRecord
         val videoPreview = binding.videoPreview
 
         // Request camera permission
-        com.neuralnetwork.imageinference.MainActivity.checkCameraPermission(_context)
+        MainActivity.checkCameraPermission(_context)
 
         // Setup camera preview and capture
         cameraProviderFuture = ProcessCameraProvider.getInstance(_context)
-        val resolutionSelector = ResolutionSelector.Builder()
-            .setResolutionStrategy(
-                ResolutionStrategy(
-                    Size(256, 256),
-                    ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER
-                )
-            )
-            .build()
-        val imageAnalysis = ImageAnalysis.Builder()
-            .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
-            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-            .setResolutionSelector(resolutionSelector)
-            .build()
         cameraProviderFuture.addListener({
             val cameraProvider = cameraProviderFuture.get()
+
             val preview: Preview = Preview.Builder()
                 .build()
-
-            val cameraSelector: CameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
-
             preview.setSurfaceProvider(videoPreview.getSurfaceProvider())
 
             cameraProvider.bindToLifecycle(
                 viewLifecycleOwner,
-                cameraSelector,
-                imageAnalysis,
+                vm.cameraSelector,
+                vm.imageAnalysis,
                 preview
             )
         }, ContextCompat.getMainExecutor(_context))
 
         videoRecord.setOnClickListener {
-            if (videoRecord.text == getString(R.string.video_record)) {
+            if (vm.isRecording.value == true) {
+                vm.stopRecording()
+            } else {
+                vm.startRecording(ContextCompat.getMainExecutor(_context))
+            }
+        }
+
+        vm.isRecording.observe(viewLifecycleOwner) {
+            if (it) {
                 videoRecord.text = getString(R.string.stop)
-                imageAnalysis.setAnalyzer(
-                    ContextCompat.getMainExecutor(_context),
-                    videoCameraViewModel
-                )
-                (activity as ModelConnector).getModel()
             } else {
                 videoRecord.text = getString(R.string.video_record)
-                imageAnalysis.clearAnalyzer()
             }
         }
 
@@ -124,6 +108,8 @@ class VideoCameraFragment : Fragment(), DetailsConnector {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        val vm = ViewModelProvider(this)[VideoCameraViewModel::class.java]
+        vm.stopRecording()
         _binding = null
     }
 

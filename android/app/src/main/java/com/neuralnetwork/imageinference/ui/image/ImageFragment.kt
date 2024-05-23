@@ -26,16 +26,15 @@ import android.view.LayoutInflater
 import android.view.MenuInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.PopupMenu
-import android.widget.Spinner
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import com.neuralnetwork.imageinference.R
 import com.neuralnetwork.imageinference.databinding.FragmentImageBinding
+import com.neuralnetwork.imageinference.model.ModelConnector
 import com.neuralnetwork.imageinference.ui.details.DetailsConnector
 import com.neuralnetwork.imageinference.ui.details.DetailsViewModel
 
@@ -59,41 +58,24 @@ class ImageFragment : Fragment(), DetailsConnector {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        val imageViewModel = ViewModelProvider(this)[ImageViewModel::class.java]
+        // region Initialization
+        val vm = ViewModelProvider(this)[ImageViewModel::class.java]
         _binding = FragmentImageBinding.inflate(inflater, container, false)
         val root: View = binding.root
+        vm.model = (activity as ModelConnector).getModel()
 
         val inferenceImage = binding.imageInferenceImage
         val imageSelection = binding.imageSelection
         val imageSelectionBefore = binding.imageSelectionBefore
         val imageSelectionNext = binding.imageSelectionNext
         val imageSelectionMenu = binding.imageSelectionMenu
+        // endregion
 
-        imageSelectionBefore.isEnabled = false
-        imageSelectionNext.isEnabled = false
+        // region Listeners
+        imageSelection.onItemSelectedListener = vm.onImageSelectedListener
+        imageSelectionBefore.setOnClickListener(vm.onBeforeClickListener)
+        imageSelectionNext.setOnClickListener(vm.onNextClickListener)
 
-        imageSelection.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(
-                parent: AdapterView<*>?,
-                view: View?,
-                position: Int,
-                id: Long
-            ) {
-                val name = parent?.getItemAtPosition(position) as String
-                imageViewModel.selectImage(name)
-            }
-
-            override fun onNothingSelected(parent: AdapterView<*>?) {
-                imageViewModel.selectNothing()
-            }
-
-        }
-        imageSelectionBefore.setOnClickListener {
-            it.isEnabled = imageViewModel.selectNext()
-        }
-        imageSelectionNext.setOnClickListener {
-            it.isEnabled = imageViewModel.selectBefore()
-        }
         // Registers a photo picker activity launcher in multi-select mode.
         val imageSelectionMenuPickMultipleMedia =
             registerForActivityResult(ActivityResultContracts.PickMultipleVisualMedia()) { uris ->
@@ -102,38 +84,38 @@ class ImageFragment : Fragment(), DetailsConnector {
                         uri,
                         Intent.FLAG_GRANT_READ_URI_PERMISSION
                     )
-                    uri.path?.let { imageViewModel.addImage(it) }
+                    uri.path?.let { vm.addImage(it) }
                 }
             }
-        val imageSelectionMenuOnMenuItemClickListener = PopupMenu.OnMenuItemClickListener {
-            when (it.itemId) {
-                R.id.image_selection_menu_add -> {
-                    imageSelectionMenuPickMultipleMedia.launch(
-                        PickVisualMediaRequest(
-                            ActivityResultContracts.PickVisualMedia.ImageOnly
-                        )
-                    )
-                    true
-                }
-
-                R.id.image_selection_menu_remove -> {
-                    imageViewModel.selectedImage.value?.let { it1 -> imageViewModel.removeImage(it1) }
-                    true
-                }
-
-                else -> false
-            }
-        }
         imageSelectionMenu.setOnClickListener {
             val popup = PopupMenu(_context, it)
-            popup.setOnMenuItemClickListener(imageSelectionMenuOnMenuItemClickListener)
+            popup.setOnMenuItemClickListener { it1 ->
+                when (it1.itemId) {
+                    R.id.image_selection_menu_add -> {
+                        imageSelectionMenuPickMultipleMedia.launch(
+                            PickVisualMediaRequest(
+                                ActivityResultContracts.PickVisualMedia.ImageOnly
+                            )
+                        )
+                        true
+                    }
+
+                    R.id.image_selection_menu_remove -> {
+                        vm.selectedImage.value?.let { it2 -> vm.removeImage(it2) }
+                        true
+                    }
+
+                    else -> false
+                }
+            }
             val popupInflater: MenuInflater = popup.menuInflater
             popupInflater.inflate(R.menu.image_selection_menu, popup.menu)
             popup.show()
         }
+        // endregion
 
-
-        imageViewModel.images.observe(viewLifecycleOwner) { images ->
+        // region Observes
+        vm.images.observe(viewLifecycleOwner) { images ->
             imageSelection.adapter = ArrayAdapter(
                 _context,
                 android.R.layout.simple_spinner_dropdown_item,
@@ -142,9 +124,16 @@ class ImageFragment : Fragment(), DetailsConnector {
             imageSelectionBefore.isEnabled = images.count() > 1
             imageSelectionNext.isEnabled = images.count() > 1
         }
-        imageViewModel.selectedImage.observe(viewLifecycleOwner) {
+        vm.selectedImage.observe(viewLifecycleOwner) {
             it.loadImageInto(inferenceImage)
         }
+        vm.hasNext.observe(viewLifecycleOwner) {
+            imageSelectionNext.isEnabled = it
+        }
+        vm.hasBefore.observe(viewLifecycleOwner) {
+            imageSelectionBefore.isEnabled = it
+        }
+        // endregion
 
         return root
     }
@@ -156,7 +145,7 @@ class ImageFragment : Fragment(), DetailsConnector {
 
     override fun getDetailViewModel(): DetailsViewModel {
         val imageViewModel = ViewModelProvider(this)[ImageViewModel::class.java]
-        return imageViewModel.getDetailViewModel()
+        return imageViewModel.detailsViewModel
     }
 
 }

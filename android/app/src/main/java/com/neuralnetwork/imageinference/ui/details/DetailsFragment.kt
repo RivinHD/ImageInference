@@ -19,6 +19,7 @@
 
 package com.neuralnetwork.imageinference.ui.details
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -44,6 +45,7 @@ class DetailsFragment : Fragment() {
         _context = context
     }
 
+    @SuppressLint("SetTextI18n")
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -52,10 +54,8 @@ class DetailsFragment : Fragment() {
         _binding = FragmentDetailsBinding.inflate(inflater, container, false)
         val root: View = binding.root
 
-        val detailsViewModel: DetailsViewModel = when (parentFragment?.id) {
-            R.id.navigation_image,
-            R.id.navigation_photo_camera,
-            R.id.navigation_video_camera -> {
+        val vm: DetailsViewModel = when (parentFragment) {
+            is DetailsConnector -> {
                 (requireParentFragment() as DetailsConnector).getDetailViewModel()
             }
 
@@ -64,16 +64,40 @@ class DetailsFragment : Fragment() {
             }
         }
 
-        val class1 = binding.option1Class
-        val accuracy1 = binding.option1Percentage
-        val class2 = binding.option2Class
-        val accuracy2 = binding.option2Percentage
-        val class3 = binding.option3Class
-        val accuracy3 = binding.option3Percentage
-        val class4 = binding.option4Class
-        val accuracy4 = binding.option4Percentage
-        val class5 = binding.option5Class
-        val accuracy5 = binding.option5Percentage
+        val information = binding.informationText
+        val detailsView = binding.detailsView
+        val classes = arrayOf(
+            binding.option1Class,
+            binding.option2Class,
+            binding.option3Class,
+            binding.option4Class,
+            binding.option5Class
+        )
+        val accuracies = arrayOf(
+            binding.option1Percentage,
+            binding.option2Percentage,
+            binding.option3Percentage,
+            binding.option4Percentage,
+            binding.option5Percentage
+        )
+
+        vm.success.observe(viewLifecycleOwner) {
+            information.visibility = if (it != true) View.VISIBLE else View.INVISIBLE
+            information.text = getString(
+                if (it == null) R.string.no_data else R.string.inference_failed
+            )
+            detailsView.visibility = if (it == true) View.VISIBLE else View.INVISIBLE
+        }
+
+        vm.details.observe(viewLifecycleOwner) {
+            val results = it.getTopResults(5)
+
+            val applier = classes.zip(accuracies).zip(results) { (a, b), c -> Triple(a, b, c) }
+            for ((name, accuracy, result) in applier) {
+                name.text = result.name
+                accuracy.text = "${"%.2f".format(result.accuracy * 100)} %"
+            }
+        }
 
         return root
     }

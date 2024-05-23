@@ -21,34 +21,103 @@ package com.neuralnetwork.imageinference.ui.videoCamera
 
 import android.graphics.Bitmap
 import android.util.Log
+import android.util.Size
+import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
+import androidx.camera.core.resolutionselector.ResolutionSelector
+import androidx.camera.core.resolutionselector.ResolutionStrategy
+import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.neuralnetwork.imageinference.model.ModelExecutor
 import com.neuralnetwork.imageinference.ui.details.DetailsViewModel
 import com.neuralnetwork.imageinference.ui.details.ModelDetails
 import com.neuralnetwork.imageinference.ui.details.containers.ModelInputType
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.pytorch.executorch.Module
+import java.util.concurrent.Executor
 
 class VideoCameraViewModel : ViewModel(), ImageAnalysis.Analyzer {
     private val _details = MutableLiveData<ModelDetails>().apply {
-        this.value = ModelDetails(ModelInputType.VIDEO)
+        value = ModelDetails(ModelInputType.VIDEO)
     }
-    private val _detailsViewModel = DetailsViewModel(_details)
+
+    private val _modelSuccess = MutableLiveData<Boolean>()
+
+    private val _isRecording = MutableLiveData<Boolean>().apply {
+        value = false
+    }
+
+    private val _detailsViewModel = DetailsViewModel(_details, _modelSuccess)
+
+    private val _resolutionSelector = ResolutionSelector.Builder()
+        .setResolutionStrategy(
+            ResolutionStrategy(
+                Size(256, 256),
+                ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER
+            )
+        )
+        .build()
+
+    private val _imageAnalysis = ImageAnalysis.Builder()
+        .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
+        .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+        .setResolutionSelector(_resolutionSelector)
+        .build()
+
+    private val _cameraSelector: CameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
 
     val detailsViewModel get() = _detailsViewModel
 
     var model: Module? = null
 
+    val imageAnalysis get() = _imageAnalysis
+    val cameraSelector get() = _cameraSelector
+
+    val isRecording: LiveData<Boolean> = _isRecording
+
     override fun analyze(image: ImageProxy) {
-        Log.d("TestAnalyzer", "Image size ${image.height * image.width}")
+        Log.d("TestAnalyzer", "Image size ${image.width} x ${image.height}")
         runModel(image.toBitmap())
+
+        // done, release the ImageProxy object
+        image.close()
     }
 
     private fun runModel(image: Bitmap) {
-        val module: Module = model ?: return
-        val details: ModelDetails = _details.value ?: return
-        val executor = ModelExecutor(module, image, details)
+        val module: Module? = model
+        if (module == null) {
+            _modelSuccess.value = false
+            return
+        }
+
+        val details: ModelDetails? = _details.value
+        if (details == null){
+            _modelSuccess.value = false
+            return
+        }
+
+        viewModelScope.launch(Dispatchers.Default) {
+            val executor = ModelExecutor(module, image, details)
+            executor.run()
+            withContext(Dispatchers.Main) {
+                _details.value = executor.details
+                _modelSuccess.value = true
+            }
+        }
+    }
+
+    fun startRecording(executor: Executor) {
+        _isRecording.value = true
+        imageAnalysis.setAnalyzer(executor, this)
+    }
+
+    fun stopRecording() {
+        _isRecording.value = false
+        imageAnalysis.clearAnalyzer()
     }
 }

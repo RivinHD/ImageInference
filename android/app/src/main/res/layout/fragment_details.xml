@@ -22,7 +22,19 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="com.neuralnetwork.imageinference..ui.details.DetailsFragment">
+    tools:context="com.neuralnetwork.imageinference.ui.details.DetailsFragment">
+
+    <TextView
+        android:id="@+id/information_text"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginStart="12dp"
+        android:layout_marginTop="5dp"
+        android:layout_marginEnd="12dp"
+        android:layout_marginBottom="5dp"
+        android:text="@string/no_data"
+        android:textAlignment="center"
+        android:visibility="visible"/>
 
     <ScrollView
         android:id="@+id/details_view"
@@ -32,7 +44,8 @@
         android:layout_marginTop="5dp"
         android:layout_marginEnd="12dp"
         android:layout_marginBottom="5dp"
-        tools:ignore="UselessParent">
+        tools:ignore="UselessParent"
+        android:visibility="invisible">
 
         <LinearLayout
             android:layout_width="match_parent"

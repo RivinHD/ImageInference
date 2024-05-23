@@ -19,23 +19,51 @@
 
 package com.neuralnetwork.imageinference.ui.image
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.view.View
+import android.widget.AdapterView
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import kotlin.io.path.Path
-import kotlin.io.path.exists
-import kotlin.io.path.isRegularFile
+import androidx.lifecycle.viewModelScope
+import com.neuralnetwork.imageinference.model.ModelExecutor
 import com.neuralnetwork.imageinference.ui.details.DetailsViewModel
 import com.neuralnetwork.imageinference.ui.details.ModelDetails
 import com.neuralnetwork.imageinference.ui.details.containers.ModelInputType
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.pytorch.executorch.Module
+import kotlin.io.path.Path
+import kotlin.io.path.exists
+import kotlin.io.path.isRegularFile
 
 class ImageViewModel : ViewModel() {
 
     private val _images = MutableLiveData<List<Image>>()
+
     private var _selectedImage = MutableLiveData<Image>().apply {
         value = Image.default()
     }
-    private val detailsViewModel = DetailsViewModel(ModelDetails(ModelInputType.IMAGE))
+
+    private val _details = MutableLiveData<ModelDetails>().apply {
+        this.value = ModelDetails(ModelInputType.IMAGE)
+    }
+    private val _modelSuccess = MutableLiveData<Boolean>()
+
+    private val _detailsViewModel = DetailsViewModel(_details, _modelSuccess)
+
+    private val _hasNext = MutableLiveData<Boolean>().apply {
+        value = false
+    }
+    private val _hasBefore = MutableLiveData<Boolean>().apply {
+        value = false
+    }
+
+    val detailsViewModel get() = _detailsViewModel
+
+    var model: Module? = null
 
     /**
      * The images that are used for inference.
@@ -46,6 +74,35 @@ class ImageViewModel : ViewModel() {
      * The current selected image for inference.
      */
     val selectedImage: LiveData<Image> = _selectedImage
+
+    val hasNext: LiveData<Boolean> = _hasNext
+
+    val hasBefore: LiveData<Boolean> = _hasBefore
+
+    val onImageSelectedListener = object : AdapterView.OnItemSelectedListener {
+        override fun onItemSelected(
+            parent: AdapterView<*>?,
+            view: View?,
+            position: Int,
+            id: Long
+        ) {
+            val name = parent?.getItemAtPosition(position) as String
+            selectImage(name)
+        }
+
+        override fun onNothingSelected(parent: AdapterView<*>?) {
+            selectNothing()
+        }
+
+    }
+
+    val onBeforeClickListener = View.OnClickListener {
+        selectBefore()
+    }
+
+    val onNextClickListener = View.OnClickListener {
+        selectNext()
+    }
 
     /**
      * Adds an image to the current set for inference.
@@ -125,13 +182,19 @@ class ImageViewModel : ViewModel() {
      *
      * @return true if a next image was found.
      */
-    fun selectNext(): Boolean {
-        val imagesValue = _images.value ?: return false
+    private fun selectNext() {
+        val imagesValue = _images.value
+        if (imagesValue == null)
+        {
+            _hasNext.value = false
+            return
+        }
+
+        _hasNext.value = true
         val currentIndex = imagesValue.indexOf(_selectedImage.value)
         val nextIndex = (currentIndex + 1) % imagesValue.count()
         _selectedImage.value = _images.value?.get(nextIndex)
         runModel()
-        return true
     }
 
 
@@ -140,30 +203,49 @@ class ImageViewModel : ViewModel() {
      *
      * @return true if a next image was found.
      */
-    fun selectBefore(): Boolean {
-        val imagesValue = _images.value ?: return false
+    private fun selectBefore() {
+        val imagesValue = _images.value
+        if (imagesValue == null){
+            _hasBefore.value = false
+            return
+        }
+
+        _hasBefore.value = true
         val currentIndex = imagesValue.indexOf(_selectedImage.value)
         val beforeIndex = (currentIndex + imagesValue.count() - 1) % imagesValue.count()
         _selectedImage.value = _images.value?.get(beforeIndex)
         runModel()
-        return true
     }
 
     /**
      * Selects the default image.
      */
-    fun selectNothing() {
+    private fun selectNothing() {
         _selectedImage.value = Image.default()
     }
 
-    /**
-     * Get the detail view model from this view model.
-     */
-    fun getDetailViewModel(): DetailsViewModel {
-        return detailsViewModel
-    }
-
     private fun runModel() {
-        TODO("Not Implemented")
+        val module: Module? = model
+        if (module == null) {
+            _modelSuccess.value = false
+            return
+        }
+
+        val details: ModelDetails? = _details.value
+        if (details == null){
+            _modelSuccess.value = false
+            return
+        }
+
+        val path = selectedImage.value?.path?.toAbsolutePath().toString()
+        val image: Bitmap = BitmapFactory.decodeFile(path)
+        viewModelScope.launch(Dispatchers.Default) {
+            val executor = ModelExecutor(module, image, details)
+            executor.run()
+            withContext(Dispatchers.Main) {
+                _details.value = executor.details
+                _modelSuccess.value = true
+            }
+        }
     }
 }

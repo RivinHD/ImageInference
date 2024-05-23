@@ -25,14 +25,10 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.camera.core.CameraSelector
 import androidx.camera.core.ExperimentalZeroShutterLag
-import androidx.camera.core.ImageCapture
-import androidx.camera.core.ImageCaptureException
-import androidx.camera.core.ImageProxy
-import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.drawable.DrawableCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import com.google.common.util.concurrent.ListenableFuture
@@ -65,7 +61,7 @@ class PhotoCameraFragment : Fragment(), DetailsConnector {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        val photoCameraViewModel = ViewModelProvider(this)[PhotoCameraViewModel::class.java]
+        val vm = ViewModelProvider(this)[PhotoCameraViewModel::class.java]
         _binding = FragmentPhotoCameraBinding.inflate(inflater, container, false)
         val root: View = binding.root
 
@@ -78,56 +74,64 @@ class PhotoCameraFragment : Fragment(), DetailsConnector {
 
         // Setup camera preview and capture
         cameraProviderFuture = ProcessCameraProvider.getInstance(_context)
-        val imageCapture = ImageCapture.Builder()
-            .setCaptureMode(ImageCapture.CAPTURE_MODE_ZERO_SHUTTER_LAG)
-            .build()
-        cameraProviderFuture.addListener({
-            val cameraProvider = cameraProviderFuture.get()
-            val preview: Preview = Preview.Builder()
-                .build()
+        cameraProviderFuture.addListener(
+            {
+                val cameraProvider = cameraProviderFuture.get()
 
-            val cameraSelector: CameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+                vm.preview.setSurfaceProvider(photoPreview.getSurfaceProvider())
 
-            preview.setSurfaceProvider(photoPreview.getSurfaceProvider())
-
-            cameraProvider.bindToLifecycle(
-                viewLifecycleOwner,
-                cameraSelector,
-                imageCapture,
-                preview
-            )
-        }, ContextCompat.getMainExecutor(_context))
-
+                cameraProvider.bindToLifecycle(
+                    viewLifecycleOwner,
+                    vm.cameraSelector,
+                    vm.imageCapture,
+                    vm.preview
+                )
+            },
+            ContextCompat.getMainExecutor(_context)
+        )
 
         photoCapture.setOnClickListener {
-            if (photoPreview.visibility == View.VISIBLE) {
+            if (vm.image.value == null) {
                 // Take the current photo from the camera preview
-                var photoSuccess = true
-                imageCapture.takePicture(
+                vm.imageCapture.takePicture(
                     ContextCompat.getMainExecutor(_context),
-                    object : ImageCapture.OnImageCapturedCallback() {
-                        override fun onCaptureSuccess(image: ImageProxy) {
-                            super.onCaptureSuccess(image)
-                            photoView.setImageBitmap(image.toBitmap())
-                            photoCameraViewModel.runModel(image.toBitmap())
-                        }
-
-                        override fun onError(exception: ImageCaptureException) {
-                            super.onError(exception)
-                            photoSuccess = false
-                        }
-                    }
+                    vm.onImageCaptureCallback
                 )
-
-                if (photoSuccess) {
-                    photoPreview.visibility = View.INVISIBLE
-                    photoCapture.text = getString(R.string.photo_clear)
-                }
-
             } else {
-                // Delete the current photo and activate the preview again
+                vm.clearImage()
+            }
+        }
+
+        vm.modelSuccess.observe(viewLifecycleOwner) {
+            val colorID = if (it) {
+                R.color.success_green
+            } else {
+                R.color.fail_red
+            }
+
+            val drawableID = if (it) {
+                R.drawable.ic_check_google
+            } else {
+                R.drawable.ic_close_google
+            }
+
+            val drawable = ContextCompat.getDrawable(_context, drawableID)
+            val color = ContextCompat.getColor(_context, colorID)
+            if (drawable != null) {
+                DrawableCompat.setTint(drawable, color)
+            }
+            photoCapture.setCompoundDrawablesRelativeWithIntrinsicBounds(drawable, null, drawable, null)
+        }
+
+        vm.image.observe(viewLifecycleOwner) {
+            if (it == null) {
                 photoPreview.visibility = View.VISIBLE
                 photoCapture.text = getString(R.string.photo_capture)
+                photoCapture.setCompoundDrawablesRelativeWithIntrinsicBounds(null, null, null, null)
+            } else {
+                photoView.setImageBitmap(it)
+                photoPreview.visibility = View.INVISIBLE
+                photoCapture.text = getString(R.string.photo_clear)
             }
         }
 
@@ -142,6 +146,6 @@ class PhotoCameraFragment : Fragment(), DetailsConnector {
 
     override fun getDetailViewModel(): DetailsViewModel {
         val photoCameraViewModel = ViewModelProvider(this)[PhotoCameraViewModel::class.java]
-        return photoCameraViewModel.getDetailViewModel()
+        return photoCameraViewModel.detailsViewModel
     }
 }
