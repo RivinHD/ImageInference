@@ -1,0 +1,18 @@
+cmake_minimum_required(VERSION 3.19)
+project(ImageInference)
+
+get_property(IS_MULTI_CONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+
+if(IS_MULTI_CONFIG)
+    message(NOTICE "Using multi-config generator. Compile with: cmake --build . --config [Debug|Release] --target <target>")
+else()
+    message(NOTICE "Using single-config generator. Generate with: cmake .. -DCMAKE_BUILD_TYPE=[Debug|Release]")
+
+    if(NOT CMAKE_BUILD_TYPE)
+        set(CMAKE_BUILD_TYPE "Release")
+        message(WARNING "No Build type is set. Using Release!")
+    endif()
+endif()
+
+add_subdirectory(submodules/executorch)
+add_subdirectory(submodules/executorch//third-party/flatbuffers)
