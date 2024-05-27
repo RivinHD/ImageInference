@@ -1,5 +1,5 @@
 [versions]
-agp = "8.4.0"
+agp = "8.4.1"
 kotlin = "1.9.0"
 coreKtx = "1.13.1"
 junit = "4.13.2"
@@ -18,6 +18,10 @@ recyclerview = "1.3.2"
 fragmentKtx = "1.7.1"
 cameraVersion = "1.3.3"
 executorch = "0.2.0"
+datastore = "1.1.1"
+protobufJavaLite = "4.27.0"
+protobuf = "0.9.4"
+activity = "1.9.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -40,7 +44,11 @@ androidx-camera-lifecycle = { group = "androidx.camera", name = "camera-lifecycl
 androidx-camera-camera2 =  { group = "androidx.camera", name = "camera-camera2", version.ref = "cameraVersion" }
 androidx-camera-core =  { group = "androidx.camera", name = "camera-core", version.ref = "cameraVersion" }
 org-pytorch-executorch = { group = "org.pytorch.executorch", name = "executorch", version.ref = "executorch" }
+androidx-datastore-datastore = { group = "androidx.datastore", name = "datastore", version.ref = "datastore" }
+com-google-protobuf-protobuf-javalite = { group = "com.google.protobuf", name = "protobuf-javalite", version.ref = "protobufJavaLite" }
+androidx-activity-activity = { group = "androidx.activity", name = "activity", version.ref = "activity" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
 jetbrainsKotlinAndroid = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+googleProtobuf = { id = "com.google.protobuf", version.ref = "protobuf" }

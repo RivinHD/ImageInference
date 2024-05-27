@@ -19,22 +19,40 @@
 
 package com.neuralnetwork.imageinference.ui.image
 
+import android.content.ContentResolver
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
+import android.graphics.ImageDecoder
+import android.net.Uri
 import android.widget.ImageView
 import androidx.core.content.res.ResourcesCompat
 import com.neuralnetwork.imageinference.R
-import java.nio.file.Path
 
-data class Image(val path: Path, val name: String) {
-
+/**
+ * Container that represents an image.
+ *
+ * @property uri The uri to the image.
+ * @property name The unique name of the image.
+ * @constructor Create an image with the given path and name.
+ */
+data class Image(val uri: Uri, val name: String) {
     companion object {
         /**
          * A predefined default image.
          *
          * @return The created default image.
          */
-        fun default(): Image = Image(kotlin.io.path.Path(""), "DefaultImage")
+        fun default(): Image = Image(Uri.EMPTY, "DefaultImage")
+    }
+
+    /**
+     * Gets the bitmap of this image.
+     *
+     * @return The loaded bitmap.
+     */
+    fun getBitmap(resolver: ContentResolver): Bitmap {
+        return ImageDecoder.createSource(resolver, uri).let {
+            ImageDecoder.decodeBitmap(it)
+        }
     }
 
     /**
@@ -44,18 +62,22 @@ data class Image(val path: Path, val name: String) {
      */
     fun loadImageInto(view: ImageView): Bitmap? {
         return if (this == default()) {
-            view.setImageDrawable(
-                ResourcesCompat.getDrawable(
-                    view.resources,
-                    R.drawable.ic_image_google,
-                    null
-                )
-            )
+            setDefault(view)
             null
         } else {
-            val imageFile: Bitmap = BitmapFactory.decodeFile(path.toAbsolutePath().toString())
-            view.setImageBitmap(imageFile)
-            imageFile
+            val image = getBitmap(view.context.contentResolver)
+            view.setImageBitmap(image)
+            image
         }
+    }
+
+    private fun setDefault(view: ImageView) {
+        view.setImageDrawable(
+            ResourcesCompat.getDrawable(
+                view.resources,
+                R.drawable.ic_image_google,
+                null
+            )
+        )
     }
 }

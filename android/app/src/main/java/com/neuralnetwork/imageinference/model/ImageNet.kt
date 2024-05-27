@@ -1044,9 +1044,9 @@ class ImageNet {
          * @return The corresponding ImageNet class without synonyms.
          */
         fun getClass(index: Int, synonymIndex: Int = 0): String {
-            val classIndex: Int = if (index >= 0) index else (imageNetClasses.count() + index)
+            val classIndex: Int = if (index >= 0) index else (imageNetClasses.size + index)
             val synonyms: List<String> = imageNetClasses[classIndex].split(',')
-            if (synonymIndex > synonyms.count()) {
+            if (synonymIndex > synonyms.size) {
                 return synonyms.last().trim()
             }
             return synonyms[synonymIndex].trim()

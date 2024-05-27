@@ -65,7 +65,7 @@ data class ModelDetails(val modelInputType: ModelInputType) {
             throw RuntimeException("Cannot return a negative amount of results.")
         }
         val transferArray: Array<ModelResult> = Array(count) { ModelResult.Default }
-        for (i in 0..<min(count, _results.count())) {
+        for (i in 0..<min(count, _results.size)) {
             transferArray[i] = _results[i].copy()
         }
         return transferArray

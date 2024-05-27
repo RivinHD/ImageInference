@@ -19,14 +19,17 @@
 
 package com.neuralnetwork.imageinference.ui.image
 
+import android.content.ContentResolver
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
+import android.net.Uri
 import android.view.View
 import android.widget.AdapterView
+import androidx.datastore.core.DataStore
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.neuralnetwork.imageinference.ImageCollections
+import com.neuralnetwork.imageinference.datastore.DataStoreViewModel
 import com.neuralnetwork.imageinference.model.ModelExecutor
 import com.neuralnetwork.imageinference.ui.details.DetailsViewModel
 import com.neuralnetwork.imageinference.ui.details.ModelDetails
@@ -35,11 +38,48 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.pytorch.executorch.Module
-import kotlin.io.path.Path
-import kotlin.io.path.exists
-import kotlin.io.path.isRegularFile
 
-class ImageViewModel : ViewModel() {
+class ImageViewModel(dataStore: DataStore<ImageCollections>) :
+    DataStoreViewModel<ImageCollections>(dataStore) {
+
+    private var inferencedImage: Image = Image.default()
+
+    private val _collections = MutableLiveData<MutableList<ImageCollection>>().apply {
+        value = mutableListOf(ImageCollection.default())
+        viewModelScope.launch {
+            dataStore.data.collect {
+                var data = MutableList(it.imageCollectionCount) { collectionIndex ->
+                    val collection = it.imageCollectionList[collectionIndex]
+                    ImageCollection(collection.name, List(collection.imageCount) { imageIndex ->
+                        val image = collection.imageList[imageIndex]
+                        Image(Uri.parse(image.uri), image.name)
+                    })
+                }
+                val selectedCollectionIndex: Int
+                val selectedImageIndex: Int
+                if (data.isEmpty()) {
+                    data = mutableListOf(ImageCollection.default())
+                    selectedCollectionIndex = 0
+                    selectedImageIndex = -1
+                } else {
+                    selectedCollectionIndex = it.selectedImageCollectionIndex
+                    selectedImageIndex =
+                        it.imageCollectionList[selectedCollectionIndex].selectedImageIndex
+                }
+                value = data
+                _selectedCollection.value = data[selectedCollectionIndex]
+                _images.value = data[selectedCollectionIndex].images
+                if (selectedImageIndex != -1) {
+                    _selectedImage.value = data[selectedCollectionIndex].images[selectedImageIndex]
+                }
+
+            }
+        }
+    }
+
+    private val _selectedCollection = MutableLiveData<ImageCollection>().apply {
+        value = ImageCollection.default()
+    }
 
     private val _images = MutableLiveData<List<Image>>()
 
@@ -86,8 +126,8 @@ class ImageViewModel : ViewModel() {
             position: Int,
             id: Long
         ) {
-            val name = parent?.getItemAtPosition(position) as String
-            selectImage(name)
+            val image = parent?.getItemAtPosition(position) as Image
+            selectImage(image.name)
         }
 
         override fun onNothingSelected(parent: AdapterView<*>?) {
@@ -96,10 +136,16 @@ class ImageViewModel : ViewModel() {
 
     }
 
+    /**
+     * OnClickListener that selects the before image.
+     */
     val onBeforeClickListener = View.OnClickListener {
         selectBefore()
     }
 
+    /**
+     * OnClickListener that selects the next image.
+     */
     val onNextClickListener = View.OnClickListener {
         selectNext()
     }
@@ -109,32 +155,38 @@ class ImageViewModel : ViewModel() {
      * If the image already exists nothing happens.
      * If the name of the image already exists a count is added with syntax (<count>).
      *
-     * @param path The path to the image to add.
+     * @param uri The uri of the image to add.
      * @return true on success.
      */
-    fun addImage(path: String): Boolean {
-        val parsedPath = Path(path)
-        if (!parsedPath.isRegularFile() || !parsedPath.exists()) {
-            return false
-        }
+    fun addImages(uris: List<Uri>): Boolean {
+        val selectedCollection = getSelectedCollection()
+        var image: Image = Image.default()
+        for (uri in uris) {
+            val images = _images.value ?: continue
+            if (images.any { it.uri == uri }) {
+                continue
+            }
 
-        if (_images.value?.first { it.path == parsedPath } != null) {
-            return false
-        }
 
-        var name: String = parsedPath.fileName.toString()
-        val imageNames = _images.value?.map { it.name }
-        if (imageNames != null) {
+            var name: String = uri.lastPathSegment ?: "Image"
+            val imageNames = images.map { it.name }
             var count = 1
             while (imageNames.contains(name)) {
                 name = name.split('(', limit = 2)[0].removeSuffix(" ")
                 name += " (${count})"
                 count++
             }
+
+            image = Image(uri, name)
+            selectedCollection.addImage(image)
         }
 
-        val image = Image(parsedPath, name)
-        _images.value = _images.value?.plus(image) ?: listOf(image)
+        if (image == Image.default()) {
+            return false
+        }
+
+        _images.value = selectedCollection.images
+        _selectedImage.value = image
         return true
     }
 
@@ -145,7 +197,8 @@ class ImageViewModel : ViewModel() {
      * @param image The image to remove from the list.
      */
     fun removeImage(image: Image) {
-        if (!containsImage(image)) {
+        val selectedCollection = getSelectedCollection()
+        if (!selectedCollection.images.contains(image)) {
             return
         }
 
@@ -154,18 +207,10 @@ class ImageViewModel : ViewModel() {
             selectNext()
         }
 
-        _images.value = _images.value?.minus(image)
+        selectedCollection.removeImage(image)
+        _images.value = selectedCollection.images
     }
 
-    /**
-     * Checks if the image exists in the current set for inference.
-     *
-     * @param image The image to check.
-     * @return true if the image is contained.
-     */
-    fun containsImage(image: Image): Boolean {
-        return _images.value?.contains(image) ?: false
-    }
 
     /**
      * Changes the selected image and do inference on the current model.
@@ -174,7 +219,57 @@ class ImageViewModel : ViewModel() {
      */
     fun selectImage(name: String) {
         _selectedImage.value = _images.value?.first { it.name == name }
-        runModel()
+    }
+
+    fun getCollectionsNames(): List<String> {
+        return _collections.value?.map { it.name } ?: emptyList()
+    }
+
+    fun getSelectedCollectionIndex(): Int {
+        return _collections.value?.indexOf(getSelectedCollection()) ?: -1
+    }
+
+    fun changeCollection(name: String) {
+        val collection = _collections.value?.first { it.name == name }
+        if (collection != null) {
+            _selectedCollection.value = collection
+            _images.value = collection.images
+            _selectedImage.value = collection.images.firstOrNull()
+        }
+    }
+
+    fun addCollection(name: String) {
+        val collections = _collections.value ?: return
+        val new = ImageCollection(name, listOf())
+        collections.add(new)
+        _collections.value = collections
+        _selectedCollection.value = new
+        _images.value = new.images
+        _selectedImage.value = Image.default()
+
+    }
+
+    fun removeCollection() {
+        val collection = getSelectedCollection()
+        val collections = _collections.value ?: return
+
+        if (collections.size == 1) {
+            return
+        }
+
+        collections.remove(collection)
+        _collections.value = collections
+        _selectedCollection.value = collections.first()
+        _images.value = collections.first().images
+        _selectedImage.value = Image.default()
+    }
+
+    private fun getSelectedCollection(): ImageCollection {
+        val selectedCollection = _selectedCollection.value ?: ImageCollection.default()
+        if (selectedCollection == ImageCollection.default()) {
+            _selectedCollection.value = selectedCollection
+        }
+        return selectedCollection
     }
 
     /**
@@ -184,17 +279,15 @@ class ImageViewModel : ViewModel() {
      */
     private fun selectNext() {
         val imagesValue = _images.value
-        if (imagesValue == null)
-        {
+        if (imagesValue == null) {
             _hasNext.value = false
             return
         }
 
         _hasNext.value = true
         val currentIndex = imagesValue.indexOf(_selectedImage.value)
-        val nextIndex = (currentIndex + 1) % imagesValue.count()
+        val nextIndex = (currentIndex + 1) % imagesValue.size
         _selectedImage.value = _images.value?.get(nextIndex)
-        runModel()
     }
 
 
@@ -205,16 +298,18 @@ class ImageViewModel : ViewModel() {
      */
     private fun selectBefore() {
         val imagesValue = _images.value
-        if (imagesValue == null){
+        if (imagesValue == null) {
             _hasBefore.value = false
             return
         }
 
         _hasBefore.value = true
-        val currentIndex = imagesValue.indexOf(_selectedImage.value)
-        val beforeIndex = (currentIndex + imagesValue.count() - 1) % imagesValue.count()
+        var currentIndex = imagesValue.indexOf(_selectedImage.value)
+        if (currentIndex == -1) {
+            currentIndex = 0
+        }
+        val beforeIndex = (currentIndex + imagesValue.size - 1) % imagesValue.size
         _selectedImage.value = _images.value?.get(beforeIndex)
-        runModel()
     }
 
     /**
@@ -224,7 +319,7 @@ class ImageViewModel : ViewModel() {
         _selectedImage.value = Image.default()
     }
 
-    private fun runModel() {
+    fun runModel(resolver: ContentResolver) {
         val module: Module? = model
         if (module == null) {
             _modelSuccess.value = false
@@ -232,15 +327,27 @@ class ImageViewModel : ViewModel() {
         }
 
         val details: ModelDetails? = _details.value
-        if (details == null){
+        if (details == null) {
             _modelSuccess.value = false
             return
         }
 
-        val path = selectedImage.value?.path?.toAbsolutePath().toString()
-        val image: Bitmap = BitmapFactory.decodeFile(path)
+        val image = selectedImage.value
+        if (image == null || image == Image.default()) {
+            _modelSuccess.value = false
+            return
+        }
+
+        if (image == inferencedImage) {
+            _modelSuccess.value = true
+            return
+        }
+
+        inferencedImage = image
+
+        val bitmap: Bitmap = image.getBitmap(resolver)
         viewModelScope.launch(Dispatchers.Default) {
-            val executor = ModelExecutor(module, image, details)
+            val executor = ModelExecutor(module, bitmap, details)
             executor.run()
             withContext(Dispatchers.Main) {
                 _details.value = executor.details

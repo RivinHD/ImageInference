@@ -21,19 +21,25 @@ package com.neuralnetwork.imageinference.ui.image
 
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.MenuInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
+import android.widget.EditText
 import android.widget.PopupMenu
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
 import androidx.lifecycle.ViewModelProvider
 import com.neuralnetwork.imageinference.R
 import com.neuralnetwork.imageinference.databinding.FragmentImageBinding
+import com.neuralnetwork.imageinference.datastore.DataStoreViewModelFactory
+import com.neuralnetwork.imageinference.datastore.imageCollectionsDataStore
 import com.neuralnetwork.imageinference.model.ModelConnector
 import com.neuralnetwork.imageinference.ui.details.DetailsConnector
 import com.neuralnetwork.imageinference.ui.details.DetailsViewModel
@@ -58,8 +64,11 @@ class ImageFragment : Fragment(), DetailsConnector {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
+
         // region Initialization
-        val vm = ViewModelProvider(this)[ImageViewModel::class.java]
+        val vm: ImageViewModel by viewModels {
+            DataStoreViewModelFactory(_context.imageCollectionsDataStore)
+        }
         _binding = FragmentImageBinding.inflate(inflater, container, false)
         val root: View = binding.root
         vm.model = (activity as ModelConnector).getModel()
@@ -80,12 +89,15 @@ class ImageFragment : Fragment(), DetailsConnector {
         val imageSelectionMenuPickMultipleMedia =
             registerForActivityResult(ActivityResultContracts.PickMultipleVisualMedia()) { uris ->
                 for (uri in uris) {
-                    _context.contentResolver.takePersistableUriPermission(
-                        uri,
-                        Intent.FLAG_GRANT_READ_URI_PERMISSION
-                    )
-                    uri.path?.let { vm.addImage(it) }
+                    if (Build.VERSION.SDK_INT > Build.VERSION_CODES.Q)
+                    {
+                        _context.contentResolver.takePersistableUriPermission(
+                            uri,
+                            Intent.FLAG_GRANT_READ_URI_PERMISSION
+                        )
+                    }
                 }
+                vm.addImages(uris)
             }
         imageSelectionMenu.setOnClickListener {
             val popup = PopupMenu(_context, it)
@@ -105,6 +117,57 @@ class ImageFragment : Fragment(), DetailsConnector {
                         true
                     }
 
+                    R.id.image_selection_menu_change_collection -> {
+                        val changeCollectionDialogBuilder = AlertDialog.Builder(_context)
+                        .setTitle("Change Collection")
+                        .setSingleChoiceItems(
+                            ArrayAdapter(
+                                _context,
+                                android.R.layout.simple_spinner_dropdown_item,
+                                vm.getCollectionsNames()
+                            ), vm.getSelectedCollectionIndex()
+                        ) { dialog, _ ->
+                            val item = (dialog as AlertDialog).listView.selectedItem as String?
+                            item?.let { it1 -> vm.changeCollection(it1) }
+                            dialog.dismiss()
+                        }
+                        val dialog = changeCollectionDialogBuilder.create()
+                        dialog.show()
+                        true
+                    }
+
+                    R.id.image_selection_menu_add_collection -> {
+                        val addCollectionDialogBuilder = AlertDialog.Builder(_context)
+                            .setTitle("Add Collection")
+                            .setView(R.layout.dialog_add_collection)
+                            .setPositiveButton("Add") { dialog, _ ->
+                                val textView = (dialog as AlertDialog).findViewById<View>(R.id.collection_name) as EditText
+                                vm.addCollection(textView.text.toString())
+                                dialog.dismiss()
+                            }
+                            .setNegativeButton("Cancel") { dialog, _ -> dialog.dismiss() }
+                        val dialog = addCollectionDialogBuilder.create()
+                        dialog.show()
+                        true
+                    }
+
+                    R.id.image_selection_menu_remove_collection -> {
+                        val currentCollectionName = vm.getCollectionsNames()[vm.getSelectedCollectionIndex()]
+                        val removeCollectionDialogBuilder = AlertDialog.Builder(_context)
+                            .setTitle("Remove Collection")
+                            .setMessage("Are you sure you want to remove the collection: '$currentCollectionName'?")
+                            .setPositiveButton("Yes") { dialog, _ ->
+                                vm.removeCollection()
+                                dialog.dismiss()
+                            }
+                            .setNegativeButton("No") { dialog, _ ->
+                                dialog.dismiss()
+                            }
+                        val dialog = removeCollectionDialogBuilder.create()
+                        dialog.show()
+                        true
+                    }
+
                     else -> false
                 }
             }
@@ -116,16 +179,16 @@ class ImageFragment : Fragment(), DetailsConnector {
 
         // region Observes
         vm.images.observe(viewLifecycleOwner) { images ->
-            imageSelection.adapter = ArrayAdapter(
+            imageSelection.adapter = ImageArrayAdapter(
                 _context,
-                android.R.layout.simple_spinner_dropdown_item,
-                images.map { it.name }
+                images
             )
-            imageSelectionBefore.isEnabled = images.count() > 1
-            imageSelectionNext.isEnabled = images.count() > 1
+            imageSelectionBefore.isEnabled = images.size > 1
+            imageSelectionNext.isEnabled = images.size > 1
         }
         vm.selectedImage.observe(viewLifecycleOwner) {
             it.loadImageInto(inferenceImage)
+            vm.runModel(_context.contentResolver)
         }
         vm.hasNext.observe(viewLifecycleOwner) {
             imageSelectionNext.isEnabled = it

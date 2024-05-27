@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+option java_package = "com.neuralnetwork.imageinference";
+option java_multiple_files = true;
+
+message ImageCollections {
+    message ImageCollection {
+        message Image {
+            string name = 1;
+            string uri = 2;
+        }
+        string name = 1;
+        repeated Image image = 2;
+        uint32 selectedImageIndex = 3;
+    }
+    repeated ImageCollection imageCollection = 1;
+    uint32 selectedImageCollectionIndex = 2;
+}
