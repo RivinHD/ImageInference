@@ -1,16 +1,44 @@
 #!/bin/bash
 
+#  Copyright (c) 2024 by Vincent Gerlach. All rights reserved.
+#
+#  SPDX-License-Identifier: GPL-3.0-or-later
+#
+#  This program is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  in the root folder of this project with the name LICENSE. If not, see <http://www.gnu.org/licenses/>.
+
+# Check sourced
+(return 0 2>/dev/null) && sourced=1 || sourced=0
+
+if [[ ${sourced} -eq 0 ]]; then
+    echo "Please run this script sourced, as environment variables are exported."
+    echo "> source install.sh"
+    exit 1
+fi
+
 # Set the base path
-BasePath="$(dirname "${BASH_SOURCE[0]}")"  # relative
-BasePath="$(cd "$BasePath" && pwd)"  # absolutized and normalized
-BasePath="$(dirname "$BasePath")" # go up one directory
+BasePath="$(dirname -- "${BASH_SOURCE[0]}")"  # relative
+BasePath="$(cd -- "$BasePath" && pwd)"  # absolutized and normalized
+BasePath="$(dirname -- "$BasePath")" # go up one directory
 echo "Installing needed software and dependencies in $BasePath"
 
 # Installing Miniconda
 cd "${BasePath}"
-wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
-bash Miniconda3-latest-Linux-x86_64.sh -b -f
-rm Miniconda3-latest-Linux-x86_64.sh
+if [ ! -d "${BasePath}/miniconda3" ]; then
+    wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+    bash Miniconda3-latest-Linux-x86_64.sh -b -f
+    rm Miniconda3-latest-Linux-x86_64.sh
+fi
 
 # Update submodules
 cd ImageInference
@@ -29,10 +57,20 @@ cd submodules/executorch
 cp backends/ "${BasePath}/miniconda3/envs/imageinfernce/lib/python3.10/site-packages/executorch/" -n -r
 cp examples/ "${BasePath}/miniconda3/envs/imageinfernce/lib/python3.10/site-packages/executorch/" -n -r
 conda install -y numpy
+conda install -y scipy
 ulimit -n 4096
 
+# Compile Qnn
+# Workaround for fbs files in exir/_serialize
+cp schema/program.fbs exir/_serialize/program.fbs
+cp schema/scalar_type.fbs exir/_serialize/scalar_type.fbs
+
+# install Python APIs to correct import path
+# The filename might vary depending on your Python and host version.
+cp -f backends/qualcomm/PyQnnManagerAdaptor.cpython-310-x86_64-linux-gnu.so $EXECUTORCH_ROOT/backends/qualcomm/python
+cp -f backends/qualcomm/PyQnnWrapperAdaptor.cpython-310-x86_64-linux-gnu.so $EXECUTORCH_ROOT/backends/qualcomm/python
+
 # Install Flatc
-export PATH="${BasePath}/submodules/executorch/third-party/flatbuffers/cmake-out:${PATH}"
 ./build/install_flatc.sh
 
 # Install buck2
@@ -58,4 +96,10 @@ if [ ! -d "${BasePath}/android/ndk/android-ndk-r26d" ]; then
 fi
 
 cd ImageInference
+source config.sh
+
+cd submodules/executorch
+./backends/qualcomm/scripts/build.sh
+
+cd "${BasePath}"/ImageInference
 source config.sh

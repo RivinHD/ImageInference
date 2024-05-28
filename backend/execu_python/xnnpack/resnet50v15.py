@@ -1,32 +1,34 @@
+#  Copyright (c) 2024 by Vincent Gerlach. All rights reserved.
+#
+#  SPDX-License-Identifier: GPL-3.0-or-later
+#
+#  This program is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  in the root folder of this project with the name LICENSE. If not, see <http://www.gnu.org/licenses/>.
+
 import argparse
+import os
 
 import torch
 import torchvision.models as models
 from executorch.backends.xnnpack.partition.xnnpack_partitioner import \
     XnnpackPartitioner
 from executorch.exir import EdgeCompileConfig, EdgeProgramManager, to_edge
-from torch.ao.quantization.quantize_pt2e import convert_pt2e, prepare_pt2e
-from torch.ao.quantization.quantizer.xnnpack_quantizer import (
-    XNNPACKQuantizer, get_symmetric_quantization_config)
 from torch.export import ExportedProgram, export
 from torchvision.models import ResNet50_Weights
 
-
-def quantize(model, example_inputs):
-    """This is the official recommended flow for quantization in pytorch 2.0 export"""
-    print(f"Original model: {model}")
-    quantizer = XNNPACKQuantizer()
-    # if we set is_per_channel to True, we also need to add out_variant of quantize_per_channel/dequantize_per_channel
-    operator_config = get_symmetric_quantization_config(is_per_channel=False)
-    quantizer.set_global(operator_config)
-    m = prepare_pt2e(model, quantizer)
-    # calibration
-    m(*example_inputs)
-    m = convert_pt2e(m)
-    print(f"Quantized model: {m}")
-    # make sure we can export to flat buffer
-    return m
-
+from .builder import quantize
+from ..datasets import getImageNet
+from torch._export import capture_pre_autograd_graph
 
 if __name__ == "__main__":
 
@@ -37,6 +39,7 @@ if __name__ == "__main__":
         required=False,
         default=False,
         help="Flag for producing quantized or floating-point model",
+        action='store_true',
     )
     args = parser.parse_args()
 
@@ -44,10 +47,13 @@ if __name__ == "__main__":
     resnet50 = models.resnet50(weights=ResNet50_Weights.IMAGENET1K_V2).eval()
     sample_input = (torch.randn(1, 3, 224, 224),)
 
+    resnet50 = capture_pre_autograd_graph(resnet50, sample_input)
+
     compile_config = EdgeCompileConfig()
 
     if args.quantize:
-        resnet50 = quantize(resnet50, sample_input)
+        imagenet_dataset = getImageNet()
+        resnet50 = quantize(resnet50, imagenet_dataset)
         compile_config = EdgeCompileConfig(_check_ir_validity=False)
 
     exported_program: ExportedProgram = export(resnet50, sample_input)
@@ -60,5 +66,6 @@ if __name__ == "__main__":
     exec_program = edge.to_executorch()
 
     quantize_tag = "q8" if args.quantize else "fp32"
-    with open(f"resnet50v1.5_xnnpack_{quantize_tag}.pte", "wb") as file:
+    os.makedirs("models-out", exist_ok=True)
+    with open(f"models-out/resnet50v15_xnnpack_{quantize_tag}.pte", "wb") as file:
         exec_program.write_to_file(file)
