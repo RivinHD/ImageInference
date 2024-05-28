@@ -54,4 +54,10 @@
     <string name="stop">Stop</string>
     <string name="inference_failed">Inference Failed!</string>
     <string name="no_data">No Data!</string>
+    <string name="add_collection">Add Collection</string>
+    <string name="change_collection">Change Collection</string>
+    <string name="remove_collection">Remove Collection</string>
+    <string name="name">Name</string>
+    <string name="default_image">Default Image</string>
+    <string name="matches_name_image">Shows the image that matches the name of the image.</string>
 </resources>

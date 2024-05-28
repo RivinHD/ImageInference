@@ -21,6 +21,7 @@ package com.neuralnetwork.imageinference.model
 
 import android.content.res.AssetManager
 import kotlin.io.path.Path
+import kotlin.io.path.name
 
 class ModelAssets(assets: AssetManager) {
 
@@ -53,7 +54,7 @@ class ModelAssets(assets: AssetManager) {
             }
 
             val path = Path(fileName)
-            val modelFileName: String = path.fileName.toString()
+            val modelFileName: String = path.name
             return _modelsNames.getOrDefault(modelFileName, modelFileName)
         }
 

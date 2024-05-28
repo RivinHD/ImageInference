@@ -83,6 +83,7 @@ class PhotoCameraViewModel : ViewModel() {
             val currentImage = image.toBitmap()
             _image.value = currentImage
             runModel(currentImage)
+            image.close()
         }
 
         override fun onError(exception: ImageCaptureException) {

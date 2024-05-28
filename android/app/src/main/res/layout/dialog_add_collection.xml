@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!--
+<?xml version="1.0" encoding="utf-8"?><!--
   ~  Copyright (c) 2024 by Vincent Gerlach. All rights reserved.
   ~
   ~  SPDX-License-Identifier: GPL-3.0-or-later
@@ -18,26 +17,16 @@
   ~  in the root folder of this project with the name LICENSE. If not, see <http://www.gnu.org/licenses/>.
   -->
 
-<menu xmlns:android="http://schemas.android.com/apk/res/android">
-    <item
-        android:id="@+id/image_selection_menu_add"
-        android:title="@string/add" />
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content">
 
-    <item
-        android:id="@+id/image_selection_menu_remove"
-        android:title="@string/remove" />
-
-    <item
-        android:id="@+id/image_selection_menu_change_collection"
-        android:title="@string/change_collection" />
-
-    <item
-        android:id="@+id/image_selection_menu_add_collection"
-        android:title="@string/add_collection" />
-
-    <item
-        android:id="@+id/image_selection_menu_remove_collection"
-        android:title="@string/remove_collection" />
-
-
-</menu>
+    <EditText
+        android:id="@+id/collection_name"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="@string/name"
+        android:inputType="text"
+        android:layout_margin="10dp"/>
+</LinearLayout>

@@ -39,12 +39,14 @@ class ModelExecutor(
 
     override fun run() {
 
+        // Based on https://pytorch.org/vision/main/models/generated/torchvision.models.resnet50.html
+        // ResNet50_Weights.IMAGENET1K_V2
         val input: Tensor = TensorImageUtils.bitmapToFloat32Tensor(
-            image.scale(256, 256, false),
-            6, // 256 - 244 = 12
-            6, // To center we have an offset of 6 pixels
-            244,
-            244,
+            image.scale(256, 256, true),
+            16, // 256 - 224 = 32
+            16, // To center we have an offset of 16 pixels
+            224,
+            224,
             TensorImageUtils.TORCHVISION_NORM_MEAN_RGB,
             TensorImageUtils.TORCHVISION_NORM_STD_RGB
         )

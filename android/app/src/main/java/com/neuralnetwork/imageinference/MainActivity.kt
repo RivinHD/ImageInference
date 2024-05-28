@@ -22,7 +22,11 @@ package com.neuralnetwork.imageinference
 import android.app.Activity
 import android.content.Context
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
+import android.system.ErrnoException
+import android.system.Os
+import android.util.Log
 import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
@@ -51,6 +55,19 @@ class MainActivity : AppCompatActivity(), ModelConnector {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Sets the library path for the Snapdragon Neural Processing Engine SDK.
+        // See https://developer.qualcomm.com/sites/default/files/docs/snpe/dsp_runtime.html for
+        // more information.
+        try {
+            Os.setenv("ADSP_LIBRARY_PATH", applicationInfo.nativeLibraryDir, true)
+        } catch (e: ErrnoException) {
+            Log.e(
+                "Snapdragon Neural Processing Engine SDK",
+                "Cannot set ADSP_LIBRARY_PATH",
+                e
+            )
+        }
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -117,8 +134,9 @@ class MainActivity : AppCompatActivity(), ModelConnector {
          * Check for the camera permission and ask if needed.
          *
          * @param context The context for the permission check.
+         * @return True if the permission is granted, false otherwise.
          */
-        fun checkCameraPermission(context: Context) {
+        fun checkCameraPermission(context: Context): Boolean {
             if (ContextCompat.checkSelfPermission(
                     context,
                     android.Manifest.permission.CAMERA
@@ -131,6 +149,55 @@ class MainActivity : AppCompatActivity(), ModelConnector {
                 )
             }
 
+            return ContextCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.CAMERA
+            ) == PackageManager.PERMISSION_GRANTED
+        }
+
+        /**
+         * Check for the image read permission and ask if needed.
+         *
+         * @param context The context for the permission check.
+         * @return True if the permission is granted, false otherwise.
+         */
+        fun checkImagePermission(context: Context): Boolean {
+            // Permission request logic
+            val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                arrayOf(
+                    android.Manifest.permission.READ_MEDIA_IMAGES,
+                    android.Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED
+                )
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                arrayOf(
+                    android.Manifest.permission.READ_MEDIA_IMAGES
+                )
+            } else {
+                arrayOf(
+                    android.Manifest.permission.READ_EXTERNAL_STORAGE
+                )
+            }
+
+            if (permissions.all {
+                    ContextCompat.checkSelfPermission(
+                        context,
+                        it
+                    ) != PackageManager.PERMISSION_GRANTED
+                }
+            ) {
+                ActivityCompat.requestPermissions(
+                    context as Activity,
+                    permissions,
+                    100
+                )
+            }
+
+            return permissions.all {
+                ContextCompat.checkSelfPermission(
+                    context,
+                    it
+                ) == PackageManager.PERMISSION_GRANTED
+            }
         }
 
         /**
