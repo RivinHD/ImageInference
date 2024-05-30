@@ -63,15 +63,6 @@ ulimit -n 4096
 # Install Flatc
 ./build/install_flatc.sh
 
-# Install buck2
-if [ ! -f /tmp/buck2 ]; then
-    pip3 install zstd
-    wget https://github.com/facebook/buck2/releases/download/2023-07-18/buck2-x86_64-unknown-linux-musl.zst
-    rm /tmp/buck2
-    zstd -cdq buck2-x86_64-unknown-linux-musl.zst > /tmp/buck2 && chmod +x /tmp/buck2
-    rm buck2-x86_64-unknown-linux-musl.zst
-fi
-
 # Download Android 
 cd "${BasePath}"
 if [ ! -d "${BasePath}/android/ndk/android-ndk-r26d" ]; then
@@ -92,7 +83,50 @@ cd submodules/executorch
 ./backends/qualcomm/scripts/build.sh
 cp backends/ "${BasePath}/miniconda3/envs/imageinfernce/lib/python3.10/site-packages/executorch/" -n -r
 
-# Build the requiered run time liberaries
+# Build the requiered run time liberary
+rm -rf cmake-android-out
+mkdir cmake-android-out
+cmake . -DCMAKE_INSTALL_PREFIX=cmake-android-out \
+    -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK/build/cmake/android.toolchain.cmake" \
+    -DANDROID_ABI="${ANDROID_ABI}" \
+    -DANDROID_NATIVE_API_LEVEL="${ANDROID_VERSION}" \
+    -DEXECUTORCH_BUILD_ANDROID_JNI=ON \
+    -DEXECUTORCH_BUILD_XNNPACK=ON \
+    -DEXECUTORCH_BUILD_QNN=ON \
+    -DQNN_SDK_ROOT="${QNN_SDK_ROOT}" \
+    -DEXECUTORCH_BUILD_EXTENSION_DATA_LOADER=ON \
+    -DEXECUTORCH_BUILD_EXTENSION_MODULE=ON \
+    -DFLATC_EXECUTABLE="${FLATC_EXECUTABLE}" \
+    -Bcmake-android-out
 
-cd "${BasePath}"/ImageInference
+    # For now Vulkan does not work properly and therefore is disabled
+    # -DEXECUTORCH_BUILD_VULKAN=ON \
+cmake --build cmake-android-out -j16 --target install
+
+# Build the android extension
+cmake extension/android \
+  -DCMAKE_TOOLCHAIN_FILE="${ANDROID_NDK}/build/cmake/android.toolchain.cmake" \
+  -DANDROID_ABI="${ANDROID_ABI}" \
+  -DCMAKE_INSTALL_PREFIX=cmake-android-out \
+  -DANDROID_PLATFORM="${ANDROID_VERSION}" \
+  -Bcmake-android-out/extension/android
+
+cmake --build cmake-android-out/extension/android -j16
+
+# Copy the needed libaraies to the android application
+mkdir -p "${BasePath}/ImageInference/android/app/src/main/jniLibs/${ANDROID_ABI}"
+yes | cp "cmake-android-out/extension/android/libexecutorch_jni.so" \
+    "${BasePath}/ImageInference/android/app/src/main/jniLibs/${ANDROID_ABI}"
+yes | cp "cmake-android-out/lib/libqnn_executorch_backend.so" \
+   "${BasePath}/ImageInference/android/app/src/main/jniLibs/${ANDROID_ABI}"
+yes | cp "${QNN_SDK_ROOT}/lib/aarch64-android/libQnnHtp.so" \
+    "${QNN_SDK_ROOT}/lib/aarch64-android/libQnnHtpV69Stub.so" \
+    "${QNN_SDK_ROOT}/lib/aarch64-android/libQnnHtpV73Stub.so" \
+    "${QNN_SDK_ROOT}/lib/aarch64-android/libQnnSystem.so" \
+    "${QNN_SDK_ROOT}/lib/hexagon-v69/unsigned/libQnnHtpV69Skel.so" \
+    "${QNN_SDK_ROOT}/lib/hexagon-v73/unsigned/libQnnHtpV73Skel.so" \
+    "${BasePath}/ImageInference/android/app/src/main/jniLibs/${ANDROID_ABI}"
+
+# Print the config for user verfication
+cd "${BasePath}/ImageInference"
 source config.sh

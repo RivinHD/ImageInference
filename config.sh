@@ -31,26 +31,28 @@ BasePath="$(cd -- "$BasePath" && pwd)"  # absolutized and normalized
 BasePath="$(dirname -- "$BasePath")" # go up one directory
 
 # ==============================================================================
-# YOU CAN ADJUST THE PATH TO THE VARIABLES BELOW
+# YOU CAN ADJUST THE VALUE OF THE VARIABLES BELOW
 
 # Export the required environment variables
-export QNN_SDK_ROOT="/opt/qcom/aistack/qairt/2.21.0.240401"
 export ANDROID_NDK="${BasePath}/android/ndk/android-ndk-r26d"
-export EXECUTORCH_ROOT="${BasePath}/submodules/executorch"
-export FLATC_EXECUTABLE="$(which -- flatc)"
-export LD_LIBRARY_PATH="${QNN_SDK_ROOT}/lib/x86_64-linux-clang/":$LD_LIBRARY_PATH
+export ANDROID_ABI="arm64-v8a"
+export ANDROID_VERSION="29"
+export QNN_SDK_ROOT="/opt/qcom/aistack/qairt/2.21.0.240401"
 export IMAGENET_DATASET_2012="${BasePath}/data/imagenet/ilsvrc_2012"
 
 # DO NOT EDIT ANY CODE OUTSIDE THIS SECTION
 # ==============================================================================
 
-echo "QNN_SDK_ROOT: $QNN_SDK_ROOT"
+# DO NOT EDIT THE CODE BELOW
+
+export FLATC_EXECUTABLE="$(which -- flatc)"
+export LD_LIBRARY_PATH="${QNN_SDK_ROOT}/lib/x86_64-linux-clang/":$LD_LIBRARY_PATH
 echo "ANDROID_NDK: $ANDROID_NDK"
-echo "EXECUTORCH_ROOT: $EXECUTORCH_ROOT"
+echo "ANDROID_ABI: $ANDROID_ABI"
+echo "ANDROID_VERSION: $ANDROID_VERSION"
+echo "QNN_SDK_ROOT: $QNN_SDK_ROOT"
+echo "IMAGENET_DATASET_2012: $IMAGENET_DATASET_2012"
 echo "FLATC_EXECUTABLE: $FLATC_EXECUTABLE"
 echo "LD_LIBRARY_PATH: $LD_LIBRARY_PATH"
-echo "IMAGENET_DATASET_2012: $IMAGENET_DATASET_2012"
-
-# DO NOT EDIT THE CODE BELOW
 
 export SETUP_DONE=1  # Mark the setup as done
