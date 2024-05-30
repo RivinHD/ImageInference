@@ -17,18 +17,15 @@
 
 import argparse
 import os
-
 import torch
 import torchvision.models as models
-from executorch.backends.xnnpack.partition.xnnpack_partitioner import \
-    XnnpackPartitioner
-from executorch.exir import EdgeCompileConfig, EdgeProgramManager, to_edge
-from torch.export import ExportedProgram, export
-from torchvision.models import ResNet50_Weights
 
-from .builder import quantize
-from ..datasets import getImageNet
+from torch.export import export, ExportedProgram
+from executorch.backends.vulkan.partitioner.vulkan_partitioner import VulkanPartitioner
+from torchvision.models import ResNet50_Weights
+from executorch.exir import EdgeProgramManager, to_edge
 from torch._export import capture_pre_autograd_graph
+from ..datasets import getImageNet
 
 if __name__ == "__main__":
 
@@ -43,27 +40,25 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    # Lowering the model to XNNPACK
+    # Lowering the model to Vulkan
     resnet50 = models.resnet50(weights=ResNet50_Weights.IMAGENET1K_V2).eval()
     sample_input = (torch.randn(1, 3, 224, 224),)
 
     resnet50 = capture_pre_autograd_graph(resnet50, sample_input)
 
-    compile_config = EdgeCompileConfig()
-
     if args.quantize:
         imagenet_dataset = getImageNet()
-        resnet50 = quantize(resnet50, imagenet_dataset)
-        compile_config = EdgeCompileConfig(_check_ir_validity=False)
+        # resnet50 = quantize(resnet50, imagenet_dataset)
+        raise RuntimeError("Vulkan currently does not support int8 quantization")
 
     exported_program: ExportedProgram = export(resnet50, sample_input)
-    edge: EdgeProgramManager = to_edge(exported_program, compile_config=compile_config)
+    edge: EdgeProgramManager = to_edge(exported_program)
 
-    edge = edge.to_backend(XnnpackPartitioner())
+    edge = edge.to_backend(VulkanPartitioner())
 
     exec_program = edge.to_executorch()
 
     quantize_tag = "q8" if args.quantize else "fp32"
     os.makedirs("models-out", exist_ok=True)
-    with open(f"models-out/resnet50v15_xnnpack_{quantize_tag}.pte", "wb") as file:
+    with open(f"models-out/resnet50v15_vulkan_{quantize_tag}.pte", "wb") as file:
         exec_program.write_to_file(file)

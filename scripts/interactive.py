@@ -23,7 +23,7 @@ MODELS = [
 HTP_QUALCOMM = "HTP (Qualcomm)"
 HARDWARE = [
     "CPU (XNNPACK)",
-    # "GPU (VULKAN)",
+    "GPU (VULKAN)",
     HTP_QUALCOMM,
 ]
 QUALCOMM_DEVICES = [
@@ -37,7 +37,7 @@ MODELS_TO_PYFILE = {
 }
 HARDWARE_TO_DIRECTORY = {
     "CPU (XNNPACK)": "xnnpack",
-    # "GPU (VULKAN)": "vulkan",
+    "GPU (VULKAN)": "vulkan",
     HTP_QUALCOMM: "htp",
 }
 EXECU_PACKAGE = "backend.execu_python"
@@ -133,9 +133,9 @@ def generate_command(
             package_path = ".".join([EXECU_PACKAGE, HARDWARE_TO_DIRECTORY[hw], MODELS_TO_PYFILE[model]])
             base_command = f"python -m {package_path}"
             if hw == HTP_QUALCOMM:
-                base_command = f"{base_command} -m {htp_device}"
+                base_command = f"{base_command} --model {htp_device}"
             if quantize:
-                commands.append(f"{base_command} -q")
+                commands.append(f"{base_command} --quantize")
             if non_quantize:
                 commands.append(base_command)
     return "; ".join(commands)

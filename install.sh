@@ -60,16 +60,6 @@ conda install -y numpy
 conda install -y scipy
 ulimit -n 4096
 
-# Compile Qnn
-# Workaround for fbs files in exir/_serialize
-cp schema/program.fbs exir/_serialize/program.fbs
-cp schema/scalar_type.fbs exir/_serialize/scalar_type.fbs
-
-# install Python APIs to correct import path
-# The filename might vary depending on your Python and host version.
-cp -f backends/qualcomm/PyQnnManagerAdaptor.cpython-310-x86_64-linux-gnu.so $EXECUTORCH_ROOT/backends/qualcomm/python
-cp -f backends/qualcomm/PyQnnWrapperAdaptor.cpython-310-x86_64-linux-gnu.so $EXECUTORCH_ROOT/backends/qualcomm/python
-
 # Install Flatc
 ./build/install_flatc.sh
 
@@ -100,6 +90,9 @@ source config.sh
 
 cd submodules/executorch
 ./backends/qualcomm/scripts/build.sh
+cp backends/ "${BasePath}/miniconda3/envs/imageinfernce/lib/python3.10/site-packages/executorch/" -n -r
+
+# Build the requiered run time liberaries
 
 cd "${BasePath}"/ImageInference
 source config.sh

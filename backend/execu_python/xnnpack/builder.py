@@ -19,11 +19,11 @@ from torch.ao.quantization.quantize_pt2e import convert_pt2e, prepare_pt2e
 from torch.ao.quantization.quantizer.xnnpack_quantizer import (
     XNNPACKQuantizer, get_symmetric_quantization_config)
 from torch.fx.graph_module import GraphModule
+import torch
 
 
 def quantize(model, dataset) -> GraphModule:
     """This is the official recommended flow for quantization in pytorch 2.0 export"""
-    print(f"Original model: {model}")
     quantizer = XNNPACKQuantizer()
     # if we set is_per_channel to True, we also need to add out_variant of quantize_per_channel/dequantize_per_channel
     operator_config = get_symmetric_quantization_config(is_per_channel=True)
@@ -33,5 +33,4 @@ def quantize(model, dataset) -> GraphModule:
     for data in dataset:
         m(data)
     m = convert_pt2e(m)
-    print(f"Quantized model: {m}")
     return m

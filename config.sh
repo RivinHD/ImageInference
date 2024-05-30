@@ -15,6 +15,7 @@
 #  You should have received a copy of the GNU General Public License
 #  in the root folder of this project with the name LICENSE. If not, see <http://www.gnu.org/licenses/>.
 
+# DO NOT EDIT THE CODE BELOW
 # Check sourced
 (return 0 2>/dev/null) && sourced=1 || sourced=0
 
@@ -29,13 +30,19 @@ BasePath="$(dirname -- "${BASH_SOURCE[0]}")"  # relative
 BasePath="$(cd -- "$BasePath" && pwd)"  # absolutized and normalized
 BasePath="$(dirname -- "$BasePath")" # go up one directory
 
+# ==============================================================================
+# YOU CAN ADJUST THE PATH TO THE VARIABLES BELOW
+
 # Export the required environment variables
 export QNN_SDK_ROOT="/opt/qcom/aistack/qairt/2.21.0.240401"
 export ANDROID_NDK="${BasePath}/android/ndk/android-ndk-r26d"
 export EXECUTORCH_ROOT="${BasePath}/submodules/executorch"
 export FLATC_EXECUTABLE="$(which -- flatc)"
 export LD_LIBRARY_PATH="${QNN_SDK_ROOT}/lib/x86_64-linux-clang/":$LD_LIBRARY_PATH
-export IMAGENET_DATASET_2012="/mnt/hd1/data/imagenet/ilsvrc_2012"
+export IMAGENET_DATASET_2012="${BasePath}/data/imagenet/ilsvrc_2012"
+
+# DO NOT EDIT ANY CODE OUTSIDE THIS SECTION
+# ==============================================================================
 
 echo "QNN_SDK_ROOT: $QNN_SDK_ROOT"
 echo "ANDROID_NDK: $ANDROID_NDK"
@@ -44,7 +51,6 @@ echo "FLATC_EXECUTABLE: $FLATC_EXECUTABLE"
 echo "LD_LIBRARY_PATH: $LD_LIBRARY_PATH"
 echo "IMAGENET_DATASET_2012: $IMAGENET_DATASET_2012"
 
-
-# DO NOT TOUCH THE CODE BELOW
+# DO NOT EDIT THE CODE BELOW
 
 export SETUP_DONE=1  # Mark the setup as done

@@ -14,19 +14,3 @@
 #
 #  You should have received a copy of the GNU General Public License
 #  in the root folder of this project with the name LICENSE. If not, see <http://www.gnu.org/licenses/>.
-
-from executorch.backends.qualcomm.quantizer.quantizer import (
-    QnnQuantizer,
-)
-from torch.ao.quantization.quantize_pt2e import convert_pt2e, prepare_pt2e
-from torch.fx.graph_module import GraphModule
-
-
-def quantize(model, dataset) -> GraphModule:
-    quantizer = QnnQuantizer()
-    m = prepare_pt2e(model, quantizer)
-    # calibration
-    for data in dataset:
-        m(data)
-    m = convert_pt2e(m)
-    return m

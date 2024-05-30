@@ -24,26 +24,27 @@ import torch.utils.data as data
 MAX_DATA_SIZE = 1500
 
 
-def getImageNet() -> data.Subset | data.Dataset:
+def getImageNet() -> data.RandomSampler:
     if "IMAGENET_DATASET_2012" not in os.environ:
         raise RuntimeError("Environment variable IMAGENET_DATASET_2012 must be set")
     print(f"IMAGENET_DATASET_2012={os.getenv('IMAGENET_DATASET_2012')}")
 
     dataset_path = os.getenv('IMAGENET_DATASET_2012')
-    # The IMAGENET1K_V1 transforms are chosen on purpose as it matches with the actions during inference.
+    # The IMAGENET1K_V1 transforms is chosen on purpose as it matches with the actions during inference.
     # For more information see: https://pytorch.org/vision/main/models/generated/torchvision.models.resnet50.html.
-    transformer = ResNet50_Weights.IMAGENET1K_V1.transforms
+    transformer = transforms.Compose([
+        transforms.Resize(256),
+        transforms.CenterCrop(224),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    ])
+
     dataset = datasets.ImageNet(
         root=dataset_path,
         split='val',
         transform=transformer
     )
 
-    data_loader = data.DataLoader(
-        dataset,
-        shuffle=True,
-    )
+    ran_sampler = data.RandomSampler(dataset, num_samples=MAX_DATA_SIZE)
 
-    if len(data_loader.dataset) > MAX_DATA_SIZE:
-        return data.Subset(data_loader.dataset, range(MAX_DATA_SIZE))
-    return data_loader.dataset
+    return (dataset[i][0].reshape(1, 3, 224, 224) for i in ran_sampler)

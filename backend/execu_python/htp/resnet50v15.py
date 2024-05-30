@@ -21,7 +21,7 @@ import os
 import torch
 import torchvision.models as models
 from executorch.exir import EdgeProgramManager, to_edge
-from torch.export import ExportedProgram
+from torch.export import ExportedProgram, export
 from torchvision.models import ResNet50_Weights
 from torch._export import capture_pre_autograd_graph
 from .builder import quantize
@@ -34,6 +34,18 @@ from executorch.backends.qualcomm.utils.utils import (
 )
 from executorch.exir.capture._config import ExecutorchBackendConfig
 from executorch.exir.passes.memory_planning_pass import MemoryPlanningPass
+from executorch.backends.qualcomm.serialization.qnn_compile_spec_schema import (
+    QcomChipset
+)
+from executorch.exir import ExirExportedProgram
+from executorch.exir.backend.backend_api import to_backend
+
+chipset_parse = {
+    "SM8650": QcomChipset.SM8650,
+    "SM8550": QcomChipset.SM8550,
+    "SM8475": QcomChipset.SM8475,
+    "SM8450": QcomChipset.SM8450,
+}
 
 if __name__ == "__main__":
 
@@ -75,27 +87,28 @@ if __name__ == "__main__":
         imagenet_dataset = getImageNet()
         resnet50 = quantize(resnet50, imagenet_dataset)
 
-    exported_program: ExportedProgram = capture_program(resnet50, sample_input).exported_program
-    edge: EdgeProgramManager = to_edge(exported_program)
+    exec_program: ExirExportedProgram = capture_program(resnet50, sample_input)
 
     backend_options = generate_htp_compiler_spec(
         use_fp16=False
     )
     qnn_partitioner = QnnPartitioner(
         generate_qnn_executorch_compiler_spec(
-            soc_model=args.model,
+            soc_model=chipset_parse[args.model],
             backend_options=backend_options,
             debug=False,
             saver=False,
             shared_buffer=False,
-        )
+        ),
+        skip_node_id_set=set(
+        ),
+        skip_node_op_set=set(
+        ),
     )
 
-    edge = edge.to_backend(qnn_partitioner)
+    exec_program.exported_program = to_backend(exec_program.exported_program, qnn_partitioner)
 
-    print(edge.exported_program().graph_module)
-
-    exec_program = edge.to_executorch(config=ExecutorchBackendConfig(
+    exec_program = exec_program.to_executorch(config=ExecutorchBackendConfig(
         extract_constant_segment=False,
         # For shared buffer, user must pass the memory address
         # which is allocated by RPC memory to executor runner.
