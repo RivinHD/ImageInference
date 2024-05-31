@@ -62,7 +62,11 @@ class VideoCameraFragment : Fragment(), DetailsConnector {
         val vm = ViewModelProvider(this)[VideoCameraViewModel::class.java]
         _binding = FragmentVideoCameraBinding.inflate(inflater, container, false)
         val root: View = binding.root
-        vm.model = (activity as ModelConnector).getModel()
+        val modelConnector = (activity as ModelConnector)
+        vm.model = modelConnector.getModel()
+        modelConnector.setOnModelChangedListener {
+            vm.model = it
+        }
 
         val videoRecord = binding.videoRecord
         val videoPreview = binding.videoPreview
@@ -108,6 +112,8 @@ class VideoCameraFragment : Fragment(), DetailsConnector {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        val modelConnector = (activity as ModelConnector)
+        modelConnector.setOnModelChangedListener(null)
         val vm = ViewModelProvider(this)[VideoCameraViewModel::class.java]
         vm.stopRecording()
         _binding = null

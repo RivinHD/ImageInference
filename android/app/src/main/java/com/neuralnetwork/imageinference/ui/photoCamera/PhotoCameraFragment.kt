@@ -35,6 +35,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.neuralnetwork.imageinference.MainActivity
 import com.neuralnetwork.imageinference.R
 import com.neuralnetwork.imageinference.databinding.FragmentPhotoCameraBinding
+import com.neuralnetwork.imageinference.model.ModelConnector
 import com.neuralnetwork.imageinference.ui.details.DetailsConnector
 import com.neuralnetwork.imageinference.ui.details.DetailsViewModel
 
@@ -64,6 +65,11 @@ class PhotoCameraFragment : Fragment(), DetailsConnector {
         val vm = ViewModelProvider(this)[PhotoCameraViewModel::class.java]
         _binding = FragmentPhotoCameraBinding.inflate(inflater, container, false)
         val root: View = binding.root
+        val modelConnector = (activity as ModelConnector)
+        vm.model = modelConnector.getModel()
+        modelConnector.setOnModelChangedListener {
+            vm.model = it
+        }
 
         val photoCapture = binding.photoCapture
         val photoView = binding.photoInferenceImage
@@ -140,6 +146,8 @@ class PhotoCameraFragment : Fragment(), DetailsConnector {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        val modelConnector = (activity as ModelConnector)
+        modelConnector.setOnModelChangedListener(null)
         cameraProviderFuture.cancel(true)
         _binding = null
     }

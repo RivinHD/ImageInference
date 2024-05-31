@@ -25,4 +25,5 @@ interface ModelConnector {
 
     fun getModel(): Module?
     fun getModelName(): String
+    fun setOnModelChangedListener(callback : ((m: Module?) -> Unit)?)
 }

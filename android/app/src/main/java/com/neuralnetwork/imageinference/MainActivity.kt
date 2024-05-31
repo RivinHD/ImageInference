@@ -52,6 +52,7 @@ class MainActivity : AppCompatActivity(), ModelConnector {
 
     private var module: Module? = null
     private var moduleName: String = ModelAssets.DEFAULT
+    private var _moduleChangedCallback: ((m: Module?) -> Unit)? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -117,12 +118,14 @@ class MainActivity : AppCompatActivity(), ModelConnector {
                 } else {
                     null
                 }
+                _moduleChangedCallback?.let { it(module) }
 
             }
 
             override fun onNothingSelected(parent: AdapterView<*>?) {
                 module?.destroy()
                 moduleName = ModelAssets.DEFAULT
+                _moduleChangedCallback?.let { it(null) }
             }
 
         }
@@ -234,6 +237,10 @@ class MainActivity : AppCompatActivity(), ModelConnector {
 
     override fun getModelName(): String {
         return moduleName
+    }
+
+    override fun setOnModelChangedListener(callback: ((m: Module?) -> Unit)?) {
+        _moduleChangedCallback = callback
     }
 
 }

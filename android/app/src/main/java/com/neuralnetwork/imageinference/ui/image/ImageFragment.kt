@@ -71,7 +71,11 @@ class ImageFragment : Fragment(), DetailsConnector {
         }
         _binding = FragmentImageBinding.inflate(inflater, container, false)
         val root: View = binding.root
-        vm.model = (activity as ModelConnector).getModel()
+        val modelConnector = (activity as ModelConnector)
+        vm.model = modelConnector.getModel()
+        modelConnector.setOnModelChangedListener {
+            vm.model = it
+        }
 
         val inferenceImage = binding.imageInferenceImage
         val imageSelection = binding.imageSelection
@@ -203,6 +207,8 @@ class ImageFragment : Fragment(), DetailsConnector {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        val modelConnector = (activity as ModelConnector)
+        modelConnector.setOnModelChangedListener(null)
         _binding = null
     }
 
