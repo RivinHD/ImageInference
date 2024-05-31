@@ -33,6 +33,7 @@ import com.neuralnetwork.imageinference.datastore.DataStoreViewModel
 import com.neuralnetwork.imageinference.model.ModelExecutor
 import com.neuralnetwork.imageinference.ui.details.DetailsViewModel
 import com.neuralnetwork.imageinference.ui.details.ModelDetails
+import com.neuralnetwork.imageinference.ui.details.ModelState
 import com.neuralnetwork.imageinference.ui.details.containers.ModelInputType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -90,7 +91,9 @@ class ImageViewModel(dataStore: DataStore<ImageCollections>) :
     private val _details = MutableLiveData<ModelDetails>().apply {
         this.value = ModelDetails(ModelInputType.IMAGE)
     }
-    private val _modelSuccess = MutableLiveData<Boolean>()
+    private val _modelSuccess = MutableLiveData<ModelState>().apply {
+        value = ModelState.INITIAL
+    }
 
     private val _detailsViewModel = DetailsViewModel(_details, _modelSuccess)
 
@@ -155,7 +158,7 @@ class ImageViewModel(dataStore: DataStore<ImageCollections>) :
      * If the image already exists nothing happens.
      * If the name of the image already exists a count is added with syntax (<count>).
      *
-     * @param uri The uri of the image to add.
+     * @param uris The uri of the images to add.
      * @return true on success.
      */
     fun addImages(uris: List<Uri>): Boolean {
@@ -322,36 +325,37 @@ class ImageViewModel(dataStore: DataStore<ImageCollections>) :
     fun runModel(resolver: ContentResolver) {
         val module: Module? = model
         if (module == null) {
-            _modelSuccess.value = false
+            _modelSuccess.value = ModelState.FAILED
             return
         }
 
         val details: ModelDetails? = _details.value
         if (details == null) {
-            _modelSuccess.value = false
+            _modelSuccess.value = ModelState.FAILED
             return
         }
 
         val image = selectedImage.value
         if (image == null || image == Image.default()) {
-            _modelSuccess.value = false
+            _modelSuccess.value = ModelState.FAILED
             return
         }
 
         if (image == inferencedImage) {
-            _modelSuccess.value = true
+            _modelSuccess.value = ModelState.FAILED
             return
         }
 
         inferencedImage = image
 
         val bitmap: Bitmap = image.getBitmap(resolver)
+        _modelSuccess.value = ModelState.RUNNING
         viewModelScope.launch(Dispatchers.Default) {
             val executor = ModelExecutor(module, bitmap, details)
             executor.run()
             withContext(Dispatchers.Main) {
                 _details.value = executor.details
-                _modelSuccess.value = true
+                _modelSuccess.value = ModelState.SUCCESS
             }
         }
     }

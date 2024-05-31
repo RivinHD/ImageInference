@@ -34,6 +34,7 @@ import androidx.lifecycle.viewModelScope
 import com.neuralnetwork.imageinference.model.ModelExecutor
 import com.neuralnetwork.imageinference.ui.details.DetailsViewModel
 import com.neuralnetwork.imageinference.ui.details.ModelDetails
+import com.neuralnetwork.imageinference.ui.details.ModelState
 import com.neuralnetwork.imageinference.ui.details.containers.ModelInputType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -46,7 +47,7 @@ class VideoCameraViewModel : ViewModel(), ImageAnalysis.Analyzer {
         value = ModelDetails(ModelInputType.VIDEO)
     }
 
-    private val _modelSuccess = MutableLiveData<Boolean>()
+    private val _modelSuccess = MutableLiveData<ModelState>()
 
     private val _isRecording = MutableLiveData<Boolean>().apply {
         value = false
@@ -91,22 +92,23 @@ class VideoCameraViewModel : ViewModel(), ImageAnalysis.Analyzer {
     private fun runModel(image: Bitmap) {
         val module: Module? = model
         if (module == null) {
-            _modelSuccess.value = false
+            _modelSuccess.value = ModelState.FAILED
             return
         }
 
         val details: ModelDetails? = _details.value
         if (details == null){
-            _modelSuccess.value = false
+            _modelSuccess.value = ModelState.FAILED
             return
         }
 
+        _modelSuccess.value = ModelState.RUNNING
         viewModelScope.launch(Dispatchers.Default) {
             val executor = ModelExecutor(module, image, details)
             executor.run()
             withContext(Dispatchers.Main) {
                 _details.value = executor.details
-                _modelSuccess.value = true
+                _modelSuccess.value = ModelState.SUCCESS
             }
         }
     }

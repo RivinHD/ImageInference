@@ -38,6 +38,7 @@ import com.neuralnetwork.imageinference.databinding.FragmentPhotoCameraBinding
 import com.neuralnetwork.imageinference.model.ModelConnector
 import com.neuralnetwork.imageinference.ui.details.DetailsConnector
 import com.neuralnetwork.imageinference.ui.details.DetailsViewModel
+import com.neuralnetwork.imageinference.ui.details.ModelState
 
 class PhotoCameraFragment : Fragment(), DetailsConnector {
 
@@ -109,16 +110,22 @@ class PhotoCameraFragment : Fragment(), DetailsConnector {
         }
 
         vm.modelSuccess.observe(viewLifecycleOwner) {
-            val colorID = if (it) {
-                R.color.success_green
-            } else {
-                R.color.fail_red
+
+
+            val colorID =  when (it) {
+                ModelState.INITIAL -> return@observe
+                ModelState.RUNNING -> R.color.loading
+                ModelState.SUCCESS -> R.color.success_green
+                ModelState.FAILED -> R.color.fail_red
+                null -> return@observe
             }
 
-            val drawableID = if (it) {
-                R.drawable.ic_check_google
-            } else {
-                R.drawable.ic_close_google
+            val drawableID = when (it) {
+                ModelState.INITIAL -> return@observe
+                ModelState.RUNNING -> R.drawable.inference
+                ModelState.SUCCESS -> R.drawable.ic_check_google
+                ModelState.FAILED -> R.drawable.ic_close_google
+                null -> return@observe
             }
 
             val drawable = ContextCompat.getDrawable(_context, drawableID)

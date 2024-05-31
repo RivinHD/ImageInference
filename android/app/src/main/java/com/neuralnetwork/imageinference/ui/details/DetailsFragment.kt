@@ -82,11 +82,22 @@ class DetailsFragment : Fragment() {
         )
 
         vm.success.observe(viewLifecycleOwner) {
-            information.visibility = if (it != true) View.VISIBLE else View.INVISIBLE
+            information.visibility = when (it) {
+                null, ModelState.INITIAL, ModelState.RUNNING, ModelState.FAILED -> View.VISIBLE
+                ModelState.SUCCESS -> View.INVISIBLE
+            }
             information.text = getString(
-                if (it == null) R.string.no_data else R.string.inference_failed
+                when (it) {
+                    null, ModelState.INITIAL -> R.string.no_data
+                    ModelState.RUNNING -> R.string.inference_running
+                    ModelState.SUCCESS -> R.string.inference_successful
+                    ModelState.FAILED -> R.string.inference_failed
+                }
             )
-            detailsView.visibility = if (it == true) View.VISIBLE else View.INVISIBLE
+            detailsView.visibility = when (it) {
+                null, ModelState.INITIAL, ModelState.RUNNING, ModelState.FAILED -> View.INVISIBLE
+                ModelState.SUCCESS -> View.VISIBLE
+            }
         }
 
         vm.details.observe(viewLifecycleOwner) {

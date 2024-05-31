@@ -33,6 +33,7 @@ import androidx.lifecycle.viewModelScope
 import com.neuralnetwork.imageinference.model.ModelExecutor
 import com.neuralnetwork.imageinference.ui.details.DetailsViewModel
 import com.neuralnetwork.imageinference.ui.details.ModelDetails
+import com.neuralnetwork.imageinference.ui.details.ModelState
 import com.neuralnetwork.imageinference.ui.details.containers.ModelInputType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -45,7 +46,9 @@ class PhotoCameraViewModel : ViewModel() {
         this.value = ModelDetails(ModelInputType.PHOTO)
     }
 
-    private val _modelSuccess = MutableLiveData<Boolean>()
+    private val _modelSuccess = MutableLiveData<ModelState>().apply {
+        value = ModelState.INITIAL
+    }
 
     private val _detailsViewModel = DetailsViewModel(_details, _modelSuccess)
 
@@ -75,7 +78,7 @@ class PhotoCameraViewModel : ViewModel() {
 
     val image: LiveData<Bitmap?> = _image
 
-    val modelSuccess: LiveData<Boolean> = _modelSuccess
+    val modelSuccess: LiveData<ModelState> = _modelSuccess
 
     val onImageCaptureCallback = object : ImageCapture.OnImageCapturedCallback() {
         override fun onCaptureSuccess(image: ImageProxy) {
@@ -88,29 +91,30 @@ class PhotoCameraViewModel : ViewModel() {
 
         override fun onError(exception: ImageCaptureException) {
             super.onError(exception)
-            _modelSuccess.value = false
+            _modelSuccess.value = ModelState.FAILED
         }
     }
 
     fun runModel(image: Bitmap) {
         val module: Module? = model
         if (module == null) {
-            _modelSuccess.value = false
+            _modelSuccess.value = ModelState.FAILED
             return
         }
 
         val details: ModelDetails? = _details.value
         if (details == null) {
-            _modelSuccess.value = false
+            _modelSuccess.value = ModelState.FAILED
             return
         }
 
+        _modelSuccess.value = ModelState.RUNNING
         viewModelScope.launch(Dispatchers.Default) {
             val executor = ModelExecutor(module, image, details)
             executor.run()
             withContext(Dispatchers.Main) {
                 _details.value = executor.details
-                _modelSuccess.value = true
+                _modelSuccess.value = ModelState.SUCCESS
             }
         }
     }

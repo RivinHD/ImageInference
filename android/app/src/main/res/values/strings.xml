@@ -60,4 +60,6 @@
     <string name="name">Name</string>
     <string name="default_image">Default Image</string>
     <string name="matches_name_image">Shows the image that matches the name of the image.</string>
+    <string name="inference_running">Inference running</string>
+    <string name="inference_successful">Inference successful</string>
 </resources>

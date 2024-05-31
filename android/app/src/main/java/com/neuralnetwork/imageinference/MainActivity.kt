@@ -22,7 +22,6 @@ package com.neuralnetwork.imageinference
 import android.app.Activity
 import android.content.Context
 import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
 import android.system.ErrnoException
 import android.system.Os
@@ -156,51 +155,6 @@ class MainActivity : AppCompatActivity(), ModelConnector {
                 context,
                 android.Manifest.permission.CAMERA
             ) == PackageManager.PERMISSION_GRANTED
-        }
-
-        /**
-         * Check for the image read permission and ask if needed.
-         *
-         * @param context The context for the permission check.
-         * @return True if the permission is granted, false otherwise.
-         */
-        fun checkImagePermission(context: Context): Boolean {
-            // Permission request logic
-            val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                arrayOf(
-                    android.Manifest.permission.READ_MEDIA_IMAGES,
-                    android.Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED
-                )
-            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                arrayOf(
-                    android.Manifest.permission.READ_MEDIA_IMAGES
-                )
-            } else {
-                arrayOf(
-                    android.Manifest.permission.READ_EXTERNAL_STORAGE
-                )
-            }
-
-            if (permissions.all {
-                    ContextCompat.checkSelfPermission(
-                        context,
-                        it
-                    ) != PackageManager.PERMISSION_GRANTED
-                }
-            ) {
-                ActivityCompat.requestPermissions(
-                    context as Activity,
-                    permissions,
-                    100
-                )
-            }
-
-            return permissions.all {
-                ContextCompat.checkSelfPermission(
-                    context,
-                    it
-                ) == PackageManager.PERMISSION_GRANTED
-            }
         }
 
         /**

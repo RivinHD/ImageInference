@@ -19,18 +19,9 @@
 
 package com.neuralnetwork.imageinference.ui.details
 
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
-
-class DetailsViewModel(modelDetail : MutableLiveData<ModelDetails>? = null, modelSuccess : MutableLiveData<ModelState>? = null) : ViewModel() {
-
-    private val _details = modelDetail ?: MutableLiveData<ModelDetails>()
-
-    private val _success = modelSuccess ?: MutableLiveData<ModelState>()
-
-    val details : LiveData<ModelDetails> = _details
-
-    val success : LiveData<ModelState> = _success
-
+enum class ModelState {
+    INITIAL,
+    RUNNING,
+    SUCCESS,
+    FAILED
 }
