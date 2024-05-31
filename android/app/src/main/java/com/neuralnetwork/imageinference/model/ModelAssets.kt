@@ -41,7 +41,11 @@ class ModelAssets(assets: AssetManager) {
 
     companion object {
         private val _modelsNames: Map<String, String> = mapOf(
-            "test.pte" to "test"
+            // "filename" to "display name"
+            "resnet50v15_htp_fp32.pte" to "Resnet50v1.5 (HTP, FP32)",
+            "resnet50v15_htp_q8.pte" to "Resnet50v1.5 (HTP, Int8)",
+            "resnet50v15_xnnpack_fp32.pte" to "Resnet50v1.5 (CPU, FP32)",
+            "resnet50v15_xnnpack_q8.pte" to "Resnet50v1.5 (CPU, Int8)"
         )
         private val _modelsValues: Map<String, String> =
             _modelsNames.map { it.value to it.key }.toMap()
