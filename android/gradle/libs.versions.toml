@@ -22,6 +22,8 @@ datastore = "1.1.1"
 protobufJavaLite = "4.27.0"
 protobuf = "0.9.4"
 activity = "1.9.0"
+soloader = "0.10.5"
+fbjni = "0.5.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -47,6 +49,8 @@ org-pytorch-executorch = { group = "org.pytorch.executorch", name = "executorch"
 androidx-datastore-datastore = { group = "androidx.datastore", name = "datastore", version.ref = "datastore" }
 com-google-protobuf-protobuf-javalite = { group = "com.google.protobuf", name = "protobuf-javalite", version.ref = "protobufJavaLite" }
 androidx-activity-activity = { group = "androidx.activity", name = "activity", version.ref = "activity" }
+com-facebook-soloader = { group = "com.facebook.soloader", name = "soloader", version.ref = "soloader" }
+com-facebook-fbjni = { group = "com.facebook.fbjni", name = "fbjni", version.ref = "fbjni"}
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

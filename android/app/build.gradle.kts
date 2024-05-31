@@ -56,10 +56,17 @@ android {
     buildFeatures {
         viewBinding = true
     }
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
+    }
 }
 
 dependencies {
-    implementation(libs.org.pytorch.executorch)
+    implementation(libs.org.pytorch.executorch) {
+        exclude("com.facebook.fbjni", "fbjni-java-only")
+    }
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
@@ -79,6 +86,8 @@ dependencies {
     implementation(libs.androidx.camera.core)
     implementation(libs.androidx.datastore.datastore)
     implementation(libs.com.google.protobuf.protobuf.javalite)
+    implementation(libs.com.facebook.soloader)
+    implementation(libs.com.facebook.fbjni)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

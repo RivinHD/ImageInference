@@ -97,6 +97,8 @@ cmake . -DCMAKE_INSTALL_PREFIX=cmake-android-out \
     -DEXECUTORCH_BUILD_EXTENSION_DATA_LOADER=ON \
     -DEXECUTORCH_BUILD_EXTENSION_MODULE=ON \
     -DFLATC_EXECUTABLE="${FLATC_EXECUTABLE}" \
+    -DEXECUTORCH_BUILD_KERNELS_OPTIMIZED=ON \
+    -DCMAKE_BUILD_TYPE=Release \
     -Bcmake-android-out
 
     # For now Vulkan does not work properly and therefore is disabled
@@ -109,6 +111,7 @@ cmake extension/android \
   -DANDROID_ABI="${ANDROID_ABI}" \
   -DCMAKE_INSTALL_PREFIX=cmake-android-out \
   -DANDROID_PLATFORM="${ANDROID_VERSION}" \
+  -DCMAKE_BUILD_TYPE=Release \
   -Bcmake-android-out/extension/android
 
 cmake --build cmake-android-out/extension/android -j16
