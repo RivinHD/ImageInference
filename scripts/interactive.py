@@ -16,6 +16,7 @@
 #  in the root folder of this project with the name LICENSE. If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import shutil
 
 MODELS = [
     "resnet50v1.5",
@@ -141,6 +142,13 @@ def generate_command(
     return "; ".join(commands)
 
 
+def ask_copy_to_assets() -> bool:
+    text = input("Should the generated models by copied to the android app? (y/n) > ").strip().lower()
+    while not (text.startswith("y") or text.startswith("n")):
+        text = input("Please enter y or n > ")
+    return text.startswith("y")
+
+
 if __name__ == "__main__":
 
     # Ask for models
@@ -183,3 +191,11 @@ if __name__ == "__main__":
         exit(0)
 
     os.system(command)
+
+    # Ask to copy into android assets
+    copy = ask_copy_to_assets()
+    if copy:
+        print("Copying models to android app.")
+        sourceDirectory = os.path.join(working_directory, "models-out")
+        destinationDirectory = os.path.join(working_directory, "android", "app", "src", "main", "assets")
+        shutil.copytree(sourceDirectory, destinationDirectory)
