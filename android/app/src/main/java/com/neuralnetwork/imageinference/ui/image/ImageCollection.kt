@@ -48,7 +48,7 @@ data class ImageCollection(private val _name: String, private val imageList: Lis
             *
             * @return The created default image collection.
             */
-            fun default(): ImageCollection = ImageCollection("Default", listOf())
+            val DEFAULT: ImageCollection = ImageCollection("Default", listOf())
         }
 
         /**

@@ -22,15 +22,13 @@ package com.neuralnetwork.imageinference.ui.image
 import android.content.ContentResolver
 import android.graphics.Bitmap
 import android.net.Uri
-import android.view.View
-import android.widget.AdapterView
 import androidx.datastore.core.DataStore
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.neuralnetwork.imageinference.ImageCollections
 import com.neuralnetwork.imageinference.datastore.DataStoreViewModel
-import com.neuralnetwork.imageinference.model.ModelExecutor
+import com.neuralnetwork.imageinference.model.Model
 import com.neuralnetwork.imageinference.ui.details.DetailsViewModel
 import com.neuralnetwork.imageinference.ui.details.ModelDetails
 import com.neuralnetwork.imageinference.ui.details.ModelState
@@ -38,15 +36,26 @@ import com.neuralnetwork.imageinference.ui.details.containers.ModelInputType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.pytorch.executorch.Module
 
+/**
+ * The view model for the image fragment.
+ *
+ * @constructor Creates an empty image view model.
+ *
+ * @param dataStore The stored data that is used for the image collections.
+ */
 class ImageViewModel(dataStore: DataStore<ImageCollections>) :
     DataStoreViewModel<ImageCollections>(dataStore) {
+    /**
+     * Holds the image that is used for inference.
+     */
+    private var inferencedImage: Image = Image.DEFAULT
 
-    private var inferencedImage: Image = Image.default()
-
+    /**
+     * Holds the image collections that store all images for inference.
+     */
     private val _collections = MutableLiveData<MutableList<ImageCollection>>().apply {
-        value = mutableListOf(ImageCollection.default())
+        value = mutableListOf(ImageCollection.DEFAULT)
         viewModelScope.launch {
             dataStore.data.collect {
                 var data = MutableList(it.imageCollectionCount) { collectionIndex ->
@@ -59,7 +68,7 @@ class ImageViewModel(dataStore: DataStore<ImageCollections>) :
                 val selectedCollectionIndex: Int
                 val selectedImageIndex: Int
                 if (data.isEmpty()) {
-                    data = mutableListOf(ImageCollection.default())
+                    data = mutableListOf(ImageCollection.DEFAULT)
                     selectedCollectionIndex = 0
                     selectedImageIndex = -1
                 } else {
@@ -69,89 +78,99 @@ class ImageViewModel(dataStore: DataStore<ImageCollections>) :
                 }
                 value = data
                 _selectedCollection.value = data[selectedCollectionIndex]
-                _images.value = data[selectedCollectionIndex].images
-                if (selectedImageIndex != -1) {
-                    _selectedImage.value = data[selectedCollectionIndex].images[selectedImageIndex]
+                val images = data[selectedCollectionIndex].images
+                _images.value = images
+                if (images.isNotEmpty() && selectedImageIndex != -1) {
+                    _selectedImage.value = images[selectedImageIndex]
+                    _hasNext.value = images.size > 1
+                    _hasBefore.value = images.size > 1
                 }
 
             }
         }
     }
 
+    /**
+     * Holds the selected collection.
+     */
     private val _selectedCollection = MutableLiveData<ImageCollection>().apply {
-        value = ImageCollection.default()
+        value = ImageCollection.DEFAULT
     }
 
+    /**
+     * Holds the images of the selected collection.
+     */
     private val _images = MutableLiveData<List<Image>>()
 
+    /**
+     * Holds the selected image for inference.
+     */
     private var _selectedImage = MutableLiveData<Image>().apply {
-        value = Image.default()
+        value = Image.DEFAULT
     }
 
+    /**
+     * Holds the details that are update by the model and displayed by the details fragment.
+     */
     private val _details = MutableLiveData<ModelDetails>().apply {
         this.value = ModelDetails(ModelInputType.IMAGE)
     }
-    private val _modelSuccess = MutableLiveData<ModelState>().apply {
+
+    /**
+     * Holds the state of the model.
+     */
+    private val _modelState = MutableLiveData<ModelState>().apply {
         value = ModelState.INITIAL
     }
 
-    private val _detailsViewModel = DetailsViewModel(_details, _modelSuccess)
+    /**
+     * Holds the details view model that is provided to the details fragment.
+     */
+    private val _detailsViewModel = DetailsViewModel(_details, _modelState)
 
+    /**
+     * Holds the state if a next image is available.
+     */
     private val _hasNext = MutableLiveData<Boolean>().apply {
         value = false
     }
+
+    /**
+     * Holds the state if a before image is available.
+     */
     private val _hasBefore = MutableLiveData<Boolean>().apply {
         value = false
     }
 
+    /**
+     * Gets the detail view model for the details fragment.
+     */
     val detailsViewModel get() = _detailsViewModel
 
-    var model: Module? = null
+    /**
+     * Gets or sets the model for the inference.
+     */
+    var model: Model? = null
 
     /**
-     * The images that are used for inference.
+     * Gets the images that are used for inference.
      */
     val images: LiveData<List<Image>> = _images
 
     /**
-     * The current selected image for inference.
+     * Gets the current selected image for inference.
      */
     val selectedImage: LiveData<Image> = _selectedImage
 
+    /**
+     * Gets the has next state.
+     */
     val hasNext: LiveData<Boolean> = _hasNext
 
+    /**
+     * Gets the has before state.
+     */
     val hasBefore: LiveData<Boolean> = _hasBefore
-
-    val onImageSelectedListener = object : AdapterView.OnItemSelectedListener {
-        override fun onItemSelected(
-            parent: AdapterView<*>?,
-            view: View?,
-            position: Int,
-            id: Long
-        ) {
-            val image = parent?.getItemAtPosition(position) as Image
-            selectImage(image.name)
-        }
-
-        override fun onNothingSelected(parent: AdapterView<*>?) {
-            selectNothing()
-        }
-
-    }
-
-    /**
-     * OnClickListener that selects the before image.
-     */
-    val onBeforeClickListener = View.OnClickListener {
-        selectBefore()
-    }
-
-    /**
-     * OnClickListener that selects the next image.
-     */
-    val onNextClickListener = View.OnClickListener {
-        selectNext()
-    }
 
     /**
      * Adds an image to the current set for inference.
@@ -163,7 +182,7 @@ class ImageViewModel(dataStore: DataStore<ImageCollections>) :
      */
     fun addImages(uris: List<Uri>): Boolean {
         val selectedCollection = getSelectedCollection()
-        var image: Image = Image.default()
+        var image: Image = Image.DEFAULT
         for (uri in uris) {
             val images = _images.value ?: continue
             if (images.any { it.uri == uri }) {
@@ -184,7 +203,7 @@ class ImageViewModel(dataStore: DataStore<ImageCollections>) :
             selectedCollection.addImage(image)
         }
 
-        if (image == Image.default()) {
+        if (image == Image.DEFAULT) {
             return false
         }
 
@@ -224,39 +243,77 @@ class ImageViewModel(dataStore: DataStore<ImageCollections>) :
         _selectedImage.value = _images.value?.first { it.name == name }
     }
 
+    /**
+     * Get the name of the collections.
+     *
+     * @return The names of the collections.
+     */
     fun getCollectionsNames(): List<String> {
         return _collections.value?.map { it.name } ?: emptyList()
     }
 
+    /**
+     * Get the selected collection index.
+     *
+     * @return The index of the selected collection.
+     */
     fun getSelectedCollectionIndex(): Int {
-        return _collections.value?.indexOf(getSelectedCollection()) ?: -1
+        return _collections.value?.indexOf(_selectedCollection.value) ?: 0
     }
 
+    /**
+     * Changes the selected collection.
+     * This also updates the available images and the selected image.
+     * Nothing happens if the collection doesn't exists.
+     *
+     * @param name The name of the collection to change to.
+     */
     fun changeCollection(name: String) {
         val collection = _collections.value?.first { it.name == name }
-        if (collection != null) {
-            _selectedCollection.value = collection
-            _images.value = collection.images
-            _selectedImage.value = collection.images.firstOrNull()
+        if (collection == null) {
+            return
         }
+
+        _selectedCollection.value = collection
+        _images.value = collection.images
+        _selectedImage.value = collection.images.firstOrNull() ?: Image.DEFAULT
     }
 
+    /**
+     * Add a collection to the list of collections and select this collection.
+     * If the name of the collection already exists a count is added with syntax (<count>).
+     *
+     * @param name The name of the new collection.
+     */
     fun addCollection(name: String) {
         val collections = _collections.value ?: return
-        val new = ImageCollection(name, listOf())
+
+        val collectionNames = collections.map { it.name }
+        var newName = name
+        var count = 1
+        while (collectionNames.contains(newName)) {
+            newName = newName.split('(', limit = 2)[0].removeSuffix(" ")
+            newName += " (${count})"
+            count++
+        }
+
+        val new = ImageCollection(newName, listOf())
         collections.add(new)
         _collections.value = collections
         _selectedCollection.value = new
         _images.value = new.images
-        _selectedImage.value = Image.default()
+        _selectedImage.value = Image.DEFAULT
 
     }
 
+    /**
+     * Removes the selected collection and selects the first collection.
+     */
     fun removeCollection() {
         val collection = getSelectedCollection()
         val collections = _collections.value ?: return
 
-        if (collections.size == 1) {
+        if (collections.size == 1 || collection == ImageCollection.DEFAULT) {
             return
         }
 
@@ -264,15 +321,7 @@ class ImageViewModel(dataStore: DataStore<ImageCollections>) :
         _collections.value = collections
         _selectedCollection.value = collections.first()
         _images.value = collections.first().images
-        _selectedImage.value = Image.default()
-    }
-
-    private fun getSelectedCollection(): ImageCollection {
-        val selectedCollection = _selectedCollection.value ?: ImageCollection.default()
-        if (selectedCollection == ImageCollection.default()) {
-            _selectedCollection.value = selectedCollection
-        }
-        return selectedCollection
+        _selectedImage.value = Image.DEFAULT
     }
 
     /**
@@ -280,7 +329,7 @@ class ImageViewModel(dataStore: DataStore<ImageCollections>) :
      *
      * @return true if a next image was found.
      */
-    private fun selectNext() {
+    fun selectNext() {
         val imagesValue = _images.value
         if (imagesValue == null) {
             _hasNext.value = false
@@ -299,7 +348,7 @@ class ImageViewModel(dataStore: DataStore<ImageCollections>) :
      *
      * @return true if a next image was found.
      */
-    private fun selectBefore() {
+    fun selectBefore() {
         val imagesValue = _images.value
         if (imagesValue == null) {
             _hasBefore.value = false
@@ -316,47 +365,92 @@ class ImageViewModel(dataStore: DataStore<ImageCollections>) :
     }
 
     /**
-     * Selects the default image.
+     * Run the current model on the selected image.
+     *
+     * @param resolver The content resolver to get the bitmap from the uri.
      */
-    private fun selectNothing() {
-        _selectedImage.value = Image.default()
-    }
-
     fun runModel(resolver: ContentResolver) {
-        val module: Module? = model
-        if (module == null) {
-            _modelSuccess.value = ModelState.FAILED
+        val fixedModel: Model? = model
+        if (fixedModel == null) {
+            _modelState.value = ModelState.FAILED
             return
         }
 
         val details: ModelDetails? = _details.value
         if (details == null) {
-            _modelSuccess.value = ModelState.FAILED
+            _modelState.value = ModelState.FAILED
             return
         }
 
         val image = selectedImage.value
-        if (image == null || image == Image.default()) {
-            _modelSuccess.value = ModelState.FAILED
+        if (image == null || image == Image.DEFAULT) {
+            _modelState.value = ModelState.FAILED
             return
         }
 
         if (image == inferencedImage) {
-            _modelSuccess.value = ModelState.FAILED
+            _modelState.value = ModelState.FAILED
             return
         }
 
         inferencedImage = image
 
         val bitmap: Bitmap = image.getBitmap(resolver)
-        _modelSuccess.value = ModelState.RUNNING
+        _modelState.value = ModelState.RUNNING
         viewModelScope.launch(Dispatchers.Default) {
-            val executor = ModelExecutor(module, bitmap, details)
-            executor.run()
+            val outputDetails = fixedModel.run(bitmap, details)
             withContext(Dispatchers.Main) {
-                _details.value = executor.details
-                _modelSuccess.value = ModelState.SUCCESS
+                _details.value = outputDetails
+                _modelState.value = ModelState.SUCCESS
             }
         }
+    }
+
+    /**
+     * Saved the image collections to the system using data store.
+     *
+     * @param dataStore The data store object to write to.
+     */
+    fun saveDatastore(dataStore: DataStore<ImageCollections>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            dataStore.updateData { data ->
+                data.toBuilder()
+                    .clearImageCollection()
+                    .addAllImageCollection(_collections.value?.map { collection ->
+                        ImageCollections.ImageCollection.newBuilder()
+                            .setName(collection.name)
+                            .addAllImage(collection.images.map { image ->
+                                ImageCollections.ImageCollection.Image.newBuilder()
+                                    .setName(image.name)
+                                    .setUri(image.uri.toString())
+                                    .build()
+                            })
+                            .build()
+                    } ?: listOf(
+                        ImageCollections.ImageCollection.newBuilder()
+                            .setName(ImageCollection.DEFAULT.name)
+                            .build()
+                    ))
+                    .setSelectedImageCollectionIndex(
+                        getSelectedCollectionIndex()
+                    )
+                    .build()
+            }
+        }
+    }
+
+    /**
+     * Gets the selected collection.
+     * If no collection is selected the first or default collection is selected.
+     */
+    private fun getSelectedCollection(): ImageCollection {
+        val selectedCollection = _selectedCollection.value
+        if (selectedCollection == null) {
+            val collections = _collections.value
+            val selection = collections?.first() ?: ImageCollection.DEFAULT
+            _selectedCollection.value = selection
+            return selection
+        }
+        return selectedCollection
     }
 }

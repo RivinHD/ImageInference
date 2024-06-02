@@ -23,7 +23,8 @@
         android:id="@+id/item_text"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/default_image" />
+        android:text="@string/default_image"
+        android:visibility="gone"/>
 
     <View
         android:id="@+id/item_divider_bottom"

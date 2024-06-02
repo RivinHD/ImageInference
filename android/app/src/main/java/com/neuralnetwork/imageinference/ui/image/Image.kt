@@ -41,7 +41,7 @@ data class Image(val uri: Uri, val name: String) {
          *
          * @return The created default image.
          */
-        fun default(): Image = Image(Uri.EMPTY, "DefaultImage")
+        val DEFAULT: Image = Image(Uri.EMPTY, "DefaultImage")
     }
 
     /**
@@ -61,7 +61,7 @@ data class Image(val uri: Uri, val name: String) {
      * @param view The ImageView to load the image into.
      */
     fun loadImageInto(view: ImageView): Bitmap? {
-        return if (this == default()) {
+        return if (this == DEFAULT) {
             setDefault(view)
             null
         } else {
@@ -71,6 +71,11 @@ data class Image(val uri: Uri, val name: String) {
         }
     }
 
+    /**
+     * Sets the default image into the given ImageView.
+     *
+     * @param view The ImageView to load the default image into.
+     */
     private fun setDefault(view: ImageView) {
         view.setImageDrawable(
             ResourcesCompat.getDrawable(

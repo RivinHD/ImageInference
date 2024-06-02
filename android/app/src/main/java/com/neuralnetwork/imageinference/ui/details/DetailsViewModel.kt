@@ -23,14 +23,34 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 
-class DetailsViewModel(modelDetail : MutableLiveData<ModelDetails>? = null, modelSuccess : MutableLiveData<ModelState>? = null) : ViewModel() {
+/**
+ * The view model for the details fragment.
+ *
+ * @constructor Creates an details view model filled with the given details and success state.
+ *
+ * @param modelDetail (optional) The detail object that will be shown.
+ * @param modelState (optional) The model state object that will be used.
+ */
+class DetailsViewModel(modelDetail : MutableLiveData<ModelDetails>? = null, modelState : MutableLiveData<ModelState>? = null) : ViewModel() {
 
+    /**
+     * Holds the details that are update by the model and displayed by the details fragment.
+     */
     private val _details = modelDetail ?: MutableLiveData<ModelDetails>()
 
-    private val _success = modelSuccess ?: MutableLiveData<ModelState>()
+    /**
+     * Holds the state of the model.
+     */
+    private val _state = modelState ?: MutableLiveData<ModelState>()
 
+    /**
+     * Gets the details of the model.
+     */
     val details : LiveData<ModelDetails> = _details
 
-    val success : LiveData<ModelState> = _success
+    /**
+     * Gets the model state.
+     */
+    val state : LiveData<ModelState> = _state
 
 }

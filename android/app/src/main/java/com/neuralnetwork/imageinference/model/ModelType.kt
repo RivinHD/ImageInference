@@ -17,16 +17,14 @@
  *  in the root folder of this project with the name LICENSE. If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.neuralnetwork.imageinference.datastore
-
-import androidx.datastore.core.DataStore
-import androidx.lifecycle.ViewModel
+package com.neuralnetwork.imageinference.model
 
 /**
- * Provides a view model base that connect a DataStore to the view model.
- *
- * @param T The type of the data store.
- * @property dataStore The data store object to use.
- * @constructor Creates an empty data store view model.
+ * The available models that are implemented in the app.
  */
-open class DataStoreViewModel<T>(private val dataStore: DataStore<T>) : ViewModel()
+enum class ModelType {
+    /**
+     * The [Resnet50 v1.5](https://catalog.ngc.nvidia.com/orgs/nvidia/resources/resnet_50_v1_5_for_pytorch) model.
+     */
+    RESNET50v15,
+}

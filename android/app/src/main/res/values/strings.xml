@@ -62,4 +62,7 @@
     <string name="matches_name_image">Shows the image that matches the name of the image.</string>
     <string name="inference_running">Inference running</string>
     <string name="inference_successful">Inference successful</string>
+    <string name="selected_model">Selected Model</string>
+    <string name="select_a_model">Select a Model</string>
+    <string name="select_image">Select Image</string>
 </resources>

@@ -24,11 +24,26 @@ import com.neuralnetwork.imageinference.ui.details.containers.ModelResult
 import java.text.DateFormat
 import kotlin.math.min
 
+/**
+ * Holds all details a model may generate during its inference.
+ *
+ * @property modelInputType The type of input the model was evaluated with.
+ * @constructor Creates an empty Model details
+ */
 data class ModelDetails(val modelInputType: ModelInputType) {
+    /**
+     * Holds the results of the model inference.
+     */
     private var _results: Array<ModelResult> = Array(0) { ModelResult.Default }
 
+    /**
+     * Holds the evaluation time of the model in nanoseconds.
+     */
     private var _evaluationTimeNano: Long? = null
 
+    /**
+     * Gets or sets the evaluation time of the model in nanoseconds.
+     */
     var evaluationTimeNano: Long?
         get() = _evaluationTimeNano
         set(value) {
@@ -37,6 +52,9 @@ data class ModelDetails(val modelInputType: ModelInputType) {
             }
         }
 
+    /**
+     * Gets or sets the evaluation time of the model in milliseconds.
+     */
     var evaluationTimeMillisecond: Long?
         get() = _evaluationTimeNano?.div(1_000_000)
         set(value) {
@@ -45,8 +63,14 @@ data class ModelDetails(val modelInputType: ModelInputType) {
             }
         }
 
+    /**
+     * Gets the evaluation time of the model as a string in milliseconds.
+     */
     val evaluationTimeString: String get() = DateFormat.getInstance().format(_evaluationTimeNano)
 
+    /**
+     * Gets the results of the model inference.
+     */
     var results: Array<ModelResult>
         get() = _results
         set(value) {
@@ -55,10 +79,10 @@ data class ModelDetails(val modelInputType: ModelInputType) {
         }
 
     /**
-     * Get top results
+     * Get the top results of the model inference.
      *
-     * @param count
-     * @return
+     * @param count The amount of top results to return.
+     * @return The [count] count top results of the model inference.
      */
     fun getTopResults(count: Int): Array<ModelResult> {
         if (count < 0) {

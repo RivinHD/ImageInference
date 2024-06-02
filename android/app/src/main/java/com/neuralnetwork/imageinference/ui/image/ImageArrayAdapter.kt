@@ -28,6 +28,14 @@ import android.widget.ImageView
 import android.widget.TextView
 import com.neuralnetwork.imageinference.R
 
+/**
+ * The Adapter that displays images in a list.
+ *
+ * @constructor Creates an image array adapter filled with the given images.
+ *
+ * @param context The context the adapter is created in.
+ * @param objects The list of images used to fill the adapter.
+ */
 class ImageArrayAdapter(context: Context, objects: List<Image>)
     : ArrayAdapter<Image>(context, R.layout.item_image_text, R.id.item_text, objects) {
 

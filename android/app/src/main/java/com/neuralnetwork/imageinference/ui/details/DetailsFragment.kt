@@ -30,14 +30,28 @@ import androidx.lifecycle.ViewModelProvider
 import com.neuralnetwork.imageinference.R
 import com.neuralnetwork.imageinference.databinding.FragmentDetailsBinding
 
+/**
+ * Fragment that shows the details of the model.
+ *
+ * @constructor Create empty details fragment.
+ */
 class DetailsFragment : Fragment() {
 
-
+    /**
+     * The binding that gets updated from the fragment.
+     */
     private var _binding: FragmentDetailsBinding? = null
 
-    // This property is only valid between onCreateView and
-    // onDestroyView.
+    /**
+     * The binding that holds the view of this fragment.
+     * This property is only valid between onCreateView and onDestroyView.
+     */
     private val binding get() = _binding!!
+
+    /**
+     * The binding that holds the view of this fragment.
+     * This property is only valid between onCreateView and onDestroyView.
+     */
     private lateinit var _context: Context
 
     override fun onAttach(context: Context) {
@@ -64,8 +78,19 @@ class DetailsFragment : Fragment() {
             }
         }
 
-        val information = binding.informationText
-        val detailsView = binding.detailsView
+        observeDetails(vm)
+        observeState(vm)
+
+        return root
+    }
+
+    /**
+     * Setup the observe of the view model property details LiveData.
+     *
+     * @param vm The view model of this fragment.
+     */
+    @SuppressLint("SetTextI18n")
+    private fun observeDetails(vm: DetailsViewModel) {
         val classes = arrayOf(
             binding.option1Class,
             binding.option2Class,
@@ -81,7 +106,29 @@ class DetailsFragment : Fragment() {
             binding.option5Percentage
         )
 
-        vm.success.observe(viewLifecycleOwner) {
+        vm.details.observe(viewLifecycleOwner) {
+            val results = it.getTopResults(5)
+
+            val applier = classes.zip(accuracies).zip(results) { (a, b), c -> Triple(a, b, c) }
+            for ((name, accuracy, result) in applier) {
+                name.text = result.name
+                accuracy.text = "${"%.2f".format(result.accuracy * 100)} %"
+            }
+        }
+    }
+
+    /**
+     * Setup the observe on the view model property state LiveData.
+     *
+     * @param vm The view model of this fragment.
+     */
+    private fun observeState(
+        vm: DetailsViewModel
+    ) {
+        val information = binding.informationText
+        val detailsView = binding.detailsView
+
+        vm.state.observe(viewLifecycleOwner) {
             information.visibility = when (it) {
                 null, ModelState.INITIAL, ModelState.RUNNING, ModelState.FAILED -> View.VISIBLE
                 ModelState.SUCCESS -> View.INVISIBLE
@@ -99,17 +146,5 @@ class DetailsFragment : Fragment() {
                 ModelState.SUCCESS -> View.VISIBLE
             }
         }
-
-        vm.details.observe(viewLifecycleOwner) {
-            val results = it.getTopResults(5)
-
-            val applier = classes.zip(accuracies).zip(results) { (a, b), c -> Triple(a, b, c) }
-            for ((name, accuracy, result) in applier) {
-                name.text = result.name
-                accuracy.text = "${"%.2f".format(result.accuracy * 100)} %"
-            }
-        }
-
-        return root
     }
 }

@@ -28,7 +28,7 @@ import android.system.Os
 import android.util.Log
 import android.view.View
 import android.widget.AdapterView
-import android.widget.ArrayAdapter
+import android.widget.AutoCompleteTextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -37,10 +37,11 @@ import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.google.android.material.textfield.MaterialAutoCompleteTextView
 import com.neuralnetwork.imageinference.databinding.ActivityMainBinding
+import com.neuralnetwork.imageinference.model.Model
 import com.neuralnetwork.imageinference.model.ModelAssets
 import com.neuralnetwork.imageinference.model.ModelConnector
-import org.pytorch.executorch.Module
 import java.io.File
 import java.io.FileOutputStream
 
@@ -49,9 +50,9 @@ class MainActivity : AppCompatActivity(), ModelConnector {
 
     private lateinit var binding: ActivityMainBinding
 
-    private var module: Module? = null
-    private var moduleName: String = ModelAssets.DEFAULT
-    private var _moduleChangedCallback: ((m: Module?) -> Unit)? = null
+    private var model: Model? = null
+    private var modelName: String = ModelAssets.DEFAULT
+    private var _modelChangedCallback: ((m: Model?) -> Unit)? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -90,45 +91,42 @@ class MainActivity : AppCompatActivity(), ModelConnector {
         navView.setupWithNavController(navController)
 
         val modelAssets = ModelAssets(assets)
+        setupModelSelector(modelAssets)
+    }
+
+    /**
+     * Setup the model selector with with listener and items
+     *
+     * @param modelAssets The models available from the assets.
+     */
+    private fun setupModelSelector(modelAssets: ModelAssets) {
         val modelSelector = binding.modelSelector
-        modelSelector.adapter = ArrayAdapter(
-            this,
-            android.R.layout.simple_spinner_dropdown_item,
-            modelAssets.models
+        (modelSelector.editText as? MaterialAutoCompleteTextView)?.setSimpleItems(
+            modelAssets.models.toTypedArray()
         )
-        modelSelector.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(
-                parent: AdapterView<*>?,
-                view: View?,
-                position: Int,
-                id: Long
-            ) {
-                moduleName = parent?.getItemAtPosition(position) as String
-                val fileName = ModelAssets.getModelFile(moduleName)
-                module?.destroy()
+        modelSelector.isEnabled = modelAssets.models.isNotEmpty()
 
-                module = if (fileName != null) {
-                    Module.load(
-                        getAsset(
-                            applicationContext,
-                            fileName
-                        )
-                    )
-                } else {
-                    null
+        (modelSelector.editText as? AutoCompleteTextView)?.onItemSelectedListener =
+            object : AdapterView.OnItemSelectedListener {
+                override fun onItemSelected(
+                    parent: AdapterView<*>?,
+                    view: View?,
+                    position: Int,
+                    id: Long
+                ) {
+                    modelName = parent?.getItemAtPosition(position) as String
+                    model = ModelAssets.getModel(modelName)
+                    model?.load(applicationContext)
+                    _modelChangedCallback?.let { it(model) }
                 }
-                _moduleChangedCallback?.let { it(module) }
+
+                override fun onNothingSelected(parent: AdapterView<*>?) {
+                    model?.destroy()
+                    modelName = ModelAssets.DEFAULT
+                    _modelChangedCallback?.let { it(null) }
+                }
 
             }
-
-            override fun onNothingSelected(parent: AdapterView<*>?) {
-                module?.destroy()
-                moduleName = ModelAssets.DEFAULT
-                _moduleChangedCallback?.let { it(null) }
-            }
-
-        }
-
     }
 
     companion object {
@@ -185,16 +183,16 @@ class MainActivity : AppCompatActivity(), ModelConnector {
         }
     }
 
-    override fun getModel(): Module? {
-        return module
+    override fun getModel(): Model? {
+        return model
     }
 
     override fun getModelName(): String {
-        return moduleName
+        return modelName
     }
 
-    override fun setOnModelChangedListener(callback: ((m: Module?) -> Unit)?) {
-        _moduleChangedCallback = callback
+    override fun setOnModelChangedListener(callback: ((m: Model?) -> Unit)?) {
+        _modelChangedCallback = callback
     }
 
 }

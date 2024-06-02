@@ -40,16 +40,32 @@ import com.neuralnetwork.imageinference.ui.details.DetailsConnector
 import com.neuralnetwork.imageinference.ui.details.DetailsViewModel
 import com.neuralnetwork.imageinference.ui.details.ModelState
 
+/**
+ * Fragment that uses a photo camera for the model input.
+ *
+ * @constructor Create empty photo camera fragment.
+ */
 class PhotoCameraFragment : Fragment(), DetailsConnector {
-
+    /**
+     * Holds the camera provider future.
+     */
     private lateinit var cameraProviderFuture: ListenableFuture<ProcessCameraProvider>
 
+    /**
+     * The binding that gets updated from the fragment.
+     */
     private var _binding: FragmentPhotoCameraBinding? = null
 
-    // This property is only valid between onCreateView and
-    // onDestroyView.
+    /**
+     * The binding that holds the view of this fragment.
+     * This property is only valid between onCreateView and onDestroyView.
+     */
     private val binding get() = _binding!!
 
+    /**
+     * The binding that holds the view of this fragment.
+     * This property is only valid between onCreateView and onDestroyView.
+     */
     private lateinit var _context: Context
 
     override fun onAttach(context: Context) {
@@ -72,47 +88,54 @@ class PhotoCameraFragment : Fragment(), DetailsConnector {
             vm.model = it
         }
 
+        setupCamera(vm)
+        setupPhotoCapture(vm)
+
+        observeModelSuccess(vm)
+        observeImage(vm)
+
+        return root
+    }
+
+    /**
+     * Setup the observe on the view model property image LiveData.
+     *
+     * @param vm The view model of this fragment.
+     */
+    private fun observeImage(
+        vm: PhotoCameraViewModel
+    ) {
         val photoCapture = binding.photoCapture
         val photoView = binding.photoInferenceImage
         val photoPreview = binding.photoPreview
 
-        // Request camera permission
-        MainActivity.checkCameraPermission(_context)
-
-        // Setup camera preview and capture
-        cameraProviderFuture = ProcessCameraProvider.getInstance(_context)
-        cameraProviderFuture.addListener(
-            {
-                val cameraProvider = cameraProviderFuture.get()
-
-                vm.preview.setSurfaceProvider(photoPreview.getSurfaceProvider())
-
-                cameraProvider.bindToLifecycle(
-                    viewLifecycleOwner,
-                    vm.cameraSelector,
-                    vm.imageCapture,
-                    vm.preview
-                )
-            },
-            ContextCompat.getMainExecutor(_context)
-        )
-
-        photoCapture.setOnClickListener {
-            if (vm.image.value == null) {
-                // Take the current photo from the camera preview
-                vm.imageCapture.takePicture(
-                    ContextCompat.getMainExecutor(_context),
-                    vm.onImageCaptureCallback
+        vm.image.observe(viewLifecycleOwner) {
+            if (it == null) {
+                photoPreview.visibility = View.VISIBLE
+                photoCapture.text = getString(R.string.photo_capture)
+                photoCapture.setCompoundDrawablesRelativeWithIntrinsicBounds(
+                    null, null, null, null
                 )
             } else {
-                vm.clearImage()
+                photoView.setImageBitmap(it)
+                photoPreview.visibility = View.INVISIBLE
+                photoCapture.text = getString(R.string.photo_clear)
             }
         }
+    }
 
-        vm.modelSuccess.observe(viewLifecycleOwner) {
+    /**
+     * Setup the observe on the view model property models success LiveData.
+     *
+     * @param vm The view model of this fragment.
+     */
+    private fun observeModelSuccess(
+        vm: PhotoCameraViewModel
+    ) {
+        val photoCapture = binding.photoCapture
 
-
-            val colorID =  when (it) {
+        vm.modelState.observe(viewLifecycleOwner) {
+            val colorID = when (it) {
                 ModelState.INITIAL -> return@observe
                 ModelState.RUNNING -> R.color.loading
                 ModelState.SUCCESS -> R.color.success_green
@@ -133,22 +156,68 @@ class PhotoCameraFragment : Fragment(), DetailsConnector {
             if (drawable != null) {
                 DrawableCompat.setTint(drawable, color)
             }
-            photoCapture.setCompoundDrawablesRelativeWithIntrinsicBounds(drawable, null, drawable, null)
-        }
 
-        vm.image.observe(viewLifecycleOwner) {
-            if (it == null) {
-                photoPreview.visibility = View.VISIBLE
-                photoCapture.text = getString(R.string.photo_capture)
-                photoCapture.setCompoundDrawablesRelativeWithIntrinsicBounds(null, null, null, null)
+            photoCapture.setCompoundDrawablesRelativeWithIntrinsicBounds(
+                drawable,
+                null,
+                drawable,
+                null
+            )
+        }
+    }
+
+    /**
+     * Setup the photo capture button with the OnClickListener.
+     *
+     * @param vm The view model of this fragment.
+     */
+    private fun setupPhotoCapture(
+        vm: PhotoCameraViewModel
+    ) {
+        val photoCapture = binding.photoCapture
+
+        photoCapture.setOnClickListener {
+            if (vm.image.value == null) {
+                // Take the current photo from the camera preview
+                vm.imageCapture.takePicture(
+                    ContextCompat.getMainExecutor(_context),
+                    vm.onImageCaptureCallback
+                )
             } else {
-                photoView.setImageBitmap(it)
-                photoPreview.visibility = View.INVISIBLE
-                photoCapture.text = getString(R.string.photo_clear)
+                vm.clearImage()
             }
         }
+    }
 
-        return root
+    /**
+     * Setup the camera on the preview.
+     *
+     * @param vm The view model of this fragment.
+     */
+    private fun setupCamera(
+        vm: PhotoCameraViewModel
+    ) {
+        val photoPreview = binding.photoPreview
+        // Request camera permission
+        MainActivity.checkCameraPermission(_context)
+
+        // Setup camera preview and capture
+        cameraProviderFuture = ProcessCameraProvider.getInstance(_context)
+        cameraProviderFuture.addListener(
+            {
+                val cameraProvider = cameraProviderFuture.get()
+
+                vm.preview.setSurfaceProvider(photoPreview.getSurfaceProvider())
+
+                cameraProvider.bindToLifecycle(
+                    viewLifecycleOwner,
+                    vm.cameraSelector,
+                    vm.imageCapture,
+                    vm.preview
+                )
+            },
+            ContextCompat.getMainExecutor(_context)
+        )
     }
 
     override fun onDestroyView() {

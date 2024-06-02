@@ -19,11 +19,29 @@
 
 package com.neuralnetwork.imageinference.model
 
-import org.pytorch.executorch.Module
-
+/**
+ * Provides a connection to the selected model from a fragment.
+ */
 interface ModelConnector {
 
-    fun getModel(): Module?
+    /**
+     * Get the current model
+     *
+     * @return The selected model
+     */
+    fun getModel(): Model?
+
+    /**
+     * Get the name of the current model
+     *
+     * @return The name of the selected model
+     */
     fun getModelName(): String
-    fun setOnModelChangedListener(callback : ((m: Module?) -> Unit)?)
+
+    /**
+     * Set a callback that is triggered when the model changes
+     *
+     * @param callback The callback to be triggered
+     */
+    fun setOnModelChangedListener(callback : ((m: Model?) -> Unit)?)
 }

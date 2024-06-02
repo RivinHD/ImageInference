@@ -60,62 +60,51 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent">
 
-                <ImageButton
+                <Button
+                    style="?attr/materialIconButtonFilledStyle"
                     android:id="@+id/image_selection_before"
-                    style="@android:style/Widget.Holo.ImageButton"
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
                     android:layout_weight="1"
-                    android:contentDescription="@string/select_last_image"
-                    android:insetTop="0dp"
-                    android:insetRight="0dp"
-                    android:insetBottom="0dp"
-                    android:src="@drawable/ic_navigate_before_google"
-                    app:iconPadding="3dp"
+                    app:icon="@drawable/ic_navigate_before_google"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent"
                     app:layout_constraintVertical_bias="0.50" />
 
-                    <Spinner
-                    android:id="@+id/image_selection"
+                <Button
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
+                    android:id="@+id/image_selection"
+                    android:text="@string/select_image"
                     android:layout_marginStart="5dp"
                     android:layout_marginEnd="5dp"
                     android:layout_weight="1"
-                    android:contentDescription="@string/select_image_from_list"
                     app:layout_constraintEnd_toStartOf="@+id/image_selection_menu"
                     app:layout_constraintStart_toEndOf="@+id/image_selection_before"
-                    tools:layout_editor_absoluteY="0dp" />
+                    tools:layout_editor_absoluteY="0dp"/>
 
-                <ImageButton
+                <Button
+                    style="?attr/materialIconButtonFilledStyle"
                     android:id="@+id/image_selection_menu"
-                    style="@android:style/Widget.Holo.ImageButton"
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:contentDescription="@string/selection_menu"
-                    android:insetTop="0dp"
-                    android:insetBottom="0dp"
-                    android:src="@drawable/ic_menu_google"
-                    app:iconPadding="3dp"
+                    app:icon="@drawable/ic_menu_google"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintEnd_toStartOf="@+id/image_selection_next"
                     app:layout_constraintTop_toTopOf="parent"
                     tools:src="@drawable/ic_navigate_next_google" />
 
-                <ImageButton
+                <Button
+                    style="?attr/materialIconButtonFilledStyle"
                     android:id="@+id/image_selection_next"
-                    style="@android:style/Widget.Holo.ImageButton"
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:contentDescription="@string/select_next_image"
-                    android:insetTop="0dp"
-                    android:insetBottom="0dp"
-                    android:src="@drawable/ic_navigate_next_google"
-                    app:iconPadding="3dp"
+                    app:icon="@drawable/ic_navigate_next_google"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintTop_toTopOf="parent"

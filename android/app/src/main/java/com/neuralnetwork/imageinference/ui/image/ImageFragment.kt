@@ -27,12 +27,14 @@ import android.view.LayoutInflater
 import android.view.MenuInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.EditText
 import android.widget.PopupMenu
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.widget.ListPopupWindow
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.ViewModelProvider
@@ -44,15 +46,28 @@ import com.neuralnetwork.imageinference.model.ModelConnector
 import com.neuralnetwork.imageinference.ui.details.DetailsConnector
 import com.neuralnetwork.imageinference.ui.details.DetailsViewModel
 
+/**
+ * Fragment that uses an image for the model input.
+ *
+ * @constructor Create empty image fragment.
+ */
 class ImageFragment : Fragment(), DetailsConnector {
-
+    /**
+     * The binding that gets updated from the fragment.
+     */
     private var _binding: FragmentImageBinding? = null
 
-    // This property is only valid between onCreateView and
-    // onDestroyView.
+    /**
+     * The binding that holds the view of this fragment.
+     * This property is only valid between onCreateView and onDestroyView.
+     */
     private val binding get() = _binding!!
-    private lateinit var _context: Context
 
+    /**
+     * The binding that holds the view of this fragment.
+     * This property is only valid between onCreateView and onDestroyView.
+     */
+    private lateinit var _context: Context
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
@@ -64,8 +79,6 @@ class ImageFragment : Fragment(), DetailsConnector {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-
-        // region Initialization
         val vm: ImageViewModel by viewModels {
             DataStoreViewModelFactory(_context.imageCollectionsDataStore)
         }
@@ -75,36 +88,127 @@ class ImageFragment : Fragment(), DetailsConnector {
         vm.model = modelConnector.getModel()
         modelConnector.setOnModelChangedListener {
             vm.model = it
+            vm.runModel(_context.contentResolver)
         }
 
+        val imageSelectionPopup = setupImageSelection(vm)
+        setupImageSelectionBefore(vm)
+        setupImageSelectionNext(vm)
+
+        setupImageSelectionMenu(vm)
+
+        observeImages(vm, imageSelectionPopup)
+        observeSelectedImage(vm)
+        observeHasNext(vm)
+        observeHasBefore(vm)
+
+        return root
+    }
+
+    /**
+     * Setup the observe on the view model property hasBefore LiveData.
+     *
+     * @param vm The view model of this fragment.
+     */
+    private fun observeHasBefore(
+        vm: ImageViewModel
+    ) {
+        val imageSelectionBefore = binding.imageSelectionBefore
+
+        vm.hasBefore.observe(viewLifecycleOwner) {
+            imageSelectionBefore.isEnabled = it
+        }
+    }
+
+    /**
+     * Setup the observe on the view model property hasNext LiveData.
+     *
+     * @param vm The view model of this fragment.
+     */
+    private fun observeHasNext(
+        vm: ImageViewModel
+    ) {
+        val imageSelectionNext = binding.imageSelectionNext
+
+        vm.hasNext.observe(viewLifecycleOwner) {
+            imageSelectionNext.isEnabled = it
+        }
+    }
+
+    /**
+     * Setup the observe on the view model property selectedImage LiveData.
+     *
+     * @param vm The view model of this fragment.
+     */
+    private fun observeSelectedImage(
+        vm: ImageViewModel
+    ) {
         val inferenceImage = binding.imageInferenceImage
+
+        vm.selectedImage.observe(viewLifecycleOwner) {
+            if (it == Image.DEFAULT) {
+                inferenceImage.setImageResource(R.drawable.ic_image_google)
+                return@observe
+            }
+            it.loadImageInto(inferenceImage)
+            vm.runModel(_context.contentResolver)
+        }
+    }
+
+    /**
+     * Setup the observe on the view model property Image LiveData.
+     *
+     * @param vm The view model of this fragment.
+     * @param imageSelectionPopup The popup window for the image selection.
+     */
+    private fun observeImages(
+        vm: ImageViewModel,
+        imageSelectionPopup: ListPopupWindow
+    ) {
         val imageSelection = binding.imageSelection
         val imageSelectionBefore = binding.imageSelectionBefore
         val imageSelectionNext = binding.imageSelectionNext
-        val imageSelectionMenu = binding.imageSelectionMenu
-        // endregion
 
-        // region Listeners
-        imageSelection.onItemSelectedListener = vm.onImageSelectedListener
-        imageSelectionBefore.setOnClickListener(vm.onBeforeClickListener)
-        imageSelectionNext.setOnClickListener(vm.onNextClickListener)
+        vm.images.observe(viewLifecycleOwner) { images ->
+            val imageAdapter = ImageArrayAdapter(
+                _context,
+                images
+            )
+            imageSelectionPopup.setAdapter(imageAdapter)
+            imageSelectionBefore.isEnabled = images.size > 1
+            imageSelectionNext.isEnabled = images.size > 1
+            imageSelection.isEnabled = images.isNotEmpty()
+        }
+    }
+
+    /**
+     * Setup the image selection menu button with the OnClickListener that shows a popup menu.
+     *
+     * @param vm The view model of this fragment.
+     */
+    private fun setupImageSelectionMenu(
+        vm: ImageViewModel
+    ) {
+        val imageSelectionMenu = binding.imageSelectionMenu
 
         // Registers a photo picker activity launcher in multi-select mode.
-        val imageSelectionMenuPickMultipleMedia =
-            registerForActivityResult(ActivityResultContracts.PickMultipleVisualMedia()) { uris ->
-                for (uri in uris) {
-                    if (Build.VERSION.SDK_INT > Build.VERSION_CODES.Q)
-                    {
-                        _context.contentResolver.takePersistableUriPermission(
-                            uri,
-                            Intent.FLAG_GRANT_READ_URI_PERMISSION
-                        )
-                    }
+        val imageSelectionMenuPickMultipleMedia = registerForActivityResult(
+            ActivityResultContracts.PickMultipleVisualMedia()
+        ) { uris ->
+            for (uri in uris) {
+                if (Build.VERSION.SDK_INT > Build.VERSION_CODES.Q) {
+                    _context.contentResolver.takePersistableUriPermission(
+                        uri,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    )
                 }
-                vm.addImages(uris)
             }
+            vm.addImages(uris)
+        }
+
         imageSelectionMenu.setOnClickListener {
             val popup = PopupMenu(_context, it)
+
             popup.setOnMenuItemClickListener { it1 ->
                 when (it1.itemId) {
                     R.id.image_selection_menu_add -> {
@@ -123,18 +227,20 @@ class ImageFragment : Fragment(), DetailsConnector {
 
                     R.id.image_selection_menu_change_collection -> {
                         val changeCollectionDialogBuilder = AlertDialog.Builder(_context)
-                        .setTitle("Change Collection")
-                        .setSingleChoiceItems(
-                            ArrayAdapter(
-                                _context,
-                                android.R.layout.simple_spinner_dropdown_item,
-                                vm.getCollectionsNames()
-                            ), vm.getSelectedCollectionIndex()
-                        ) { dialog, _ ->
-                            val item = (dialog as AlertDialog).listView.selectedItem as String?
-                            item?.let { it1 -> vm.changeCollection(it1) }
-                            dialog.dismiss()
-                        }
+                            .setTitle("Change Collection")
+                            .setSingleChoiceItems(
+                                ArrayAdapter(
+                                    _context,
+                                    android.R.layout.simple_list_item_single_choice,
+                                    vm.getCollectionsNames()
+                                ), vm.getSelectedCollectionIndex()
+                            ) { dialog, _ ->
+                                val selection = (dialog as AlertDialog).listView
+                                val position = selection.checkedItemPosition
+                                val item = selection.adapter.getItem(position) as String?
+                                item?.let { it1 -> vm.changeCollection(it1) }
+                                dialog.dismiss()
+                            }
                         val dialog = changeCollectionDialogBuilder.create()
                         dialog.show()
                         true
@@ -145,7 +251,8 @@ class ImageFragment : Fragment(), DetailsConnector {
                             .setTitle("Add Collection")
                             .setView(R.layout.dialog_add_collection)
                             .setPositiveButton("Add") { dialog, _ ->
-                                val textView = (dialog as AlertDialog).findViewById<View>(R.id.collection_name) as EditText
+                                val textView =
+                                    (dialog as AlertDialog).findViewById<View>(R.id.collection_name) as EditText
                                 vm.addCollection(textView.text.toString())
                                 dialog.dismiss()
                             }
@@ -156,7 +263,8 @@ class ImageFragment : Fragment(), DetailsConnector {
                     }
 
                     R.id.image_selection_menu_remove_collection -> {
-                        val currentCollectionName = vm.getCollectionsNames()[vm.getSelectedCollectionIndex()]
+                        val currentCollectionName =
+                            vm.getCollectionsNames()[vm.getSelectedCollectionIndex()]
                         val removeCollectionDialogBuilder = AlertDialog.Builder(_context)
                             .setTitle("Remove Collection")
                             .setMessage("Are you sure you want to remove the collection: '$currentCollectionName'?")
@@ -175,34 +283,81 @@ class ImageFragment : Fragment(), DetailsConnector {
                     else -> false
                 }
             }
+
             val popupInflater: MenuInflater = popup.menuInflater
             popupInflater.inflate(R.menu.image_selection_menu, popup.menu)
             popup.show()
         }
-        // endregion
+    }
 
-        // region Observes
-        vm.images.observe(viewLifecycleOwner) { images ->
-            imageSelection.adapter = ImageArrayAdapter(
-                _context,
-                images
-            )
-            imageSelectionBefore.isEnabled = images.size > 1
-            imageSelectionNext.isEnabled = images.size > 1
+    /**
+     * Setup image selection next button with the OnClickListener.
+     *
+     * @param vm The view model of this fragment.
+     */
+    private fun setupImageSelectionNext(
+        vm: ImageViewModel
+    ) {
+        val imageSelectionNext = binding.imageSelectionNext
+        imageSelectionNext.setOnClickListener {
+            vm.selectNext()
         }
-        vm.selectedImage.observe(viewLifecycleOwner) {
-            it.loadImageInto(inferenceImage)
-            vm.runModel(_context.contentResolver)
-        }
-        vm.hasNext.observe(viewLifecycleOwner) {
-            imageSelectionNext.isEnabled = it
-        }
-        vm.hasBefore.observe(viewLifecycleOwner) {
-            imageSelectionBefore.isEnabled = it
-        }
-        // endregion
+    }
 
-        return root
+    /**
+     * Setup image selection before button with the OnClickListener.
+     *
+     * @param vm The view model of this fragment.
+     */
+    private fun setupImageSelectionBefore(
+        vm: ImageViewModel
+    ) {
+        val imageSelectionBefore = binding.imageSelectionBefore
+        imageSelectionBefore.setOnClickListener {
+            vm.selectBefore()
+        }
+    }
+
+    /**
+     * Setup image selection button with the OnClickListener.
+     * That also provides a popup window for the image selection.
+     *
+     * @param vm The view model of this fragment.
+     * @return The popup window for the image selection.
+     */
+    private fun setupImageSelection(
+        vm: ImageViewModel
+    ): ListPopupWindow {
+        val imageSelection = binding.imageSelection
+
+        val imageSelectionPopup = ListPopupWindow(
+            _context,
+            null,
+            androidx.appcompat.R.attr.listPopupWindowStyle
+        )
+
+        // TODO change the popup to a dialog that uses GridView to show all images
+        imageSelectionPopup.anchorView = imageSelection
+        imageSelectionPopup.setOnItemClickListener { parent: AdapterView<*>?,
+                                                     _: View?,
+                                                     position:
+                                                     Int, _: Long ->
+            val image = parent?.getItemAtPosition(position) as Image
+            vm.selectImage(image.name)
+            imageSelectionPopup.dismiss()
+        }
+
+        imageSelection.setOnClickListener {
+            imageSelectionPopup.show()
+        }
+
+        return imageSelectionPopup
+    }
+
+    override fun onDetach() {
+        val vm = ViewModelProvider(this)[ImageViewModel::class.java]
+        vm.saveDatastore(_context.imageCollectionsDataStore)
+        super.onDetach()
     }
 
     override fun onDestroyView() {
@@ -213,8 +368,8 @@ class ImageFragment : Fragment(), DetailsConnector {
     }
 
     override fun getDetailViewModel(): DetailsViewModel {
-        val imageViewModel = ViewModelProvider(this)[ImageViewModel::class.java]
-        return imageViewModel.detailsViewModel
+        val vm = ViewModelProvider(this)[ImageViewModel::class.java]
+        return vm.detailsViewModel
     }
 
 }

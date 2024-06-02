@@ -19,9 +19,28 @@
 
 package com.neuralnetwork.imageinference.ui.details
 
+/**
+ * The state a model can be in.
+ */
 enum class ModelState {
+    /**
+     * The state when a model is created but not used yet.
+     */
     INITIAL,
+
+    /**
+     * The state when a model is running inference.
+     */
     RUNNING,
+
+    /**
+     * The state when a model has finished inference successfully.
+     */
     SUCCESS,
+
+    /**
+     * The state when a model has failed inference.
+     * This state is also used if the requirements for running the model are not met.
+     */
     FAILED
 }

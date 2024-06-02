@@ -37,16 +37,32 @@ import com.neuralnetwork.imageinference.model.ModelConnector
 import com.neuralnetwork.imageinference.ui.details.DetailsConnector
 import com.neuralnetwork.imageinference.ui.details.DetailsViewModel
 
+/**
+ * Fragment that uses a video camera for the model input.
+ *
+ * @constructor Create empty Video camera fragment.
+ */
 class VideoCameraFragment : Fragment(), DetailsConnector {
-
+    /**
+     * Holds the camera provider future.
+     */
     private lateinit var cameraProviderFuture: ListenableFuture<ProcessCameraProvider>
 
+    /**
+     * The binding that gets updated from the fragment.
+     */
     private var _binding: FragmentVideoCameraBinding? = null
 
-    // This property is only valid between onCreateView and
-    // onDestroyView.
+    /**
+     * The binding that holds the view of this fragment.
+     * This property is only valid between onCreateView and onDestroyView.
+     */
     private val binding get() = _binding!!
 
+    /**
+     * The context object of the fragment.
+     * This property is only valid between onAttach and onDetach.
+     */
     private lateinit var _context: Context
 
     override fun onAttach(context: Context) {
@@ -64,13 +80,59 @@ class VideoCameraFragment : Fragment(), DetailsConnector {
         val root: View = binding.root
         val modelConnector = (activity as ModelConnector)
         vm.model = modelConnector.getModel()
-        modelConnector.setOnModelChangedListener {
-            vm.model = it
-        }
+        modelConnector.setOnModelChangedListener(vm.onModelChangedCallback)
 
+        setupCamera(vm)
+        setupVideoRecord(vm)
+
+        observeIsRecording(vm)
+
+        return root
+    }
+
+    /**
+     * Setup the observe on the view model property isRecording LiveData.
+     *
+     * @param vm The view model of this fragment.
+     */
+    private fun observeIsRecording(vm: VideoCameraViewModel) {
         val videoRecord = binding.videoRecord
-        val videoPreview = binding.videoPreview
+        vm.isRecording.observe(viewLifecycleOwner) {
+            if (it) {
+                videoRecord.text = getString(R.string.stop)
+            } else {
+                videoRecord.text = getString(R.string.video_record)
+            }
+        }
+    }
 
+    /**
+     * Setup the video record button with the OnClickListener.
+     *
+     * @param vm The view model of this fragment.
+     */
+    private fun setupVideoRecord(
+        vm: VideoCameraViewModel
+    ) {
+        val videoRecord = binding.videoRecord
+        videoRecord.setOnClickListener {
+            if (vm.isRecording.value == true) {
+                vm.stopRecording()
+            } else {
+                vm.startRecording(ContextCompat.getMainExecutor(_context))
+            }
+        }
+    }
+
+    /**
+     * Setup the camera on the preview.
+     *
+     * @param vm The view model of this fragment.
+     */
+    private fun setupCamera(
+        vm: VideoCameraViewModel
+    ) {
+        val videoPreview = binding.videoPreview
         // Request camera permission
         MainActivity.checkCameraPermission(_context)
 
@@ -90,24 +152,6 @@ class VideoCameraFragment : Fragment(), DetailsConnector {
                 preview
             )
         }, ContextCompat.getMainExecutor(_context))
-
-        videoRecord.setOnClickListener {
-            if (vm.isRecording.value == true) {
-                vm.stopRecording()
-            } else {
-                vm.startRecording(ContextCompat.getMainExecutor(_context))
-            }
-        }
-
-        vm.isRecording.observe(viewLifecycleOwner) {
-            if (it) {
-                videoRecord.text = getString(R.string.stop)
-            } else {
-                videoRecord.text = getString(R.string.video_record)
-            }
-        }
-
-        return root
     }
 
     override fun onDestroyView() {

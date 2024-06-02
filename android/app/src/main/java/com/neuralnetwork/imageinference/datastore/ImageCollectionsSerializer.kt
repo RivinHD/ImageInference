@@ -29,6 +29,11 @@ import com.neuralnetwork.imageinference.ImageCollections
 import java.io.InputStream
 import java.io.OutputStream
 
+/**
+ * Serializer for the image collections data store.
+ *
+ * @constructor Create an empty image collections serializer.
+ */
 object ImageCollectionsSerializer : Serializer<ImageCollections> {
     override val defaultValue: ImageCollections = ImageCollections.getDefaultInstance()
 
@@ -45,6 +50,9 @@ object ImageCollectionsSerializer : Serializer<ImageCollections> {
     }
 }
 
+/**
+ * Initialize the image collections data store.
+ */
 val Context.imageCollectionsDataStore: DataStore<ImageCollections> by dataStore(
     fileName = "image_collections.pb",
     serializer = ImageCollectionsSerializer
