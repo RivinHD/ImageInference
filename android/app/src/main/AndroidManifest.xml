@@ -37,6 +37,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.ImageInference"
         tools:targetApi="31">
+
         <activity
             android:name="com.neuralnetwork.imageinference.MainActivity"
             android:exported="true">

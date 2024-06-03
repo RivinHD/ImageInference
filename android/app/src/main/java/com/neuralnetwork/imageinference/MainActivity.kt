@@ -47,6 +47,10 @@ import java.io.FileOutputStream
 
 
 class MainActivity : AppCompatActivity(), ModelConnector {
+    /**
+     * The fixed asdp path based on https://developer.qualcomm.com/sites/default/files/docs/snpe/dsp_runtime.html
+     */
+    private val adspFixedPath = ";/system/lib/rfsa/adsp;/system/vendor/lib/rfsa/adsp;/dsp"
 
     private lateinit var binding: ActivityMainBinding
 
@@ -61,7 +65,10 @@ class MainActivity : AppCompatActivity(), ModelConnector {
         // See https://developer.qualcomm.com/sites/default/files/docs/snpe/dsp_runtime.html for
         // more information.
         try {
-            Os.setenv("ADSP_LIBRARY_PATH", applicationInfo.nativeLibraryDir, true)
+            Os.setenv(
+                "ADSP_LIBRARY_PATH",
+                applicationInfo.nativeLibraryDir + adspFixedPath,
+                true)
         } catch (e: ErrnoException) {
             Log.e(
                 "Snapdragon Neural Processing Engine SDK",

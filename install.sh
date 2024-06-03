@@ -76,12 +76,21 @@ if [ ! -d "${BasePath}/android/ndk/android-ndk-r26d" ]; then
     rm android-ndk-r26d-linux.zip
 fi
 
+# Initalize the config variables needed for the rest of the installation
 cd ImageInference
 source config.sh
 
+# Setup the qualcomm backend
 cd submodules/executorch
 ./backends/qualcomm/scripts/build.sh
 cp backends/ "${BasePath}/miniconda3/envs/imageinfernce/lib/python3.10/site-packages/executorch/" -n -r
+
+# Number of available processors
+if [ "$(uname)" == "Darwin" ]; then
+  CMAKE_JOBS=$(( $(sysctl -n hw.ncpu) - 1 ))
+else
+  CMAKE_JOBS=$(( $(nproc) - 1 ))
+fi
 
 # Build the requiered run time liberary
 rm -rf cmake-android-out
@@ -96,14 +105,14 @@ cmake . -DCMAKE_INSTALL_PREFIX=cmake-android-out \
     -DQNN_SDK_ROOT="${QNN_SDK_ROOT}" \
     -DEXECUTORCH_BUILD_EXTENSION_DATA_LOADER=ON \
     -DEXECUTORCH_BUILD_EXTENSION_MODULE=ON \
-    -DFLATC_EXECUTABLE="${FLATC_EXECUTABLE}" \
     -DEXECUTORCH_BUILD_KERNELS_OPTIMIZED=ON \
+    -DFLATC_EXECUTABLE="${FLATC_EXECUTABLE}" \
     -DCMAKE_BUILD_TYPE=Release \
     -Bcmake-android-out
 
     # For now Vulkan does not work properly and therefore is disabled
     # -DEXECUTORCH_BUILD_VULKAN=ON \
-cmake --build cmake-android-out -j16 --target install
+cmake --build cmake-android-out -j "${CMAKE_JOBS}" --target install
 
 # Build the android extension
 cmake extension/android \
@@ -114,12 +123,12 @@ cmake extension/android \
   -DCMAKE_BUILD_TYPE=Release \
   -Bcmake-android-out/extension/android
 
-cmake --build cmake-android-out/extension/android -j16
+cmake --build cmake-android-out/extension/android -j "${CMAKE_JOBS}"
 
 # Copy the needed libaraies to the android application
 mkdir -p "${BasePath}/ImageInference/android/app/src/main/jniLibs/${ANDROID_ABI}"
 yes | cp "cmake-android-out/extension/android/libexecutorch_jni.so" \
-    "${BasePath}/ImageInference/android/app/src/main/jniLibs/${ANDROID_ABI}"
+    "${BasePath}/ImageInference/android/app/src/main/jniLibs/${ANDROID_ABI}/libexecutorch.so"
 yes | cp "cmake-android-out/lib/libqnn_executorch_backend.so" \
    "${BasePath}/ImageInference/android/app/src/main/jniLibs/${ANDROID_ABI}"
 yes | cp "${QNN_SDK_ROOT}/lib/aarch64-android/libQnnHtp.so" \
