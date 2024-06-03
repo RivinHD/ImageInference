@@ -54,14 +54,15 @@ cd submodules/executorch
 ./install_requirements.sh
 
 # Fix excutorch installation which has some missing modules
-cp backends/ "${BasePath}/miniconda3/envs/imageinfernce/lib/python3.10/site-packages/executorch/" -n -r
-cp examples/ "${BasePath}/miniconda3/envs/imageinfernce/lib/python3.10/site-packages/executorch/" -n -r
+yes | cp backends/ "${BasePath}/miniconda3/envs/imageinfernce/lib/python3.10/site-packages/executorch/" -r
+yes | cp examples/ "${BasePath}/miniconda3/envs/imageinfernce/lib/python3.10/site-packages/executorch/" -r
 conda install -y numpy
 conda install -y scipy
 ulimit -n 4096
 
 # Install Flatc
 ./build/install_flatc.sh
+# export PATH="$(pwd)/third-party/flatbuffers/cmake-out:${PATH}" # TODO test: This may be needed
 
 # Download Android 
 cd "${BasePath}"
@@ -82,8 +83,11 @@ source config.sh
 
 # Setup the qualcomm backend
 cd submodules/executorch
+# Workaround for fbs files in exir/_serialize
+yes | cp schema/program.fbs exir/_serialize/program.fbs
+yes | cp schema/scalar_type.fbs exir/_serialize/scalar_type.fbs
 ./backends/qualcomm/scripts/build.sh
-cp backends/ "${BasePath}/miniconda3/envs/imageinfernce/lib/python3.10/site-packages/executorch/" -n -r
+yes | cp backends/ "${BasePath}/miniconda3/envs/imageinfernce/lib/python3.10/site-packages/executorch/" -r
 
 # Number of available processors
 if [ "$(uname)" == "Darwin" ]; then
@@ -133,11 +137,12 @@ yes | cp "cmake-android-out/lib/libqnn_executorch_backend.so" \
    "${BasePath}/ImageInference/android/app/src/main/jniLibs/${ANDROID_ABI}"
 yes | cp "${QNN_SDK_ROOT}/lib/aarch64-android/libQnnHtp.so" \
     "${QNN_SDK_ROOT}/lib/aarch64-android/libQnnHtpV69Stub.so" \
-    "${QNN_SDK_ROOT}/lib/aarch64-android/libQnnHtpV73Stub.so" \
     "${QNN_SDK_ROOT}/lib/aarch64-android/libQnnSystem.so" \
     "${QNN_SDK_ROOT}/lib/hexagon-v69/unsigned/libQnnHtpV69Skel.so" \
-    "${QNN_SDK_ROOT}/lib/hexagon-v73/unsigned/libQnnHtpV73Skel.so" \
     "${BasePath}/ImageInference/android/app/src/main/jniLibs/${ANDROID_ABI}"
+    # Maybe we are not allowed to use the v73 version
+    #"${QNN_SDK_ROOT}/lib/aarch64-android/libQnnHtpV73Stub.so" \
+    #"${QNN_SDK_ROOT}/lib/hexagon-v73/unsigned/libQnnHtpV73Skel.so" \
 
 # Print the config for user verfication
 cd "${BasePath}/ImageInference"

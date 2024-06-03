@@ -47,6 +47,7 @@ export IMAGENET_DATASET_2012="${BasePath}/data/imagenet/ilsvrc_2012"
 
 export FLATC_EXECUTABLE="$(which -- flatc)"
 export LD_LIBRARY_PATH="${QNN_SDK_ROOT}/lib/x86_64-linux-clang/":$LD_LIBRARY_PATH
+export EXECUTORCH_ROOT="${BasePath}/submodules/executorch"
 echo "ANDROID_NDK: $ANDROID_NDK"
 echo "ANDROID_ABI: $ANDROID_ABI"
 echo "ANDROID_VERSION: $ANDROID_VERSION"
