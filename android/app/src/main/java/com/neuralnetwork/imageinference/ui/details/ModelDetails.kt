@@ -74,7 +74,7 @@ data class ModelDetails(val modelInputType: ModelInputType) {
     var results: Array<ModelResult>
         get() = _results
         set(value) {
-            value.sortBy { it.accuracy }
+            value.sortByDescending { it.accuracy }
             _results = value
         }
 
