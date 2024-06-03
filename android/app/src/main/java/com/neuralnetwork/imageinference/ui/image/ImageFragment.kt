@@ -86,10 +86,7 @@ class ImageFragment : Fragment(), DetailsConnector {
         val root: View = binding.root
         val modelConnector = (activity as ModelConnector)
         vm.model = modelConnector.getModel()
-        modelConnector.setOnModelChangedListener {
-            vm.model = it
-            vm.runModel(_context.contentResolver)
-        }
+        modelConnector.setOnModelChangedListener(vm.onModelChangedCallback)
 
         val imageSelectionPopup = setupImageSelection(vm)
         setupImageSelectionBefore(vm)
@@ -355,20 +352,25 @@ class ImageFragment : Fragment(), DetailsConnector {
     }
 
     override fun onDetach() {
-        val vm = ViewModelProvider(this)[ImageViewModel::class.java]
+        val vm: ImageViewModel by viewModels {
+            DataStoreViewModelFactory(_context.imageCollectionsDataStore)
+        }
         vm.saveDatastore(_context.imageCollectionsDataStore)
         super.onDetach()
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
+        val vm: ImageViewModel by viewModels()
         val modelConnector = (activity as ModelConnector)
-        modelConnector.setOnModelChangedListener(null)
+        modelConnector.removeOnModelChangeListener(vm.onModelChangedCallback)
         _binding = null
     }
 
     override fun getDetailViewModel(): DetailsViewModel {
-        val vm = ViewModelProvider(this)[ImageViewModel::class.java]
+        val vm: ImageViewModel by viewModels {
+            DataStoreViewModelFactory(_context.imageCollectionsDataStore)
+        }
         return vm.detailsViewModel
     }
 

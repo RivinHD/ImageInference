@@ -22,14 +22,17 @@ package com.neuralnetwork.imageinference.ui.photoCamera
 
 import android.content.Context
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import androidx.camera.core.ExperimentalZeroShutterLag
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.DrawableCompat
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
 import androidx.lifecycle.ViewModelProvider
 import com.google.common.util.concurrent.ListenableFuture
 import com.neuralnetwork.imageinference.MainActivity
@@ -39,6 +42,7 @@ import com.neuralnetwork.imageinference.model.ModelConnector
 import com.neuralnetwork.imageinference.ui.details.DetailsConnector
 import com.neuralnetwork.imageinference.ui.details.DetailsViewModel
 import com.neuralnetwork.imageinference.ui.details.ModelState
+import kotlinx.coroutines.CancellationException
 
 /**
  * Fragment that uses a photo camera for the model input.
@@ -79,14 +83,12 @@ class PhotoCameraFragment : Fragment(), DetailsConnector {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        val vm = ViewModelProvider(this)[PhotoCameraViewModel::class.java]
+        val vm : PhotoCameraViewModel by viewModels()
         _binding = FragmentPhotoCameraBinding.inflate(inflater, container, false)
         val root: View = binding.root
         val modelConnector = (activity as ModelConnector)
         vm.model = modelConnector.getModel()
-        modelConnector.setOnModelChangedListener {
-            vm.model = it
-        }
+        modelConnector.setOnModelChangedListener(vm.onModelChangedCallback)
 
         setupCamera(vm)
         setupPhotoCapture(vm)
@@ -163,6 +165,8 @@ class PhotoCameraFragment : Fragment(), DetailsConnector {
                 drawable,
                 null
             )
+
+            photoCapture.isEnabled = (it != ModelState.RUNNING)
         }
     }
 
@@ -203,33 +207,38 @@ class PhotoCameraFragment : Fragment(), DetailsConnector {
 
         // Setup camera preview and capture
         cameraProviderFuture = ProcessCameraProvider.getInstance(_context)
-        cameraProviderFuture.addListener(
-            {
-                val cameraProvider = cameraProviderFuture.get()
+        try {
+            cameraProviderFuture.addListener(
+                {
+                    val cameraProvider = cameraProviderFuture.get()
 
-                vm.preview.setSurfaceProvider(photoPreview.getSurfaceProvider())
+                    vm.preview.setSurfaceProvider(photoPreview.getSurfaceProvider())
 
-                cameraProvider.bindToLifecycle(
-                    viewLifecycleOwner,
-                    vm.cameraSelector,
-                    vm.imageCapture,
-                    vm.preview
-                )
-            },
-            ContextCompat.getMainExecutor(_context)
-        )
+                    cameraProvider.bindToLifecycle(
+                        viewLifecycleOwner,
+                        vm.cameraSelector,
+                        vm.imageCapture,
+                        vm.preview
+                    )
+                },
+                ContextCompat.getMainExecutor(_context)
+            )
+        } catch (e: CancellationException) {
+            Log.e("PhotoCapture", e.toString())
+        }
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
         val modelConnector = (activity as ModelConnector)
-        modelConnector.setOnModelChangedListener(null)
+        val vm : PhotoCameraViewModel by viewModels()
+        modelConnector.removeOnModelChangeListener(vm.onModelChangedCallback)
         cameraProviderFuture.cancel(true)
         _binding = null
     }
 
     override fun getDetailViewModel(): DetailsViewModel {
-        val photoCameraViewModel = ViewModelProvider(this)[PhotoCameraViewModel::class.java]
-        return photoCameraViewModel.detailsViewModel
+        val vm : PhotoCameraViewModel by viewModels()
+        return vm.detailsViewModel
     }
 }

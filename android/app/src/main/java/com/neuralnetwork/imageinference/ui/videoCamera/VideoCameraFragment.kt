@@ -28,6 +28,7 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
 import androidx.lifecycle.ViewModelProvider
 import com.google.common.util.concurrent.ListenableFuture
 import com.neuralnetwork.imageinference.MainActivity
@@ -75,7 +76,7 @@ class VideoCameraFragment : Fragment(), DetailsConnector {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        val vm = ViewModelProvider(this)[VideoCameraViewModel::class.java]
+        val vm : VideoCameraViewModel by viewModels()
         _binding = FragmentVideoCameraBinding.inflate(inflater, container, false)
         val root: View = binding.root
         val modelConnector = (activity as ModelConnector)
@@ -157,14 +158,14 @@ class VideoCameraFragment : Fragment(), DetailsConnector {
     override fun onDestroyView() {
         super.onDestroyView()
         val modelConnector = (activity as ModelConnector)
-        modelConnector.setOnModelChangedListener(null)
         val vm = ViewModelProvider(this)[VideoCameraViewModel::class.java]
+        modelConnector.removeOnModelChangeListener(vm.onModelChangedCallback)
         vm.stopRecording()
         _binding = null
     }
 
     override fun getDetailViewModel(): DetailsViewModel {
-        val videoCameraViewModel = ViewModelProvider(this)[VideoCameraViewModel::class.java]
-        return videoCameraViewModel.detailsViewModel
+        val vm : VideoCameraViewModel by viewModels()
+        return vm.detailsViewModel
     }
 }

@@ -20,6 +20,7 @@
 package com.neuralnetwork.imageinference.ui.photoCamera
 
 import android.graphics.Bitmap
+import android.util.Log
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ExperimentalZeroShutterLag
 import androidx.camera.core.ImageCapture
@@ -130,11 +131,12 @@ class PhotoCameraViewModel : ViewModel() {
      */
     val onImageCaptureCallback = object : ImageCapture.OnImageCapturedCallback() {
         override fun onCaptureSuccess(image: ImageProxy) {
+            Log.d("PhotoCapture", "Got an image!")
             super.onCaptureSuccess(image)
             val currentImage = image.toBitmap()
+            image.close()
             _image.value = currentImage
             runModel(currentImage)
-            image.close()
         }
 
         override fun onError(exception: ImageCaptureException) {
@@ -147,7 +149,7 @@ class PhotoCameraViewModel : ViewModel() {
      * Callback how the model change is handled.
      */
     val onModelChangedCallback : ((Model?) -> Unit) = {
-            this.model = it
+            model = it
             _modelState.value = ModelState.INITIAL
         }
 
@@ -157,18 +159,27 @@ class PhotoCameraViewModel : ViewModel() {
      * @param image The image to run inference on.
      */
     fun runModel(image: Bitmap) {
+        if (_modelState.value == ModelState.RUNNING){
+            Log.d("PhotoCapture", "The model is already running.")
+            return
+        }
+
+        Log.d("PhotoCapture", "Try running the model!")
         val fixedModel: Model? = model
         if (fixedModel == null) {
+            Log.e("PhotoCapture", "Failed to get the model.")
             _modelState.value = ModelState.FAILED
             return
         }
 
         val details: ModelDetails? = _details.value
         if (details == null) {
+            Log.e("PhotoCapture", "Failed to get the details.")
             _modelState.value = ModelState.FAILED
             return
         }
 
+        Log.d("PhotoCapture", "Running the model!")
         _modelState.value = ModelState.RUNNING
         viewModelScope.launch(Dispatchers.Default) {
             val outputDetails = fixedModel.run(image, details)

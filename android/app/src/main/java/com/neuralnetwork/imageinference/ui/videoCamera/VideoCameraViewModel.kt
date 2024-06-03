@@ -151,7 +151,7 @@ class VideoCameraViewModel : ViewModel(), ImageAnalysis.Analyzer {
     }
 
     override fun analyze(image: ImageProxy) {
-        Log.d("TestAnalyzer", "Image size ${image.width} x ${image.height}")
+        Log.d("VideoCapture", "Got an image!")
         runModel(image.toBitmap())
         image.close()
     }
@@ -162,18 +162,27 @@ class VideoCameraViewModel : ViewModel(), ImageAnalysis.Analyzer {
      * @param image The image to run inference on.
      */
     private fun runModel(image: Bitmap) {
+        if (_modelState.value == ModelState.RUNNING){
+            Log.d("VideoCapture", "The model is already running.")
+            return
+        }
+
+        Log.d("VideoCapture", "Try running the model.")
         val fixedModel: Model? = model
         if (fixedModel == null) {
+            Log.e("VideoCapture", "Failed to get the model.")
             _modelState.value = ModelState.FAILED
             return
         }
 
         val details: ModelDetails? = _details.value
         if (details == null){
+            Log.e("VideoCapture", "Failed to get the details.")
             _modelState.value = ModelState.FAILED
             return
         }
 
+        Log.d("VideoCapture", "Running the model.")
         _modelState.value = ModelState.RUNNING
         viewModelScope.launch(Dispatchers.Default) {
             val outputDetails = fixedModel.run(image, details)

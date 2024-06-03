@@ -51,7 +51,7 @@ data class Image(val uri: Uri, val name: String) {
      */
     fun getBitmap(resolver: ContentResolver): Bitmap {
         return ImageDecoder.createSource(resolver, uri).let {
-            ImageDecoder.decodeBitmap(it)
+            ImageDecoder.decodeBitmap(it).copy(Bitmap.Config.ARGB_8888, true)
         }
     }
 

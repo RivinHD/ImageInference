@@ -22,6 +22,7 @@ package com.neuralnetwork.imageinference.ui.image
 import android.content.ContentResolver
 import android.graphics.Bitmap
 import android.net.Uri
+import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -46,10 +47,6 @@ import kotlinx.coroutines.withContext
  */
 class ImageViewModel(dataStore: DataStore<ImageCollections>) :
     DataStoreViewModel<ImageCollections>(dataStore) {
-    /**
-     * Holds the image that is used for inference.
-     */
-    private var inferencedImage: Image = Image.DEFAULT
 
     /**
      * Holds the image collections that store all images for inference.
@@ -370,31 +367,35 @@ class ImageViewModel(dataStore: DataStore<ImageCollections>) :
      * @param resolver The content resolver to get the bitmap from the uri.
      */
     fun runModel(resolver: ContentResolver) {
+        if (_modelState.value == ModelState.RUNNING){
+            Log.d("Image", "The model is already running.")
+            return
+        }
+
+        Log.d("Image", "Try running the model.")
         val fixedModel: Model? = model
         if (fixedModel == null) {
+            Log.d("Image", "Failed to get the model.")
             _modelState.value = ModelState.FAILED
             return
         }
 
         val details: ModelDetails? = _details.value
         if (details == null) {
+            Log.d("Image", "Failed to get the details.")
             _modelState.value = ModelState.FAILED
             return
         }
 
         val image = selectedImage.value
         if (image == null || image == Image.DEFAULT) {
+            Log.d("Image", "Failed to get the image.")
             _modelState.value = ModelState.FAILED
             return
         }
 
-        if (image == inferencedImage) {
-            _modelState.value = ModelState.FAILED
-            return
-        }
 
-        inferencedImage = image
-
+        Log.d("VideoCapture", "Running the model.")
         val bitmap: Bitmap = image.getBitmap(resolver)
         _modelState.value = ModelState.RUNNING
         viewModelScope.launch(Dispatchers.Default) {

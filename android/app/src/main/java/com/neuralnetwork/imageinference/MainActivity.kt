@@ -52,10 +52,24 @@ class MainActivity : AppCompatActivity(), ModelConnector {
      */
     private val adspFixedPath = ";/system/lib/rfsa/adsp;/system/vendor/lib/rfsa/adsp;/dsp"
 
+    /**
+     * The binding that holds the view of this activity.
+     */
     private lateinit var binding: ActivityMainBinding
 
+    /**
+     * The current selected model.
+     */
     private var model: Model? = null
+
+    /**
+     * The name of the current selected model.
+     */
     private var modelName: String = ModelAssets.DEFAULT
+
+    /**
+     * Callback to use when the model has changed.
+     */
     private var _modelChangedCallback: ((m: Model?) -> Unit)? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -113,26 +127,13 @@ class MainActivity : AppCompatActivity(), ModelConnector {
         )
         modelSelector.isEnabled = modelAssets.models.isNotEmpty()
 
-        (modelSelector.editText as? AutoCompleteTextView)?.onItemSelectedListener =
-            object : AdapterView.OnItemSelectedListener {
-                override fun onItemSelected(
-                    parent: AdapterView<*>?,
-                    view: View?,
-                    position: Int,
-                    id: Long
-                ) {
-                    modelName = parent?.getItemAtPosition(position) as String
-                    model = ModelAssets.getModel(modelName)
-                    model?.load(applicationContext)
-                    _modelChangedCallback?.let { it(model) }
-                }
-
-                override fun onNothingSelected(parent: AdapterView<*>?) {
-                    model?.destroy()
-                    modelName = ModelAssets.DEFAULT
-                    _modelChangedCallback?.let { it(null) }
-                }
-
+        (modelSelector.editText as? MaterialAutoCompleteTextView)?.onItemClickListener =
+            AdapterView.OnItemClickListener { parent, view, position, id ->
+                modelName = parent?.getItemAtPosition(position) as String
+                Log.d("MainActivity", "Selected Model: $modelName.")
+                model = ModelAssets.getModel(modelName)
+                model?.load(applicationContext)
+                _modelChangedCallback?.let { it(model) }
             }
     }
 
@@ -198,8 +199,15 @@ class MainActivity : AppCompatActivity(), ModelConnector {
         return modelName
     }
 
-    override fun setOnModelChangedListener(callback: ((m: Model?) -> Unit)?) {
+    override fun setOnModelChangedListener(callback: ((m: Model?) -> Unit)) {
         _modelChangedCallback = callback
+    }
+
+    override fun removeOnModelChangeListener(callback: (m: Model?) -> Unit) {
+        if (_modelChangedCallback == callback)
+        {
+            _modelChangedCallback = null
+        }
     }
 
 }
