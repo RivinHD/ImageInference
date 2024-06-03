@@ -170,6 +170,15 @@ class ImageViewModel(dataStore: DataStore<ImageCollections>) :
     val hasBefore: LiveData<Boolean> = _hasBefore
 
     /**
+     * Callback how the model change is handled.
+     */
+    val onModelChangedCallback : ((Model?) -> Unit) = {
+        model = it
+        _modelState.value = ModelState.INITIAL
+        _selectedImage.value = _selectedImage.value
+    }
+
+    /**
      * Adds an image to the current set for inference.
      * If the image already exists nothing happens.
      * If the name of the image already exists a count is added with syntax (<count>).
