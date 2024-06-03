@@ -43,6 +43,8 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
+    print("Processing ResNet50v15 model with XNNPACK partitioner.")
+
     # Lowering the model to XNNPACK
     resnet50 = models.resnet50(weights=ResNet50_Weights.IMAGENET1K_V2).eval()
     sample_input = (torch.randn(1, 3, 224, 224),)
@@ -52,6 +54,7 @@ if __name__ == "__main__":
     compile_config = EdgeCompileConfig()
 
     if args.quantize:
+        print("Starting quantization")
         imagenet_dataset = getImageNet()
         resnet50 = quantize(resnet50, imagenet_dataset)
         compile_config = EdgeCompileConfig(_check_ir_validity=False)
@@ -67,3 +70,5 @@ if __name__ == "__main__":
     os.makedirs("models-out", exist_ok=True)
     with open(f"models-out/resnet50v15_xnnpack_{quantize_tag}.pte", "wb") as file:
         exec_program.write_to_file(file)
+
+    print("Finished processing ResNet50v15 model with XNNPACK partitioner.")

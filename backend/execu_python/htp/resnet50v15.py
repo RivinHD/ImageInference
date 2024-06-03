@@ -69,6 +69,8 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
+    print("Processing ResNet50v15 model with HTP partitioner.")
+
     # Check for need environment variables.
     if "QNN_SDK_ROOT" not in os.environ:
         raise RuntimeError("Environment variable QNN_SDK_ROOT must be set")
@@ -84,6 +86,7 @@ if __name__ == "__main__":
     resnet50 = capture_pre_autograd_graph(resnet50, sample_input)
 
     if args.quantize:
+        print("Starting quantization")
         imagenet_dataset = getImageNet()
         resnet50 = quantize(resnet50, imagenet_dataset)
 
@@ -123,3 +126,5 @@ if __name__ == "__main__":
     os.makedirs("models-out", exist_ok=True)
     with open(f"models-out/resnet50v15_htp_{quantize_tag}.pte", "wb") as file:
         exec_program.write_to_file(file)
+
+    print("Finished processing ResNet50v15 model with XNNPACK partitioner.")

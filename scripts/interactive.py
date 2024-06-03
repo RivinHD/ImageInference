@@ -198,4 +198,4 @@ if __name__ == "__main__":
         print("Copying models to android app.")
         sourceDirectory = os.path.join(working_directory, "models-out")
         destinationDirectory = os.path.join(working_directory, "android", "app", "src", "main", "assets")
-        shutil.copytree(sourceDirectory, destinationDirectory)
+        shutil.copytree(sourceDirectory, destinationDirectory, dirs_exist_ok=True)
