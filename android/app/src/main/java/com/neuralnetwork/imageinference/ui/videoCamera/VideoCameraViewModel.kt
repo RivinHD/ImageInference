@@ -125,6 +125,11 @@ class VideoCameraViewModel : ViewModel(), ImageAnalysis.Analyzer {
     val isRecording: LiveData<Boolean> = _isRecording
 
     /**
+     * Gets the state of the model.
+     */
+    val modelState: LiveData<ModelState> = _modelState
+
+    /**
      * Callback how the model change is handled.
      */
     val onModelChangedCallback : ((Model?) -> Unit) = {

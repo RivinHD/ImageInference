@@ -35,9 +35,10 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.ListPopupWindow
+import androidx.core.content.ContextCompat
+import androidx.core.graphics.drawable.DrawableCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
-import androidx.lifecycle.ViewModelProvider
 import com.neuralnetwork.imageinference.R
 import com.neuralnetwork.imageinference.databinding.FragmentImageBinding
 import com.neuralnetwork.imageinference.datastore.DataStoreViewModelFactory
@@ -45,6 +46,7 @@ import com.neuralnetwork.imageinference.datastore.imageCollectionsDataStore
 import com.neuralnetwork.imageinference.model.ModelConnector
 import com.neuralnetwork.imageinference.ui.details.DetailsConnector
 import com.neuralnetwork.imageinference.ui.details.DetailsViewModel
+import com.neuralnetwork.imageinference.ui.details.ModelState
 
 /**
  * Fragment that uses an image for the model input.
@@ -98,6 +100,7 @@ class ImageFragment : Fragment(), DetailsConnector {
         observeSelectedImage(vm)
         observeHasNext(vm)
         observeHasBefore(vm)
+        observeModelState(vm)
 
         return root
     }
@@ -175,6 +178,58 @@ class ImageFragment : Fragment(), DetailsConnector {
             imageSelectionBefore.isEnabled = images.size > 1
             imageSelectionNext.isEnabled = images.size > 1
             imageSelection.isEnabled = images.isNotEmpty()
+        }
+    }
+
+    /**
+     * Setup the observe on the view model property models state LiveData.
+     *
+     * @param vm The view model of this fragment.
+     */
+    private fun observeModelState(
+        vm: ImageViewModel
+    ) {
+        val imageSelection = binding.imageSelection
+        val selectionButtons = arrayOf(
+            binding.imageSelectionNext,
+            binding.imageSelectionBefore,
+            binding.imageSelectionMenu,
+            binding.imageSelection
+        )
+
+        vm.modelState.observe(viewLifecycleOwner) {
+            val colorID = when (it) {
+                ModelState.INITIAL -> return@observe
+                ModelState.RUNNING -> R.color.loading
+                ModelState.SUCCESS -> R.color.success_green
+                ModelState.FAILED -> R.color.fail_red
+                null -> return@observe
+            }
+
+            val drawableID = when (it) {
+                ModelState.INITIAL -> return@observe
+                ModelState.RUNNING -> R.drawable.inference
+                ModelState.SUCCESS -> R.drawable.ic_check_google
+                ModelState.FAILED -> R.drawable.ic_close_google
+                null -> return@observe
+            }
+
+            val drawable = ContextCompat.getDrawable(_context, drawableID)
+            val color = ContextCompat.getColor(_context, colorID)
+            if (drawable != null) {
+                DrawableCompat.setTint(drawable, color)
+            }
+
+            imageSelection.setCompoundDrawablesRelativeWithIntrinsicBounds(
+                drawable,
+                null,
+                drawable,
+                null
+            )
+
+            selectionButtons.forEach { button ->
+                button.isEnabled = (it != ModelState.RUNNING)
+            }
         }
     }
 

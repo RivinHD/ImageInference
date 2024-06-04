@@ -58,9 +58,10 @@ class ModelAssets(assets: AssetManager) {
          * The implemented models that are available in the app.
          */
         private val _models = listOf(
-            Model("resnet50v15_htp_fp32.pte",
+            // The model is not activated as it does not finish the inference run.
+            /*Model("resnet50v15_htp_fp32.pte",
                 "Resnet50v1.5 (HTP, FP32)",
-                ModelType.RESNET50v15),
+                ModelType.RESNET50v15),*/
             Model("resnet50v15_htp_q8.pte",
                 "Resnet50v1.5 (HTP, Int8)",
                 ModelType.RESNET50v15),

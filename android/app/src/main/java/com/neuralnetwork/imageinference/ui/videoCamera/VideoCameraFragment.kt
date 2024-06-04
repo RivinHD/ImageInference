@@ -27,6 +27,7 @@ import android.view.ViewGroup
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.drawable.DrawableCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.ViewModelProvider
@@ -37,6 +38,7 @@ import com.neuralnetwork.imageinference.databinding.FragmentVideoCameraBinding
 import com.neuralnetwork.imageinference.model.ModelConnector
 import com.neuralnetwork.imageinference.ui.details.DetailsConnector
 import com.neuralnetwork.imageinference.ui.details.DetailsViewModel
+import com.neuralnetwork.imageinference.ui.details.ModelState
 
 /**
  * Fragment that uses a video camera for the model input.
@@ -76,7 +78,7 @@ class VideoCameraFragment : Fragment(), DetailsConnector {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        val vm : VideoCameraViewModel by viewModels()
+        val vm: VideoCameraViewModel by viewModels()
         _binding = FragmentVideoCameraBinding.inflate(inflater, container, false)
         val root: View = binding.root
         val modelConnector = (activity as ModelConnector)
@@ -87,6 +89,7 @@ class VideoCameraFragment : Fragment(), DetailsConnector {
         setupVideoRecord(vm)
 
         observeIsRecording(vm)
+        observeModelState(vm)
 
         return root
     }
@@ -103,6 +106,37 @@ class VideoCameraFragment : Fragment(), DetailsConnector {
                 videoRecord.text = getString(R.string.stop)
             } else {
                 videoRecord.text = getString(R.string.video_record)
+            }
+        }
+    }
+
+    /**
+     * Setup the observe on the view model property models state LiveData.
+     *
+     * @param vm The view model of this fragment.
+     */
+    private fun observeModelState(vm: VideoCameraViewModel) {
+        val videoRecord = binding.videoRecord
+
+        vm.modelState.observe(viewLifecycleOwner) {
+            if (it == ModelState.RUNNING) {
+                val colorID = R.color.loading
+                val drawableID = R.drawable.inference
+
+                val drawable = ContextCompat.getDrawable(_context, drawableID)
+                val color = ContextCompat.getColor(_context, colorID)
+
+                if (drawable != null) {
+                    DrawableCompat.setTint(drawable, color)
+                }
+
+                videoRecord.setCompoundDrawablesRelativeWithIntrinsicBounds(
+                    drawable, null, drawable, null
+                )
+            } else {
+                videoRecord.setCompoundDrawablesRelativeWithIntrinsicBounds(
+                    null, null, null, null
+                )
             }
         }
     }
@@ -165,7 +199,7 @@ class VideoCameraFragment : Fragment(), DetailsConnector {
     }
 
     override fun getDetailViewModel(): DetailsViewModel {
-        val vm : VideoCameraViewModel by viewModels()
+        val vm: VideoCameraViewModel by viewModels()
         return vm.detailsViewModel
     }
 }

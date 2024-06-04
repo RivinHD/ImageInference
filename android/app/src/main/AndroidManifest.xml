@@ -63,6 +63,12 @@
         <uses-native-library android:name="libQnnHtpV73Stub.so"
             android:required="false"/>
 
+        <uses-native-library android:name="libQnnHtpV75Skel.so"
+            android:required="false"/>
+
+        <uses-native-library android:name="libQnnHtpV75Stub.so"
+            android:required="false"/>
+
         <uses-native-library android:name="libQnnSystem.so"
             android:required="false"/>
             

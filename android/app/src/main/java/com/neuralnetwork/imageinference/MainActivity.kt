@@ -22,13 +22,12 @@ package com.neuralnetwork.imageinference
 import android.app.Activity
 import android.content.Context
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.system.ErrnoException
 import android.system.Os
 import android.util.Log
-import android.view.View
 import android.widget.AdapterView
-import android.widget.AutoCompleteTextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -85,6 +84,11 @@ class MainActivity : AppCompatActivity(), ModelConnector {
                 e
             )
         }
+
+        Log.i("HARDWARE", "Product: ${Build.PRODUCT}")
+        Log.i("HARDWARE", "Board: ${Build.BOARD}")
+        Log.i("HARDWARE", "Model: ${Build.MODEL}")
+        Log.i("HARDWARE", "Hardware: ${Build.HARDWARE}")
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)

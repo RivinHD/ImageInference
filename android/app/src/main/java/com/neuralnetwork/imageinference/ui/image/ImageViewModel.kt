@@ -170,6 +170,11 @@ class ImageViewModel(dataStore: DataStore<ImageCollections>) :
     val hasBefore: LiveData<Boolean> = _hasBefore
 
     /**
+     * Gets the state of the model.
+     */
+    val modelState: LiveData<ModelState> = _modelState
+
+    /**
      * Callback how the model change is handled.
      */
     val onModelChangedCallback : ((Model?) -> Unit) = {

@@ -26,14 +26,12 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageView
 import androidx.camera.core.ExperimentalZeroShutterLag
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.DrawableCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
-import androidx.lifecycle.ViewModelProvider
 import com.google.common.util.concurrent.ListenableFuture
 import com.neuralnetwork.imageinference.MainActivity
 import com.neuralnetwork.imageinference.R
@@ -93,7 +91,7 @@ class PhotoCameraFragment : Fragment(), DetailsConnector {
         setupCamera(vm)
         setupPhotoCapture(vm)
 
-        observeModelSuccess(vm)
+        observeModelState(vm)
         observeImage(vm)
 
         return root
@@ -127,11 +125,11 @@ class PhotoCameraFragment : Fragment(), DetailsConnector {
     }
 
     /**
-     * Setup the observe on the view model property models success LiveData.
+     * Setup the observe on the view model property models state LiveData.
      *
      * @param vm The view model of this fragment.
      */
-    private fun observeModelSuccess(
+    private fun observeModelState(
         vm: PhotoCameraViewModel
     ) {
         val photoCapture = binding.photoCapture
