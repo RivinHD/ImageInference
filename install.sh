@@ -113,9 +113,9 @@ cmake . -DCMAKE_INSTALL_PREFIX=cmake-android-out \
     -DFLATC_EXECUTABLE="${FLATC_EXECUTABLE}" \
     -DCMAKE_BUILD_TYPE=Release \
     -Bcmake-android-out
-
     # For now Vulkan does not work properly and therefore is disabled
     # -DEXECUTORCH_BUILD_VULKAN=ON \
+
 cmake --build cmake-android-out -j "${CMAKE_JOBS}" --target install
 
 # Build the android extension
@@ -141,6 +141,8 @@ yes | cp "${QNN_SDK_ROOT}/lib/aarch64-android/libQnnHtp.so" \
     "${QNN_SDK_ROOT}/lib/hexagon-v69/unsigned/libQnnHtpV69Skel.so" \
     "${QNN_SDK_ROOT}/lib/aarch64-android/libQnnHtpV73Stub.so" \
     "${QNN_SDK_ROOT}/lib/hexagon-v73/unsigned/libQnnHtpV73Skel.so" \
+    "${QNN_SDK_ROOT}/lib/aarch64-android/libQnnHtpV75Stub.so" \
+    "${QNN_SDK_ROOT}/lib/hexagon-v73/unsigned/libQnnHtpV75Skel.so" \
     "${BasePath}/ImageInference/android/app/src/main/jniLibs/${ANDROID_ABI}"
     # Maybe we are not allowed to use the v73 version
 
