@@ -47,14 +47,14 @@ EXECU_PACKAGE = "backend.execu_python"
 def select_models() -> list[str]:
     models = []
     while len(models) == 0:
-        print("Select Models to process separated by comma or 'all' to process all models.")
-        print(f"Available Models are {MODELS}")
+        print("Select models to process separated by comma or 'all' to process all models.")
+        print(f"Available models are {MODELS}")
         text = input("> ").strip()
         if text == 'all':
             models = MODELS
         else:
             models = [m.strip() for m in text.split(",") if m.strip() in MODELS]
-    print(f"Selected Models are {models}")
+    print(f"Selected models are {models}")
     return models
 
 
@@ -69,7 +69,7 @@ def select_hardware() -> list[str]:
     hardware = []
     while len(hardware) == 0:
         print("Select Hardware to run on separated by comma or 'all' to support every hardware.")
-        print(f"Available Hardware is {HARDWARE}")
+        print(f"Available hardware is {HARDWARE}")
         text = input("> ").strip()
         if text == 'all':
             hardware = HARDWARE
@@ -79,7 +79,7 @@ def select_hardware() -> list[str]:
                 for hw in HARDWARE:
                     if hw.lower().startswith(h):
                         hardware.append(hw)
-    print(f"Selected Hardware is {hardware}")
+    print(f"Selected hardware is {hardware}")
     return hardware
 
 
@@ -90,21 +90,21 @@ def ask_correct_hardware() -> bool:
     return text.startswith("y")
 
 
-def select_htp_device() -> str:
-    device = ""
-    while device == "":
-        print("Since you want to use HTP you need to select Qualcomm processor to run on.")
-        print(f"Available Devices are {QUALCOMM_DEVICES}")
-        device = input("> ").strip().lower()
-        for qd in QUALCOMM_DEVICES:
-            qdr = qd.split(" ")[0].lower()
-            if device == qdr:
-                device = qd.split(" ")[0]
-                break
-        else:
-            device = ""
-    print(f"Selected Device is {device}")
-    return device
+def select_htp_devices() -> str:
+    devices = []
+    while len(devices) == 0:
+        print("Since you want to use HTP you need to select Qualcomm device to run on.")
+        print("Select devices to run on separated by comma or 'all' to support every listed devices.")
+        print(f"Available devices are {QUALCOMM_DEVICES}")
+        input_devices = input("> ").strip().lower().split(",")
+        for device in input_devices:
+            for qd in QUALCOMM_DEVICES:
+                qdr = qd.split(" ")[0].lower()
+                if device == qdr:
+                    devices.append(qd.split(" ")[0])
+                    break
+    print(f"Selected device is {devices}")
+    return devices
 
 
 def ask_quantization() -> tuple[bool, bool]:
@@ -122,23 +122,32 @@ def ask_start_processing() -> bool:
     return text.startswith("y")
 
 
+def _generate_quantize_command(base_command: str, non_quantize: bool, quantize: bool) -> list[str]:
+    commands = []
+    if quantize:
+        commands.append(f"{base_command} --quantize")
+    if non_quantize:
+        commands.append(base_command)
+    return commands
+
+
 def generate_command(
         models: list[str],
         hardware: list[str],
         non_quantize: bool,
         quantize: bool,
-        htp_device: str = "") -> str:
+        htp_devices: list[str] = []) -> str:
     commands = []
     for model in models:
         for hw in hardware:
             package_path = ".".join([EXECU_PACKAGE, HARDWARE_TO_DIRECTORY[hw], MODELS_TO_PYFILE[model]])
             base_command = f"python -m {package_path}"
             if hw == HTP_QUALCOMM:
-                base_command = f"{base_command} --model {htp_device}"
-            if quantize:
-                commands.append(f"{base_command} --quantize")
-            if non_quantize:
-                commands.append(base_command)
+                for device in htp_devices:
+                    model_command = f"{base_command} --model {device}"
+                    commands.extend(_generate_quantize_command(model_command, non_quantize, quantize))
+            else:
+                commands.extend(_generate_quantize_command(base_command, non_quantize, quantize))
     return "; ".join(commands)
 
 
@@ -167,9 +176,9 @@ if __name__ == "__main__":
         hardware_correct = ask_correct_hardware()
     print()
 
-    htp_device = ""
+    htp_devices = ""
     if HTP_QUALCOMM in hardware:
-        htp_device = select_htp_device()
+        htp_devices = select_htp_devices()
         print()
 
     # Ask for quantization
@@ -177,7 +186,7 @@ if __name__ == "__main__":
     print()
 
     # Generate command and start processing
-    command = generate_command(models, hardware, non_quantize, quantize, htp_device)
+    command = generate_command(models, hardware, non_quantize, quantize, htp_devices)
     print("The command that will be executed is:")
     print("-"*50)
     print(command)
