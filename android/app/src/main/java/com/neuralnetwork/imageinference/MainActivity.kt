@@ -48,11 +48,6 @@ import java.io.FileOutputStream
 
 class MainActivity : AppCompatActivity(), ModelConnector {
     /**
-     * The fixed asdp path based on https://developer.qualcomm.com/sites/default/files/docs/snpe/dsp_runtime.html
-     */
-    private val adspFixedPath = ";/system/lib/rfsa/adsp;/system/vendor/lib/rfsa/adsp;/dsp"
-
-    /**
      * The binding that holds the view of this activity.
      */
     private lateinit var binding: ActivityMainBinding
@@ -81,7 +76,7 @@ class MainActivity : AppCompatActivity(), ModelConnector {
         try {
             Os.setenv(
                 "ADSP_LIBRARY_PATH",
-                applicationInfo.nativeLibraryDir + adspFixedPath,
+                applicationInfo.nativeLibraryDir,
                 true)
         } catch (e: ErrnoException) {
             Log.e(

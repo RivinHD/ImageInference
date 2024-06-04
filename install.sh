@@ -136,13 +136,13 @@ yes | cp "cmake-android-out/extension/android/libexecutorch_jni.so" \
 yes | cp "cmake-android-out/lib/libqnn_executorch_backend.so" \
    "${BasePath}/ImageInference/android/app/src/main/jniLibs/${ANDROID_ABI}"
 yes | cp "${QNN_SDK_ROOT}/lib/aarch64-android/libQnnHtp.so" \
-    "${QNN_SDK_ROOT}/lib/aarch64-android/libQnnHtpV69Stub.so" \
     "${QNN_SDK_ROOT}/lib/aarch64-android/libQnnSystem.so" \
+    "${QNN_SDK_ROOT}/lib/aarch64-android/libQnnHtpV69Stub.so" \
     "${QNN_SDK_ROOT}/lib/hexagon-v69/unsigned/libQnnHtpV69Skel.so" \
+    "${QNN_SDK_ROOT}/lib/aarch64-android/libQnnHtpV73Stub.so" \
+    "${QNN_SDK_ROOT}/lib/hexagon-v73/unsigned/libQnnHtpV73Skel.so" \
     "${BasePath}/ImageInference/android/app/src/main/jniLibs/${ANDROID_ABI}"
     # Maybe we are not allowed to use the v73 version
-    #"${QNN_SDK_ROOT}/lib/aarch64-android/libQnnHtpV73Stub.so" \
-    #"${QNN_SDK_ROOT}/lib/hexagon-v73/unsigned/libQnnHtpV73Skel.so" \
 
 # Print the config for user verfication
 cd "${BasePath}/ImageInference"
