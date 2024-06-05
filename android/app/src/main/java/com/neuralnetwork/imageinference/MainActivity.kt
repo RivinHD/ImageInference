@@ -28,6 +28,7 @@ import android.system.ErrnoException
 import android.system.Os
 import android.util.Log
 import android.widget.AdapterView
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -41,8 +42,11 @@ import com.neuralnetwork.imageinference.databinding.ActivityMainBinding
 import com.neuralnetwork.imageinference.model.Model
 import com.neuralnetwork.imageinference.model.ModelAssets
 import com.neuralnetwork.imageinference.model.ModelConnector
+import java.io.BufferedReader
 import java.io.File
 import java.io.FileOutputStream
+import java.io.FileReader
+import java.io.IOException
 
 
 class MainActivity : AppCompatActivity(), ModelConnector {
@@ -66,6 +70,8 @@ class MainActivity : AppCompatActivity(), ModelConnector {
      */
     private var _modelChangedCallback: ((m: Model?) -> Unit)? = null
 
+    private lateinit var _modelAssets: ModelAssets
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -85,11 +91,7 @@ class MainActivity : AppCompatActivity(), ModelConnector {
             )
         }
 
-        Log.i("HARDWARE", "Product: ${Build.PRODUCT}")
-        Log.i("HARDWARE", "Board: ${Build.BOARD}")
-        Log.i("HARDWARE", "Model: ${Build.MODEL}")
-        Log.i("HARDWARE", "Hardware: ${Build.HARDWARE}")
-
+        _modelAssets = ModelAssets(assets, getSoc())
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         setSupportActionBar(binding.modelToolbar)
@@ -110,33 +112,38 @@ class MainActivity : AppCompatActivity(), ModelConnector {
         setupActionBarWithNavController(navController, appBarConfiguration)
         navView.setupWithNavController(navController)
 
-        val modelAssets = ModelAssets(assets)
-        setupModelSelector(modelAssets)
+        setupModelSelector()
     }
 
     /**
      * Setup the model selector with with listener and items
-     *
-     * @param modelAssets The models available from the assets.
      */
-    private fun setupModelSelector(modelAssets: ModelAssets) {
+    private fun setupModelSelector() {
         val modelSelector = binding.modelSelector
         (modelSelector.editText as? MaterialAutoCompleteTextView)?.setSimpleItems(
-            modelAssets.models.toTypedArray()
+            _modelAssets.models.toTypedArray()
         )
-        modelSelector.isEnabled = modelAssets.models.isNotEmpty()
+        modelSelector.isEnabled = _modelAssets.models.isNotEmpty()
 
         (modelSelector.editText as? MaterialAutoCompleteTextView)?.onItemClickListener =
             AdapterView.OnItemClickListener { parent, view, position, id ->
                 modelName = parent?.getItemAtPosition(position) as String
                 Log.d("MainActivity", "Selected Model: $modelName.")
-                model = ModelAssets.getModel(modelName)
+                model = _modelAssets.getModel(modelName)
                 model?.load(applicationContext)
                 _modelChangedCallback?.let { it(model) }
             }
     }
 
     companion object {
+        private fun getSoc(): String{
+            return if (Build.VERSION.SDK_INT > Build.VERSION_CODES.S){
+                Build.SOC_MODEL
+            } else {
+                ""
+            }
+        }
+
         /**
          * Check for the camera permission and ask if needed.
          *

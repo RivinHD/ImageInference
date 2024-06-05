@@ -205,25 +205,25 @@ class PhotoCameraFragment : Fragment(), DetailsConnector {
 
         // Setup camera preview and capture
         cameraProviderFuture = ProcessCameraProvider.getInstance(_context)
-        try {
             cameraProviderFuture.addListener(
                 {
-                    val cameraProvider = cameraProviderFuture.get()
+                    try {
+                        val cameraProvider = cameraProviderFuture.get()
+                        vm.preview.setSurfaceProvider(photoPreview.getSurfaceProvider())
 
-                    vm.preview.setSurfaceProvider(photoPreview.getSurfaceProvider())
-
-                    cameraProvider.bindToLifecycle(
-                        viewLifecycleOwner,
-                        vm.cameraSelector,
-                        vm.imageCapture,
-                        vm.preview
-                    )
+                        cameraProvider.bindToLifecycle(
+                            viewLifecycleOwner,
+                            vm.cameraSelector,
+                            vm.imageCapture,
+                            vm.preview
+                        )
+                    } catch (e: CancellationException) {
+                        Log.e("PhotoCapture", e.toString())
+                    }
                 },
                 ContextCompat.getMainExecutor(_context)
             )
-        } catch (e: CancellationException) {
-            Log.e("PhotoCapture", e.toString())
-        }
+
     }
 
     override fun onDestroyView() {

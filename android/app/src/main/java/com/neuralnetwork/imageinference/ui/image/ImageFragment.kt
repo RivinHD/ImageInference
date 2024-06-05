@@ -223,7 +223,7 @@ class ImageFragment : Fragment(), DetailsConnector {
             imageSelection.setCompoundDrawablesRelativeWithIntrinsicBounds(
                 drawable,
                 null,
-                drawable,
+                null,
                 null
             )
 

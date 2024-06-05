@@ -27,13 +27,59 @@ import android.content.res.AssetManager
  * @constructor Creates a new model assets object.
  *
  * @param assets The asset manager to load the models filepath with.
+ * @param soc The system on chip (soc) of the current device.
  */
-class ModelAssets(assets: AssetManager) {
+class ModelAssets(assets: AssetManager, private val soc: String) {
+    /**
+     * The implemented models that are available in the app.
+     */
+    private val _models = listOf(
+        // The model is not activated as it does not finish the inference run.
+        /*Model("resnet50v15_htp_fp32_$soc.pte",
+            "Resnet50v1.5 (HTP, FP32)",
+            ModelType.RESNET50v15),*/
+        Model("resnet50v15_htp_q8_$soc.pte",
+            "Resnet50v1.5 (HTP, Int8)",
+            ModelType.RESNET50v15),
+        Model("resnet50v15_xnnpack_fp32.pte",
+            "Resnet50v1.5 (CPU, FP32)",
+            ModelType.RESNET50v15),
+        Model("resnet50v15_xnnpack_q8.pte",
+            "Resnet50v1.5 (CPU, Int8)",
+            ModelType.RESNET50v15),
+    )
+
+    /**
+     * Maps the model filename to the display model name.
+     */
+    private val _modelsNames: Map<String, String> = _models.associate { it.file to it.name }
+
+    /**
+     * Maps the model display name to the model filename.
+     */
+    private val _modelsValues: Map<String, Model> = _models.associateBy { it.name }
 
     /**
      * Gets the list of models that are implemented an available through the assets.
      */
     val models: List<String> = setModelsFromAsset(assets)
+
+    companion object {
+        /**
+         * The default value for the model.
+         */
+        const val DEFAULT: String = "None"
+    }
+
+    /**
+     * Gets a model by its name.
+     *
+     * @param name The name of the model to load.
+     * @return The loaded model or null if not found.
+     */
+    fun getModel(name: String): Model? {
+        return _modelsValues.getOrDefault(name, null)
+    }
 
     /**
      * List available models from the assets and loads the filepath.
@@ -50,52 +96,6 @@ class ModelAssets(assets: AssetManager) {
             listOf(DEFAULT)
         } else {
             modelList
-        }
-    }
-
-    companion object {
-        /**
-         * The implemented models that are available in the app.
-         */
-        private val _models = listOf(
-            // The model is not activated as it does not finish the inference run.
-            /*Model("resnet50v15_htp_fp32.pte",
-                "Resnet50v1.5 (HTP, FP32)",
-                ModelType.RESNET50v15),*/
-            Model("resnet50v15_htp_q8.pte",
-                "Resnet50v1.5 (HTP, Int8)",
-                ModelType.RESNET50v15),
-            Model("resnet50v15_xnnpack_fp32.pte",
-                "Resnet50v1.5 (CPU, FP32)",
-                ModelType.RESNET50v15),
-            Model("resnet50v15_xnnpack_q8.pte",
-                "Resnet50v1.5 (CPU, Int8)",
-                ModelType.RESNET50v15),
-        )
-
-        /**
-         * Maps the model filename to the display model name.
-         */
-        private val _modelsNames: Map<String, String> = _models.associate { it.file to it.name }
-
-        /**
-         * Maps the model display name to the model filename.
-         */
-        private val _modelsValues: Map<String, Model> = _models.associateBy { it.name }
-
-        /**
-         * The default value for the model.
-         */
-        const val DEFAULT: String = "None"
-
-        /**
-         * Gets a model by its name.
-         *
-         * @param name The name of the model to load.
-         * @return The loaded model or null if not found.
-         */
-        fun getModel(name: String): Model? {
-            return _modelsValues.getOrDefault(name, null)
         }
     }
 }

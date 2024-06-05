@@ -128,7 +128,7 @@ if __name__ == "__main__":
     ))
     quantize_tag = "q8" if args.quantize else "fp32"
     os.makedirs("models-out", exist_ok=True)
-    with open(f"models-out/resnet50v15_htp_{quantize_tag}.pte", "wb") as file:
+    with open(f"models-out/resnet50v15_htp_{quantize_tag}_{args.model}.pte", "wb") as file:
         exec_program.write_to_file(file)
 
     print("Finished processing ResNet50v15 model with XNNPACK partitioner.")
