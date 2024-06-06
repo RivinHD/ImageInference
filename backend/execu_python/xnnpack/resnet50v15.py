@@ -39,7 +39,7 @@ if __name__ == "__main__":
         required=False,
         default=False,
         help="Flag for producing quantized or floating-point model",
-        action='store_true',
+        choices=["false", "int8"],
     )
     args = parser.parse_args()
 
@@ -53,7 +53,7 @@ if __name__ == "__main__":
 
     compile_config = EdgeCompileConfig()
 
-    if args.quantize:
+    if args.quantize != "false":
         print("Starting quantization")
         imagenet_dataset = getImageNet()
         resnet50 = quantize(resnet50, imagenet_dataset)
@@ -66,7 +66,7 @@ if __name__ == "__main__":
 
     exec_program = edge.to_executorch()
 
-    quantize_tag = "q8" if args.quantize else "fp32"
+    quantize_tag = args.quantize if args.quantize != "false" else "fp32"
     os.makedirs("models-out", exist_ok=True)
     with open(f"models-out/resnet50v15_xnnpack_{quantize_tag}.pte", "wb") as file:
         exec_program.write_to_file(file)

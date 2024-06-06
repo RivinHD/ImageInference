@@ -86,6 +86,18 @@ data class ModelDetails(val modelInputType: ModelInputType) {
     }
 
     /**
+     * Gets the evaluation time of the model as a string in nanoseconds.
+     */
+    val evaluationTimeNanoString: String get() {
+        val time = _evaluationTimeNano
+        return if (time != null) {  
+            "$time ns"
+        } else {
+            "N/A"
+        }
+    }
+
+    /**
      * Gets the results of the model inference.
      */
     var results: Array<ModelResult>

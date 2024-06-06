@@ -21,26 +21,40 @@ import shutil
 MODELS = [
     "resnet50v1.5",
 ]
+
 HTP_QUALCOMM = "HTP (Qualcomm)"
+
 HARDWARE = [
     "CPU (XNNPACK)",
     # "GPU (VULKAN)",
     HTP_QUALCOMM,
 ]
+
 QUALCOMM_DEVICES = [
     "SM8650 (Snapdragon 8 Gen 3)",
     "SM8550 (Snapdragon 8 Gen 2)",
     "SM8475 (Snapdragon 8+ Gen 1)",
     "SM8450 (Snapdragon 8 Gen 1)",
 ]
+
+QUANTIZATION = [
+    "false",
+    "int8",
+    "int16",
+    "int16int4",
+    "int8int4",
+]
+
 MODELS_TO_PYFILE = {
     "resnet50v1.5": "resnet50v15",
 }
+
 HARDWARE_TO_DIRECTORY = {
     "CPU (XNNPACK)": "xnnpack",
     "GPU (VULKAN)": "vulkan",
     HTP_QUALCOMM: "htp",
 }
+
 EXECU_PACKAGE = "backend.execu_python"
 
 
@@ -96,23 +110,54 @@ def select_htp_devices() -> str:
         print("Since you want to use HTP you need to select Qualcomm device to run on.")
         print("Select devices to run on separated by comma or 'all' to support every listed devices.")
         print(f"Available devices are {QUALCOMM_DEVICES}")
-        input_devices = input("> ").strip().lower().split(",")
-        for device in input_devices:
-            for qd in QUALCOMM_DEVICES:
-                qdr = qd.split(" ")[0].lower()
-                if device == qdr:
-                    devices.append(qd.split(" ")[0])
-                    break
+        text = input("> ").strip()
+        if text == 'all':
+            devices = [qd.split(" ")[0] for qd in QUALCOMM_DEVICES]
+        else:
+            input_devices = text.split(",")
+            for device in input_devices:
+                for qd in QUALCOMM_DEVICES:
+                    qdr = qd.split(" ")[0].lower()
+                    if device.strip().lower() == qdr:
+                        devices.append(qd.split(" ")[0])
+                        break
     print(f"Selected device is {devices}")
     return devices
 
 
+def ask_correct_devices() -> bool:
+    text = input("Is the selected devices correct? (y/n) > ").strip()
+    while not (text.startswith("y") or text.startswith("n")):
+        text = input("Please enter y or n > ")
+    return text.startswith("y")
+
+
 def ask_quantization() -> tuple[bool, bool]:
-    text = input("Do you want to quantize the model or 'both' to get quantized and non-quantized models? (y/n/both) > ")
-    text = text.strip().lower()
-    while not (text.startswith("y") or text.startswith("n") or text.startswith("both")):
-        text = input("Please enter y or n or both > ")
-    return (not text.startswith("y"), not text.startswith("n"))
+    quantization = []
+    while len(quantization) == 0:
+        print("Select quantization to apply separated by comma or 'all' to support every listed quantization.")
+        print("If multiple types are listed the first one is for the activation functions and the second one is"
+              + "for the weights. E.g. int16int4 uses int16 for the activation functions and int4 for the weights.")
+        print(f"Available quantization is {QUANTIZATION}")
+        text = input("> ").strip()
+        if text == 'all':
+            quantization = QUANTIZATION
+        else:
+            input_quant = text.split(",")
+            for quant in input_quant:
+                for qt in QUANTIZATION:
+                    if quant.strip().lower() == qt:
+                        quantization.append(qt)
+                        break
+    print(f"Selected quantization is {quantization}")
+    return quantization
+
+
+def ask_correct_quantization() -> bool:
+    text = input("Is the selected quantization correct? (y/n) > ").strip()
+    while not (text.startswith("y") or text.startswith("n")):
+        text = input("Please enter y or n > ")
+    return text.startswith("y")
 
 
 def ask_start_processing() -> bool:
@@ -122,32 +167,22 @@ def ask_start_processing() -> bool:
     return text.startswith("y")
 
 
-def _generate_quantize_command(base_command: str, non_quantize: bool, quantize: bool) -> list[str]:
-    commands = []
-    if quantize:
-        commands.append(f"{base_command} --quantize")
-    if non_quantize:
-        commands.append(base_command)
-    return commands
-
-
 def generate_command(
         models: list[str],
         hardware: list[str],
-        non_quantize: bool,
-        quantize: bool,
+        quantize: list[str],
         htp_devices: list[str] = []) -> str:
     commands = []
     for model in models:
-        for hw in hardware:
-            package_path = ".".join([EXECU_PACKAGE, HARDWARE_TO_DIRECTORY[hw], MODELS_TO_PYFILE[model]])
-            base_command = f"python -m {package_path}"
-            if hw == HTP_QUALCOMM:
-                for device in htp_devices:
-                    model_command = f"{base_command} --model {device}"
-                    commands.extend(_generate_quantize_command(model_command, non_quantize, quantize))
-            else:
-                commands.extend(_generate_quantize_command(base_command, non_quantize, quantize))
+        for quant in quantize:
+            for hw in hardware:
+                package_path = ".".join([EXECU_PACKAGE, HARDWARE_TO_DIRECTORY[hw], MODELS_TO_PYFILE[model]])
+                base_command = f"python -m {package_path} --quantize {quant}"
+                if hw == HTP_QUALCOMM:
+                    for device in htp_devices:
+                        commands.append(f"{base_command} --model {device}")
+                else:
+                    commands.append(base_command)
     return "; ".join(commands)
 
 
@@ -179,14 +214,22 @@ if __name__ == "__main__":
     htp_devices = ""
     if HTP_QUALCOMM in hardware:
         htp_devices = select_htp_devices()
+        htp_devices_correct = ask_correct_devices()
+        while not htp_devices_correct:
+            hardware = select_htp_devices()
+            hardware_correct = ask_correct_devices()
         print()
 
     # Ask for quantization
-    non_quantize, quantize = ask_quantization()
+    quantization = ask_quantization()
+    quantization_correct = ask_correct_quantization()
+    while not quantization_correct:
+        quantization = ask_quantization()
+        quantization_correct = ask_correct_quantization()
     print()
 
     # Generate command and start processing
-    command = generate_command(models, hardware, non_quantize, quantize, htp_devices)
+    command = generate_command(models, hardware, quantization, htp_devices)
     print("The command that will be executed is:")
     print("-"*50)
     print(command)

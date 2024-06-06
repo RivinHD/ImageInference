@@ -123,6 +123,8 @@ class DetailsFragment : Fragment() {
             time.text = it.evaluationTimeString
             val frames = binding.optionFrameValue
             frames.text = (1_000 / (it.evaluationTimeMillisecond ?: 1000)).toString()
+            val timeNano = binding.optionTimeNanoValue
+            timeNano.text = it.evaluationTimeNanoString
         }
     }
 

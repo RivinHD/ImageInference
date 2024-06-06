@@ -20,11 +20,9 @@ import os
 
 import torch
 import torchvision.models as models
-from executorch.exir import EdgeProgramManager, to_edge
-from torch.export import ExportedProgram, export
 from torchvision.models import ResNet50_Weights
 from torch._export import capture_pre_autograd_graph
-from .builder import quantize
+from .builder import quantize, ExtendedQuantDtype
 from ..datasets import getImageNet
 from executorch.backends.qualcomm.partition.qnn_partitioner import QnnPartitioner
 from executorch.backends.qualcomm.utils.utils import (
@@ -47,6 +45,13 @@ chipset_parse = {
     "SM8450": QcomChipset.SM8450,
 }
 
+quantize_parser = {
+    "int8": ExtendedQuantDtype.use_8a8w,
+    "int16": ExtendedQuantDtype.use_16a16w,
+    "int16int4": ExtendedQuantDtype.use_16a4w,
+    "int8int4": ExtendedQuantDtype.use_8a4w
+}
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
@@ -55,8 +60,11 @@ if __name__ == "__main__":
         "--quantize",
         required=False,
         default=False,
-        help="Flag for producing quantized or floating-point model",
-        action='store_true'
+        help="Flag for producing quantized or floating-point model. If false is chosen nothing is done.\n"
+        + "if multiple types are listed the first one is for the activation functions and the second one is"
+        + "for the weights.\n"
+        + "E.g. int16int4 uses int16 for the activation functions and int4 for the weights.",
+        choices=["false", "int8", "int16", "int16int4", "int8int4"],
     )
     parser.add_argument(
         "-m",
@@ -85,12 +93,12 @@ if __name__ == "__main__":
 
     resnet50 = capture_pre_autograd_graph(resnet50, sample_input)
 
-    if args.quantize:
+    if args.quantize != "false":
         print("Starting quantization")
         imagenet_dataset = getImageNet()
-        resnet50 = quantize(resnet50, imagenet_dataset)
+        resnet50 = quantize(resnet50, imagenet_dataset, quantize_parser[args.quantize])
     else:
-        print("The non-quantized model does not work correctly, "
+        print("WARNING: The non-quantized model does not work correctly, "
               + "therefore it is disabled in the app and will not be generated.")
         exit(0)
 
@@ -126,7 +134,7 @@ if __name__ == "__main__":
         ),
         extract_delegate_segments=True,
     ))
-    quantize_tag = "q8" if args.quantize else "fp32"
+    quantize_tag = args.quantize if args.quantize != "False" else "fp32"
     os.makedirs("models-out", exist_ok=True)
     with open(f"models-out/resnet50v15_htp_{quantize_tag}_{args.model}.pte", "wb") as file:
         exec_program.write_to_file(file)

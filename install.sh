@@ -144,7 +144,6 @@ yes | cp "${QNN_SDK_ROOT}/lib/aarch64-android/libQnnHtp.so" \
     "${QNN_SDK_ROOT}/lib/aarch64-android/libQnnHtpV75Stub.so" \
     "${QNN_SDK_ROOT}/lib/hexagon-v73/unsigned/libQnnHtpV75Skel.so" \
     "${BasePath}/ImageInference/android/app/src/main/jniLibs/${ANDROID_ABI}"
-    # Maybe we are not allowed to use the v73 version
 
 # Print the config for user verfication
 cd "${BasePath}/ImageInference"
