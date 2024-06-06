@@ -37,9 +37,9 @@ import com.neuralnetwork.imageinference.MainActivity
 import com.neuralnetwork.imageinference.R
 import com.neuralnetwork.imageinference.databinding.FragmentPhotoCameraBinding
 import com.neuralnetwork.imageinference.model.ModelConnector
+import com.neuralnetwork.imageinference.model.ModelState
 import com.neuralnetwork.imageinference.ui.details.DetailsConnector
 import com.neuralnetwork.imageinference.ui.details.DetailsViewModel
-import com.neuralnetwork.imageinference.ui.details.ModelState
 import kotlinx.coroutines.CancellationException
 
 /**

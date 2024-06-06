@@ -29,6 +29,8 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import com.neuralnetwork.imageinference.R
 import com.neuralnetwork.imageinference.databinding.FragmentDetailsBinding
+import com.neuralnetwork.imageinference.model.ModelState
+import com.neuralnetwork.imageinference.ui.details.containers.ModelInputType
 
 /**
  * Fragment that shows the details of the model.
@@ -78,6 +80,8 @@ class DetailsFragment : Fragment() {
             }
         }
 
+        setupCorrectDetails(vm)
+
         observeDetails(vm)
         observeState(vm)
 
@@ -114,6 +118,11 @@ class DetailsFragment : Fragment() {
                 name.text = result.name
                 accuracy.text = "${"%.2f".format(result.accuracy * 100)} %"
             }
+
+            val time = binding.optionTimeValue
+            time.text = it.evaluationTimeString
+            val frames = binding.optionFrameValue
+            frames.text = (1_000 / (it.evaluationTimeMillisecond ?: 1000)).toString()
         }
     }
 
@@ -122,17 +131,55 @@ class DetailsFragment : Fragment() {
      *
      * @param vm The view model of this fragment.
      */
-    private fun observeState(
-        vm: DetailsViewModel
-    ) {
+    private fun observeState(vm: DetailsViewModel) {
+        val informationView = binding.informationView
         val information = binding.informationText
         val detailsView = binding.detailsView
+        val progressBar = binding.informationProgressbar
 
         vm.state.observe(viewLifecycleOwner) {
-            information.visibility = when (it) {
-                null, ModelState.INITIAL, ModelState.RUNNING, ModelState.FAILED -> View.VISIBLE
-                ModelState.SUCCESS -> View.INVISIBLE
+            val details = vm.details.value ?: return@observe
+            val type = details.modelInputType
+
+            informationView.visibility = when(type){
+                ModelInputType.VIDEO -> {
+                    View.VISIBLE
+                }
+                ModelInputType.PHOTO, ModelInputType.IMAGE -> {
+                    when (it) {
+                        null, ModelState.INITIAL, ModelState.RUNNING, ModelState.FAILED -> View.VISIBLE
+                        ModelState.SUCCESS -> View.GONE
+                    }
+                }
             }
+
+            information.visibility = when (type){
+                ModelInputType.VIDEO -> {
+                    when (it) {
+                        null, ModelState.INITIAL, ModelState.FAILED -> View.VISIBLE
+                        ModelState.RUNNING, ModelState.SUCCESS -> View.GONE
+                    }
+                }
+                ModelInputType.PHOTO, ModelInputType.IMAGE -> {
+                    View.VISIBLE
+                }
+            }
+
+            progressBar.visibility = when (type){
+                ModelInputType.VIDEO -> {
+                    when (it) {
+                        ModelState.RUNNING, ModelState.SUCCESS -> View.VISIBLE
+                        else ->  View.GONE
+                    }
+                }
+                ModelInputType.PHOTO, ModelInputType.IMAGE -> {
+                    when (it) {
+                        ModelState.RUNNING -> View.VISIBLE
+                        else -> View.GONE
+                    }
+                }
+            }
+
             information.text = getString(
                 when (it) {
                     null, ModelState.INITIAL -> R.string.no_data
@@ -141,9 +188,43 @@ class DetailsFragment : Fragment() {
                     ModelState.FAILED -> R.string.inference_failed
                 }
             )
-            detailsView.visibility = when (it) {
-                null, ModelState.INITIAL, ModelState.RUNNING, ModelState.FAILED -> View.INVISIBLE
-                ModelState.SUCCESS -> View.VISIBLE
+
+            detailsView.visibility = when(type){
+                ModelInputType.VIDEO -> {
+                    when (it){
+                        null, ModelState.INITIAL, ModelState.FAILED -> View.GONE
+                        ModelState.RUNNING, ModelState.SUCCESS -> View.VISIBLE
+                    }
+                }
+                ModelInputType.PHOTO, ModelInputType.IMAGE -> {
+                    when (it) {
+                        null, ModelState.INITIAL, ModelState.RUNNING, ModelState.FAILED -> View.INVISIBLE
+                        ModelState.SUCCESS -> View.VISIBLE
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Setup the correct details by hiding none important details.
+     *
+     * @param vm The view model of this fragment.
+     */
+    private fun setupCorrectDetails(vm: DetailsViewModel){
+        val details = vm.details.value ?: return
+        val type = details.modelInputType
+
+        when (type){
+            ModelInputType.VIDEO -> {
+            }
+
+            ModelInputType.PHOTO -> {
+                binding.optionFrames.visibility = View.GONE
+            }
+
+            ModelInputType.IMAGE -> {
+                binding.optionFrames.visibility = View.GONE
             }
         }
     }

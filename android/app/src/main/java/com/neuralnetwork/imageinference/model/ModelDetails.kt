@@ -17,11 +17,11 @@
  *  in the root folder of this project with the name LICENSE. If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.neuralnetwork.imageinference.ui.details
+package com.neuralnetwork.imageinference.model
 
 import com.neuralnetwork.imageinference.ui.details.containers.ModelInputType
 import com.neuralnetwork.imageinference.ui.details.containers.ModelResult
-import java.text.DateFormat
+import java.util.Locale
 import kotlin.math.min
 
 /**
@@ -66,7 +66,24 @@ data class ModelDetails(val modelInputType: ModelInputType) {
     /**
      * Gets the evaluation time of the model as a string in milliseconds.
      */
-    val evaluationTimeString: String get() = DateFormat.getInstance().format(_evaluationTimeNano)
+    val evaluationTimeString: String get() {
+        val time = evaluationTimeMillisecond
+        return if (time != null) {
+            when (time){
+                in 0..<500 -> {
+                    "${time} ms"
+                }
+                in 500..<1000 -> {
+                    "0.${time} s"
+                }
+                else -> {
+                    String.format(Locale.ROOT,"%.3d s", time / 1000.0)
+                }
+            }
+        } else {
+            "N/A"
+        }
+    }
 
     /**
      * Gets the results of the model inference.

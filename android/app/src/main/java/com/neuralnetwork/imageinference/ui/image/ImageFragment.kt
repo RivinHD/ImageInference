@@ -44,9 +44,9 @@ import com.neuralnetwork.imageinference.databinding.FragmentImageBinding
 import com.neuralnetwork.imageinference.datastore.DataStoreViewModelFactory
 import com.neuralnetwork.imageinference.datastore.imageCollectionsDataStore
 import com.neuralnetwork.imageinference.model.ModelConnector
+import com.neuralnetwork.imageinference.model.ModelState
 import com.neuralnetwork.imageinference.ui.details.DetailsConnector
 import com.neuralnetwork.imageinference.ui.details.DetailsViewModel
-import com.neuralnetwork.imageinference.ui.details.ModelState
 
 /**
  * Fragment that uses an image for the model input.

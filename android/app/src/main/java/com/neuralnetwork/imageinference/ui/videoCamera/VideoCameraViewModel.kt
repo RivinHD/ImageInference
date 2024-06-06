@@ -32,9 +32,9 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.neuralnetwork.imageinference.model.Model
+import com.neuralnetwork.imageinference.model.ModelDetails
+import com.neuralnetwork.imageinference.model.ModelState
 import com.neuralnetwork.imageinference.ui.details.DetailsViewModel
-import com.neuralnetwork.imageinference.ui.details.ModelDetails
-import com.neuralnetwork.imageinference.ui.details.ModelState
 import com.neuralnetwork.imageinference.ui.details.containers.ModelInputType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

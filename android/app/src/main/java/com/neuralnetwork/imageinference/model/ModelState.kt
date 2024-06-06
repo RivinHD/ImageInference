@@ -17,7 +17,7 @@
  *  in the root folder of this project with the name LICENSE. If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.neuralnetwork.imageinference.ui.details
+package com.neuralnetwork.imageinference.model
 
 /**
  * The state a model can be in.

@@ -24,7 +24,6 @@ import android.graphics.Bitmap
 import com.neuralnetwork.imageinference.MainActivity
 import com.neuralnetwork.imageinference.model.input.Image256244Normalized
 import com.neuralnetwork.imageinference.model.output.ImageNet1000AppliedSoftmax
-import com.neuralnetwork.imageinference.ui.details.ModelDetails
 import com.neuralnetwork.imageinference.ui.details.containers.ModelResult
 import org.pytorch.executorch.EValue
 import org.pytorch.executorch.Module

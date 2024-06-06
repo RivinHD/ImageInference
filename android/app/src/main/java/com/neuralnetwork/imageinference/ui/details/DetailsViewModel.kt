@@ -22,6 +22,8 @@ package com.neuralnetwork.imageinference.ui.details
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import com.neuralnetwork.imageinference.model.ModelDetails
+import com.neuralnetwork.imageinference.model.ModelState
 
 /**
  * The view model for the details fragment.
@@ -31,7 +33,9 @@ import androidx.lifecycle.ViewModel
  * @param modelDetail (optional) The detail object that will be shown.
  * @param modelState (optional) The model state object that will be used.
  */
-class DetailsViewModel(modelDetail : MutableLiveData<ModelDetails>? = null, modelState : MutableLiveData<ModelState>? = null) : ViewModel() {
+class DetailsViewModel(
+    modelDetail : MutableLiveData<ModelDetails>? = null,
+    modelState : MutableLiveData<ModelState>? = null) : ViewModel() {
 
     /**
      * Holds the details that are update by the model and displayed by the details fragment.
