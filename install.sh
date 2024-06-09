@@ -142,7 +142,7 @@ yes | cp "${QNN_SDK_ROOT}/lib/aarch64-android/libQnnHtp.so" \
     "${QNN_SDK_ROOT}/lib/aarch64-android/libQnnHtpV73Stub.so" \
     "${QNN_SDK_ROOT}/lib/hexagon-v73/unsigned/libQnnHtpV73Skel.so" \
     "${QNN_SDK_ROOT}/lib/aarch64-android/libQnnHtpV75Stub.so" \
-    "${QNN_SDK_ROOT}/lib/hexagon-v73/unsigned/libQnnHtpV75Skel.so" \
+    "${QNN_SDK_ROOT}/lib/hexagon-v75/unsigned/libQnnHtpV75Skel.so" \
     "${BasePath}/ImageInference/android/app/src/main/jniLibs/${ANDROID_ABI}"
 
 # Print the config for user verfication

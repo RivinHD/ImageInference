@@ -35,7 +35,7 @@ BasePath="$(dirname -- "$BasePath")" # go up one directory
 
 # Export the required environment variables
 export ANDROID_NDK="${BasePath}/android/ndk/android-ndk-r26d"
-export ANDROID_ABI="arm64-v8a"
+export ANDROID_ABI="arm64-v8a" # Options: arm64-v8a, armeabi-v7a, x86, x86_64 but currently excutorch only supports arm64-v8a.
 export ANDROID_VERSION="29"
 export QNN_SDK_ROOT="/opt/qcom/aistack/qairt/2.21.0.240401"
 export IMAGENET_DATASET_2012="${BasePath}/data/imagenet/ilsvrc_2012"
