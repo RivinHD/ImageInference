@@ -34,6 +34,7 @@ import androidx.lifecycle.viewModelScope
 import com.neuralnetwork.imageinference.model.Model
 import com.neuralnetwork.imageinference.model.ModelDetails
 import com.neuralnetwork.imageinference.model.ModelState
+import com.neuralnetwork.imageinference.rotate
 import com.neuralnetwork.imageinference.ui.details.DetailsViewModel
 import com.neuralnetwork.imageinference.ui.details.containers.ModelInputType
 import kotlinx.coroutines.Dispatchers
@@ -133,7 +134,8 @@ class PhotoCameraViewModel : ViewModel() {
         override fun onCaptureSuccess(image: ImageProxy) {
             Log.d("PhotoCapture", "Got an image!")
             super.onCaptureSuccess(image)
-            val currentImage = image.toBitmap()
+            val rotation = image.imageInfo.rotationDegrees.toFloat()
+            val currentImage: Bitmap = image.toBitmap().rotate(rotation)
             image.close()
             _image.value = currentImage
             runModel(currentImage)

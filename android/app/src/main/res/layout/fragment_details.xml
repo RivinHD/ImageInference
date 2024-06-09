@@ -30,12 +30,6 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <com.google.android.material.progressindicator.LinearProgressIndicator
-            android:id="@+id/information_progressbar"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:indeterminate="true" />
-
         <TextView
             android:id="@+id/information_text"
             android:layout_width="match_parent"

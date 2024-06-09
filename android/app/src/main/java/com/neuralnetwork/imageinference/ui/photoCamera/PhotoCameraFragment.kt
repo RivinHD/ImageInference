@@ -133,39 +133,53 @@ class PhotoCameraFragment : Fragment(), DetailsConnector {
         vm: PhotoCameraViewModel
     ) {
         val photoCapture = binding.photoCapture
+        val progressBar = binding.photoProgressbar
 
         vm.modelState.observe(viewLifecycleOwner) {
-            val colorID = when (it) {
-                ModelState.INITIAL -> return@observe
-                ModelState.RUNNING -> R.color.loading
-                ModelState.SUCCESS -> R.color.success_green
-                ModelState.FAILED -> R.color.fail_red
-                null -> return@observe
-            }
-
-            val drawableID = when (it) {
-                ModelState.INITIAL -> return@observe
-                ModelState.RUNNING -> R.drawable.inference
-                ModelState.SUCCESS -> R.drawable.ic_check_google
-                ModelState.FAILED -> R.drawable.ic_close_google
-                null -> return@observe
-            }
-
-            val drawable = ContextCompat.getDrawable(_context, drawableID)
-            val color = ContextCompat.getColor(_context, colorID)
-            if (drawable != null) {
-                DrawableCompat.setTint(drawable, color)
-            }
-
-            photoCapture.setCompoundDrawablesRelativeWithIntrinsicBounds(
-                drawable,
-                null,
-                drawable,
-                null
-            )
-
             photoCapture.isEnabled = (it != ModelState.RUNNING)
+            setButtonDrawable(it)
+
+            progressBar.visibility = when(it){
+                ModelState.RUNNING -> View.VISIBLE
+                else -> View.GONE
+            }
         }
+    }
+
+    /**
+     * Set the drawable of the photo capture button.
+     *
+     * @param it The model state that was observed.
+     */
+    private  fun setButtonDrawable(it: ModelState){
+        val photoCapture = binding.photoCapture
+
+        val colorID = when (it) {
+            ModelState.RUNNING -> R.color.loading
+            ModelState.SUCCESS -> R.color.success_green
+            ModelState.FAILED -> R.color.fail_red
+            else -> return
+        }
+
+        val drawableID = when (it) {
+            ModelState.RUNNING -> R.drawable.inference
+            ModelState.SUCCESS -> R.drawable.ic_check_google
+            ModelState.FAILED -> R.drawable.ic_close_google
+            else -> return
+        }
+
+        val drawable = ContextCompat.getDrawable(_context, drawableID)
+        val color = ContextCompat.getColor(_context, colorID)
+        if (drawable != null) {
+            DrawableCompat.setTint(drawable, color)
+        }
+
+        photoCapture.setCompoundDrawablesRelativeWithIntrinsicBounds(
+            drawable,
+            null,
+            drawable,
+            null
+        )
     }
 
     /**
@@ -205,24 +219,24 @@ class PhotoCameraFragment : Fragment(), DetailsConnector {
 
         // Setup camera preview and capture
         cameraProviderFuture = ProcessCameraProvider.getInstance(_context)
-            cameraProviderFuture.addListener(
-                {
-                    try {
-                        val cameraProvider = cameraProviderFuture.get()
-                        vm.preview.setSurfaceProvider(photoPreview.getSurfaceProvider())
+        cameraProviderFuture.addListener(
+            {
+                try {
+                    val cameraProvider = cameraProviderFuture.get()
+                    vm.preview.setSurfaceProvider(photoPreview.getSurfaceProvider())
 
-                        cameraProvider.bindToLifecycle(
-                            viewLifecycleOwner,
-                            vm.cameraSelector,
-                            vm.imageCapture,
-                            vm.preview
-                        )
-                    } catch (e: CancellationException) {
-                        Log.e("PhotoCapture", e.toString())
-                    }
-                },
-                ContextCompat.getMainExecutor(_context)
-            )
+                    cameraProvider.bindToLifecycle(
+                        viewLifecycleOwner,
+                        vm.cameraSelector,
+                        vm.imageCapture,
+                        vm.preview
+                    )
+                } catch (e: CancellationException) {
+                    Log.e("PhotoCapture", e.toString())
+                }
+            },
+            ContextCompat.getMainExecutor(_context)
+        )
 
     }
 

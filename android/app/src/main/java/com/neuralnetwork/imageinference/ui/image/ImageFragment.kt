@@ -189,7 +189,7 @@ class ImageFragment : Fragment(), DetailsConnector {
     private fun observeModelState(
         vm: ImageViewModel
     ) {
-        val imageSelection = binding.imageSelection
+        val progressBar = binding.imageProgressbar
         val selectionButtons = arrayOf(
             binding.imageSelectionNext,
             binding.imageSelectionBefore,
@@ -198,39 +198,46 @@ class ImageFragment : Fragment(), DetailsConnector {
         )
 
         vm.modelState.observe(viewLifecycleOwner) {
-            val colorID = when (it) {
-                ModelState.INITIAL -> return@observe
-                ModelState.RUNNING -> R.color.loading
-                ModelState.SUCCESS -> R.color.success_green
-                ModelState.FAILED -> R.color.fail_red
-                null -> return@observe
-            }
-
-            val drawableID = when (it) {
-                ModelState.INITIAL -> return@observe
-                ModelState.RUNNING -> R.drawable.inference
-                ModelState.SUCCESS -> R.drawable.ic_check_google
-                ModelState.FAILED -> R.drawable.ic_close_google
-                null -> return@observe
-            }
-
-            val drawable = ContextCompat.getDrawable(_context, drawableID)
-            val color = ContextCompat.getColor(_context, colorID)
-            if (drawable != null) {
-                DrawableCompat.setTint(drawable, color)
-            }
-
-            imageSelection.setCompoundDrawablesRelativeWithIntrinsicBounds(
-                drawable,
-                null,
-                null,
-                null
-            )
-
+            setButtonDrawable(it)
             selectionButtons.forEach { button ->
                 button.isEnabled = (it != ModelState.RUNNING)
             }
+
+            progressBar.visibility = when(it){
+                ModelState.RUNNING -> View.VISIBLE
+                else -> View.GONE
+            }
         }
+    }
+
+    private fun setButtonDrawable(it: ModelState){
+        val imageSelection = binding.imageSelection
+        val colorID = when (it) {
+            ModelState.RUNNING -> R.color.loading
+            ModelState.SUCCESS -> R.color.success_green
+            ModelState.FAILED -> R.color.fail_red
+            else -> return
+        }
+
+        val drawableID = when (it) {
+            ModelState.RUNNING -> R.drawable.inference
+            ModelState.SUCCESS -> R.drawable.ic_check_google
+            ModelState.FAILED -> R.drawable.ic_close_google
+            else -> return
+        }
+
+        val drawable = ContextCompat.getDrawable(_context, drawableID)
+        val color = ContextCompat.getColor(_context, colorID)
+        if (drawable != null) {
+            DrawableCompat.setTint(drawable, color)
+        }
+
+        imageSelection.setCompoundDrawablesRelativeWithIntrinsicBounds(
+            drawable,
+            null,
+            null,
+            null
+        )
     }
 
     /**

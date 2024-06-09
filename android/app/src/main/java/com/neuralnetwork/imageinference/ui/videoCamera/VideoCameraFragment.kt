@@ -117,6 +117,7 @@ class VideoCameraFragment : Fragment(), DetailsConnector {
      */
     private fun observeModelState(vm: VideoCameraViewModel) {
         val videoRecord = binding.videoRecord
+        val progressBar = binding.videoProgressbar
 
         vm.modelState.observe(viewLifecycleOwner) {
             if (it == ModelState.RUNNING) {
@@ -133,6 +134,7 @@ class VideoCameraFragment : Fragment(), DetailsConnector {
                 videoRecord.setCompoundDrawablesRelativeWithIntrinsicBounds(
                     drawable, null, drawable, null
                 )
+
             } else {
                 videoRecord.setCompoundDrawablesRelativeWithIntrinsicBounds(
                     null, null, null, null
@@ -150,11 +152,15 @@ class VideoCameraFragment : Fragment(), DetailsConnector {
         vm: VideoCameraViewModel
     ) {
         val videoRecord = binding.videoRecord
+        val progressBar = binding.videoProgressbar
+
         videoRecord.setOnClickListener {
             if (vm.isRecording.value == true) {
                 vm.stopRecording()
+                progressBar.visibility = View.GONE
             } else {
                 vm.startRecording(ContextCompat.getMainExecutor(_context))
+                progressBar.visibility = View.VISIBLE
             }
         }
     }

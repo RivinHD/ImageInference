@@ -112,15 +112,25 @@
 
             </androidx.constraintlayout.widget.ConstraintLayout>
 
+            <com.google.android.material.progressindicator.LinearProgressIndicator
+                android:id="@+id/image_progressbar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:indeterminate="true"
+                app:layout_constraintTop_toBottomOf="@+id/constraintLayout"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent" />
+
             <androidx.fragment.app.FragmentContainerView
                 android:id="@+id/fragment_view_details"
                 android:name="com.neuralnetwork.imageinference.ui.details.DetailsFragment"
                 android:layout_width="0dp"
                 android:layout_height="0dp"
+                android:layout_marginTop="4dp"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/constraintLayout"
+                app:layout_constraintTop_toBottomOf="@+id/image_progressbar"
                 app:layout_constraintVertical_bias="1.0" />
 
 

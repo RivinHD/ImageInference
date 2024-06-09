@@ -33,9 +33,9 @@ import com.neuralnetwork.imageinference.model.ModelState
 import com.neuralnetwork.imageinference.ui.details.containers.ModelInputType
 
 /**
- * Fragment that shows the details of the model.
+ * Details fragment
  *
- * @constructor Create empty details fragment.
+ * @constructor Create empty Details fragment
  */
 class DetailsFragment : Fragment() {
 
@@ -137,7 +137,6 @@ class DetailsFragment : Fragment() {
         val informationView = binding.informationView
         val information = binding.informationText
         val detailsView = binding.detailsView
-        val progressBar = binding.informationProgressbar
 
         vm.state.observe(viewLifecycleOwner) {
             val details = vm.details.value ?: return@observe
@@ -164,21 +163,6 @@ class DetailsFragment : Fragment() {
                 }
                 ModelInputType.PHOTO, ModelInputType.IMAGE -> {
                     View.VISIBLE
-                }
-            }
-
-            progressBar.visibility = when (type){
-                ModelInputType.VIDEO -> {
-                    when (it) {
-                        ModelState.RUNNING, ModelState.SUCCESS -> View.VISIBLE
-                        else ->  View.GONE
-                    }
-                }
-                ModelInputType.PHOTO, ModelInputType.IMAGE -> {
-                    when (it) {
-                        ModelState.RUNNING -> View.VISIBLE
-                        else -> View.GONE
-                    }
                 }
             }
 
