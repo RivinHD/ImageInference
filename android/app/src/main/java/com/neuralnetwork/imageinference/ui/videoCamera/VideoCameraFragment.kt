@@ -117,7 +117,6 @@ class VideoCameraFragment : Fragment(), DetailsConnector {
      */
     private fun observeModelState(vm: VideoCameraViewModel) {
         val videoRecord = binding.videoRecord
-        val progressBar = binding.videoProgressbar
 
         vm.modelState.observe(viewLifecycleOwner) {
             if (it == ModelState.RUNNING) {
