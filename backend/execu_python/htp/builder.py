@@ -22,6 +22,9 @@ from executorch.backends.qualcomm.quantizer.quantizer import (
     get_default_16bit_qnn_ptq_config,
     QnnQuantizer
 )
+from executorch.backends.qualcomm.quantizer.utils import (
+    QuantizationConfig
+)
 import torch
 from torch.ao.quantization.quantize_pt2e import convert_pt2e, prepare_pt2e
 from torch.fx.graph_module import GraphModule
@@ -32,8 +35,6 @@ from torch.ao.quantization.observer import (
 from torch.ao.quantization.quantizer import (
     QuantizationSpec,
 )
-
-from submodules.executorch.backends.arm.quantizer.quantization_config import QuantizationConfig
 
 
 @unique

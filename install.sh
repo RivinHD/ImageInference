@@ -51,7 +51,7 @@ conda create -yn imageinfernce python=3.10.0
 eval "$(conda shell.bash hook)"
 conda activate imageinfernce
 cd submodules/executorch
-./install_requirements.sh
+./install_requirements.sh --pybind xnnpack
 
 # Fix excutorch installation which has some missing modules
 yes | cp backends/ "${BasePath}/miniconda3/envs/imageinfernce/lib/python3.10/site-packages/executorch/" -r

@@ -97,10 +97,10 @@ if __name__ == "__main__":
         print("Starting quantization")
         imagenet_dataset = getImageNet()
         resnet50 = quantize(resnet50, imagenet_dataset, quantize_parser[args.quantize])
-    else:
-        print("WARNING: The non-quantized model does not work correctly, "
-              + "therefore it is disabled in the app and will not be generated.")
-        exit(0)
+    # else:
+    #     print("WARNING: The non-quantized model does not work correctly, "
+    #           + "therefore it is disabled in the app and will not be generated.")
+    #     exit(0)
 
     exec_program: ExirExportedProgram = capture_program(resnet50, sample_input)
 
