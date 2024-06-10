@@ -12,6 +12,15 @@
 #   public *;
 #}
 
+# Keep our interfaces so they can be used by other ProGuard rules.
+-keep,allowobfuscation @interface com.facebook.jni.annotations.DoNotStrip
+
+# Do not strip any method/class that is annotated with @DoNotStrip
+-keep @com.facebook.jni.annotations.DoNotStrip class *
+-keepclassmembers class * {
+    @com.facebook.jni.annotations.DoNotStrip *;
+}
+
 # Uncomment this to preserve the line number information for
 # debugging stack traces.
 #-keepattributes SourceFile,LineNumberTable
