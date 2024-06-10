@@ -92,12 +92,11 @@ dependencies {
     implementation(libs.com.google.protobuf.protobuf.javalite)
     implementation(libs.com.facebook.soloader)
     implementation(libs.com.facebook.fbjni)
+    implementation(libs.com.google.findbugs)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 }
-
-
 
 protobuf {
     protoc {

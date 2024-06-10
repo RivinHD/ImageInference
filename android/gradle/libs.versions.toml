@@ -24,6 +24,7 @@ protobuf = "0.9.4"
 activity = "1.9.0"
 soloader = "0.10.5"
 fbjni = "0.5.1"
+fingbugs = "3.0.2"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -51,6 +52,7 @@ com-google-protobuf-protobuf-javalite = { group = "com.google.protobuf", name = 
 androidx-activity-activity = { group = "androidx.activity", name = "activity", version.ref = "activity" }
 com-facebook-soloader = { group = "com.facebook.soloader", name = "soloader", version.ref = "soloader" }
 com-facebook-fbjni = { group = "com.facebook.fbjni", name = "fbjni", version.ref = "fbjni"}
+com-google-findbugs = { group = "com.google.code.findbugs", name = "jsr305", version.ref = "fingbugs" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
