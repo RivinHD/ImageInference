@@ -36,7 +36,7 @@ echo "Setup the project with BasePath at $BasePath"
 cd ImageInference
 git submodule init
 git submodule sync
-git submodule update --init --recursive --remote
+git submodule update --init --recursive
 
 # Enable conda environment
 eval "$(conda shell.bash hook)"
