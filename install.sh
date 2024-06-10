@@ -44,7 +44,7 @@ fi
 cd ImageInference
 git submodule init
 git submodule sync
-git submodule update --init --recursive
+git submodule update --init --recursive --remote
 
 # Create conda environment
 conda create -yn imageinfernce python=3.10.0
