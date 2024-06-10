@@ -157,7 +157,8 @@ class VideoCameraViewModel : ViewModel(), ImageAnalysis.Analyzer {
 
     override fun analyze(image: ImageProxy) {
         Log.d("VideoCapture", "Got an image!")
-        runModel(image.toBitmap())
+        val rotation = image.imageInfo.rotationDegrees.toFloat()
+        runModel(image.toBitmap().rotate(rotation))
         image.close()
     }
 

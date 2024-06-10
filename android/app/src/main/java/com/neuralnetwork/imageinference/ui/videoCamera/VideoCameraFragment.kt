@@ -152,6 +152,12 @@ class VideoCameraFragment : Fragment(), DetailsConnector {
     ) {
         val videoRecord = binding.videoRecord
         val progressBar = binding.videoProgressbar
+        progressBar.visibility = if(vm.isRecording.value == true){
+            View.VISIBLE
+        }
+        else {
+            View.GONE
+        }
 
         videoRecord.setOnClickListener {
             if (vm.isRecording.value == true) {
