@@ -62,7 +62,8 @@ ulimit -n 4096
 
 # Install Flatc
 ./build/install_flatc.sh
-# export PATH="$(pwd)/third-party/flatbuffers/cmake-out:${PATH}" # TODO test: This may be needed
+export PATH="$(pwd)/third-party/flatbuffers/cmake-out:${PATH}"
+./build/install_flatc.sh
 
 # Download Android 
 cd "${BasePath}"
