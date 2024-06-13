@@ -21,6 +21,7 @@ package com.neuralnetwork.imageinference.ui.videoCamera
 
 import android.content.Context
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -39,6 +40,7 @@ import com.neuralnetwork.imageinference.model.ModelConnector
 import com.neuralnetwork.imageinference.model.ModelState
 import com.neuralnetwork.imageinference.ui.details.DetailsConnector
 import com.neuralnetwork.imageinference.ui.details.DetailsViewModel
+import kotlinx.coroutines.CancellationException
 
 /**
  * Fragment that uses a video camera for the model input.
@@ -185,18 +187,22 @@ class VideoCameraFragment : Fragment(), DetailsConnector {
         // Setup camera preview and capture
         cameraProviderFuture = ProcessCameraProvider.getInstance(_context)
         cameraProviderFuture.addListener({
-            val cameraProvider = cameraProviderFuture.get()
+            try {
+                val cameraProvider = cameraProviderFuture.get()
 
-            val preview: Preview = Preview.Builder()
-                .build()
-            preview.setSurfaceProvider(videoPreview.getSurfaceProvider())
+                val preview: Preview = Preview.Builder()
+                    .build()
+                preview.setSurfaceProvider(videoPreview.getSurfaceProvider())
 
-            cameraProvider.bindToLifecycle(
-                viewLifecycleOwner,
-                vm.cameraSelector,
-                vm.imageAnalysis,
-                preview
-            )
+                cameraProvider.bindToLifecycle(
+                    viewLifecycleOwner,
+                    vm.cameraSelector,
+                    vm.imageAnalysis,
+                    preview
+                )
+            } catch (e: CancellationException) {
+                Log.e("VideoCapture", e.toString())
+            }
         }, ContextCompat.getMainExecutor(_context))
     }
 
