@@ -58,11 +58,14 @@ yes | cp backends/ "${BasePath}/miniconda3/envs/imageinfernce/lib/python3.10/sit
 yes | cp examples/ "${BasePath}/miniconda3/envs/imageinfernce/lib/python3.10/site-packages/executorch/" -r
 conda install -y numpy
 conda install -y scipy
+pip install huggingface_hub
+pip install git+https://github.com/THU-MIG/yolov10.git
 ulimit -n 4096
 
 # Install Flatc
 ./build/install_flatc.sh
-# export PATH="$(pwd)/third-party/flatbuffers/cmake-out:${PATH}" # TODO test: This may be needed
+export PATH="$(pwd)/third-party/flatbuffers/cmake-out:${PATH}"
+./build/install_flatc.sh
 
 # Download Android 
 cd "${BasePath}"
