@@ -21,12 +21,15 @@ package com.neuralnetwork.imageinference.ui.photoCamera
 
 import android.graphics.Bitmap
 import android.util.Log
+import android.util.Size
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ExperimentalZeroShutterLag
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
+import androidx.camera.core.resolutionselector.ResolutionSelector
+import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -67,11 +70,23 @@ class PhotoCameraViewModel : ViewModel() {
     private val _detailsViewModel = DetailsViewModel(_details, _modelState)
 
     /**
+     * Holds the resolution setup for the photo camera.
+     */
+    private val _resolutionSelector = ResolutionSelector.Builder()
+        .setResolutionStrategy(
+            ResolutionStrategy(
+                Size(256, 256),
+                ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER
+            )
+        )
+        .build()
+    /**
      * Holds the image capture object that states how the image is captured.
      */
     @ExperimentalZeroShutterLag
     private val _imageCapture = ImageCapture.Builder()
         .setCaptureMode(ImageCapture.CAPTURE_MODE_ZERO_SHUTTER_LAG)
+        .setResolutionSelector(_resolutionSelector)
         .build()
 
     /**
