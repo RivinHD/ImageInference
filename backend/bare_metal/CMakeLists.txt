@@ -30,6 +30,3 @@ else()
         message(WARNING "No Build type is set. Using Release!")
     endif()
 endif()
-
-add_subdirectory(submodules/executorch)
-add_subdirectory(submodules/executorch//third-party/flatbuffers)
