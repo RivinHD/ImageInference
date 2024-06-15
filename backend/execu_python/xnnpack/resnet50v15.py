@@ -27,7 +27,8 @@ from torch.export import ExportedProgram, export
 from torchvision.models import ResNet50_Weights
 
 from .builder import quantize
-from ..datasets import getImageNet
+from ..datasets import get_imagenet
+from .. import transforms
 from torch._export import capture_pre_autograd_graph
 
 if __name__ == "__main__":
@@ -55,7 +56,7 @@ if __name__ == "__main__":
 
     if args.quantize != "false":
         print("Starting quantization")
-        imagenet_dataset = getImageNet()
+        imagenet_dataset = get_imagenet(transforms.RESNET50, transforms.RESNET50_IMAGE_SIZES)
         resnet50 = quantize(resnet50, imagenet_dataset)
         compile_config = EdgeCompileConfig(_check_ir_validity=False)
 

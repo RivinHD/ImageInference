@@ -25,7 +25,8 @@ from executorch.backends.vulkan.partitioner.vulkan_partitioner import VulkanPart
 from torchvision.models import ResNet50_Weights
 from executorch.exir import EdgeProgramManager, to_edge
 from torch._export import capture_pre_autograd_graph
-from ..datasets import getImageNet
+from ..datasets import get_imagenet
+from .. import transforms
 
 if __name__ == "__main__":
 
@@ -50,7 +51,7 @@ if __name__ == "__main__":
 
     if args.quantize:
         print("Starting quantization")
-        imagenet_dataset = getImageNet()
+        imagenet_dataset = get_imagenet(transforms.resnet50)
         # resnet50 = quantize(resnet50, imagenet_dataset)
         raise RuntimeError("Vulkan currently does not support int8 quantization")
 

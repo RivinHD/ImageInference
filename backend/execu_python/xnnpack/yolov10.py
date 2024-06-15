@@ -24,10 +24,9 @@ from executorch.backends.xnnpack.partition.xnnpack_partitioner import \
     XnnpackPartitioner
 from executorch.exir import EdgeCompileConfig, EdgeProgramManager, to_edge
 from torch.export import ExportedProgram, export
-from torchvision.models import yolov10_Weights
 
 from .builder import quantize
-from ..datasets import getImageNet
+from ..datasets import get_coco
 from torch._export import capture_pre_autograd_graph
 
 from ultralytics import YOLOv10
@@ -46,11 +45,16 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    print("Processing yolov10v15 model with XNNPACK partitioner.")
+    print("Processing yolov10 model with XNNPACK partitioner.")
 
     # Lowering the model to XNNPACK
-    yolov10 = YOLOv10.from_pretrained('jameslahm/yolov10b').eval()
-    sample_input = (torch.randn(1, 3, 224, 224),)
+    yolov10 = YOLOv10.from_pretrained('jameslahm/yolov10b')
+    custom = {"conf": 0.25, "batch": 1, "save": False, "mode": "predict"}  # method defaults
+    args = {**yolov10.overrides, **custom}
+    yolov10.forward = yolov10._smart_load("predictor")(overrides=args, _callbacks=yolov10.callbacks)
+    yolov10.forward(torch.randn(1, 3, 640, 640))
+
+    sample_input = (torch.randn(1, 3, 640, 640),)
 
     yolov10 = capture_pre_autograd_graph(yolov10, sample_input)
 
@@ -58,8 +62,8 @@ if __name__ == "__main__":
 
     if args.quantize != "false":
         print("Starting quantization")
-        imagenet_dataset = getImageNet()
-        yolov10 = quantize(yolov10, imagenet_dataset)
+        coco_dataset = get_coco()
+        yolov10 = quantize(yolov10, coco_dataset)
         compile_config = EdgeCompileConfig(_check_ir_validity=False)
 
     exported_program: ExportedProgram = export(yolov10, sample_input)

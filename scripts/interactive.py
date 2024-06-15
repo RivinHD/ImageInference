@@ -20,6 +20,7 @@ import shutil
 
 MODELS = [
     "resnet50v1.5",
+    "yolov10",
 ]
 
 HTP_QUALCOMM = "HTP (Qualcomm)"
@@ -47,6 +48,7 @@ QUANTIZATION = [
 
 MODELS_TO_PYFILE = {
     "resnet50v1.5": "resnet50v15",
+    "yolov10": "yolov10",
 }
 
 HARDWARE_TO_DIRECTORY = {

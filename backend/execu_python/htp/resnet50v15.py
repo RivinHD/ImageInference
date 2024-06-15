@@ -23,7 +23,8 @@ import torchvision.models as models
 from torchvision.models import ResNet50_Weights
 from torch._export import capture_pre_autograd_graph
 from .builder import quantize, ExtendedQuantDtype
-from ..datasets import getImageNet
+from ..datasets import get_imagenet
+from .. import transforms
 from executorch.backends.qualcomm.partition.qnn_partitioner import QnnPartitioner
 from executorch.backends.qualcomm.utils.utils import (
     capture_program,
@@ -95,7 +96,7 @@ if __name__ == "__main__":
 
     if args.quantize != "false":
         print("Starting quantization")
-        imagenet_dataset = getImageNet()
+        imagenet_dataset = get_imagenet(transforms.resnet50)
         resnet50 = quantize(resnet50, imagenet_dataset, quantize_parser[args.quantize])
     else:
         print("WARNING: The non-quantized model does not work correctly, "
