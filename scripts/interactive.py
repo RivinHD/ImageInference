@@ -26,7 +26,7 @@ HTP_QUALCOMM = "HTP (Qualcomm)"
 
 HARDWARE = [
     "CPU (XNNPACK)",
-    # "GPU (VULKAN)",
+    "GPU (VULKAN)",
     HTP_QUALCOMM,
 ]
 
