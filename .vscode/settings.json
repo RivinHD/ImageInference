@@ -1,5 +1,21 @@
 {
     "cSpell.words": [
         "executorch"
-    ]
+    ],
+    "C_Cpp.default.compilerPath": "gcc",
+    "files.associations": {
+        "unordered_map": "cpp",
+        "vector": "cpp",
+        "exception": "cpp",
+        "initializer_list": "cpp",
+        "iosfwd": "cpp",
+        "stdexcept": "cpp",
+        "type_traits": "cpp",
+        "utility": "cpp",
+        "alignedvector3": "cpp",
+        "array": "cpp",
+        "string": "cpp",
+        "string_view": "cpp",
+        "span": "cpp"
+    }
 }

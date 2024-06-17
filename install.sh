@@ -51,6 +51,10 @@ conda create -yn imageinfernce python=3.10.0
 eval "$(conda shell.bash hook)"
 conda activate imageinfernce
 cd submodules/executorch
+if [ -f "pip-out/temp.linux-x86_64-cpython-310/cmake-out/buck2-bin/buck2-3bbde7daa94987db468d021ad625bc93dc62ba7fcb16945cb09b64aab077f284" ]; then
+    pip-out/temp.linux-x86_64-cpython-310/cmake-out/buck2-bin/buck2-3bbde7daa94987db468d021ad625bc93dc62ba7fcb16945cb09b64aab077f284 clean
+fi
+
 ./install_requirements.sh
 
 # Fix excutorch installation which has some missing modules
@@ -62,7 +66,8 @@ ulimit -n 4096
 
 # Install Flatc
 ./build/install_flatc.sh
-# export PATH="$(pwd)/third-party/flatbuffers/cmake-out:${PATH}" # TODO test: This may be needed
+export PATH="$(pwd)/third-party/flatbuffers/cmake-out:${PATH}"
+./build/install_flatc.sh
 
 # Download Android 
 cd "${BasePath}"

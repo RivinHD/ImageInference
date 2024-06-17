@@ -33,7 +33,7 @@ BasePath="$(dirname -- "$BasePath")" # go up one directory
 echo "Setup the project with BasePath at $BasePath"
 
 # Run the setup
-cd ImageInference
+cd "${BasePath}/ImageInference"
 git submodule init
 git submodule sync
 git submodule update --init --recursive
