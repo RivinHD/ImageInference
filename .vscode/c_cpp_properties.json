@@ -1,0 +1,14 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/home/vincent/miniconda3/envs/imageinfernce/include",
+                "/home/vincent/miniconda3/envs/imageinfernce/lib/python3.10/site-packages/torch/include",
+                "/home/vincent/miniconda3/envs/imageinfernce/lib/python3.10/site-packages/torch/include/torch/csrc/api/include"
+            ]
+        }
+    ],
+    "version": 4
+}

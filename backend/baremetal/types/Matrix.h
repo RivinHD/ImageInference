@@ -15,33 +15,41 @@
 //  You should have received a copy of the GNU General Public License
 //  in the root folder of this project with the name LICENSE. If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef IMAGEINFERENCE_IMODEL_H
-#define IMAGEINFERENCE_IMODEL_H
+#ifndef IMAGEINFERENCE_MATRIX_H
+#define IMAGEINFERENCE_MATRIX_H
 
 #include <stddef.h>
 
 namespace ImageInference
 {
-    namespace model
+    namespace types
     {
-        /// @brief Interface for a model.
-        /// @tparam T The data type used by the model.
-        template <typename T>
-        class IModel
+        template <typename T, size_t TRows, size_t TColumns>
+        class Matrix
         {
+        private:
+            T *data;
+
         public:
-            IModel();
-            ~IModel();
+            const size_t Rows = TRows;
+            const size_t Columns = TColumns;
+            const T *raw_pointer = data;
 
-            /// @brief
-            /// @param input
-            /// @return
-
-            /// @brief Do a forward pass through the model without any evaluation for training.
-            /// @param input The input data to the model.
-            /// @return The output data from the model.
-            virtual const T *inference(const T *input) = 0;
+            Matrix(T *data);
+            ~Matrix();
         };
-    } // namespace model
+
+        template <typename T, size_t TRows, size_t TColumns>
+        inline Matrix<T, TRows, TColumns>::Matrix(T *data)
+            : data(data)
+        {
+        }
+
+        template <typename T, size_t TRows, size_t TColumns>
+        inline Matrix<T, TRows, TColumns>::~Matrix()
+        {
+        }
+    } // namespace types
 } // namespace ImageInference
-#endif // IMAGEINFERENCE_IMODEL_H
+
+#endif // IMAGEINFERENCE_MATRIX_H

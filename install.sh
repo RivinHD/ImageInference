@@ -151,6 +151,30 @@ yes | cp "${QNN_SDK_ROOT}/lib/aarch64-android/libQnnHtp.so" \
     "${QNN_SDK_ROOT}/lib/hexagon-v75/unsigned/libQnnHtpV75Skel.so" \
     "${BasePath}/ImageInference/android/app/src/main/jniLibs/${ANDROID_ABI}"
 
+# Building the custome ops in backend/baremetal
+cd "${BasePath}/ImageInference"
+if [[ -z $PYTHON_EXECUTABLE ]];
+then
+  PYTHON_EXECUTABLE=python3
+fi
+
+SITE_PACKAGES="$(${PYTHON_EXECUTABLE} -c 'from distutils.sysconfig import get_python_lib; print(get_python_lib())')"
+CMAKE_PREFIX_PATH="${BasePath}/ImageInference/submodules/executorch/cmake-out/lib/cmake/ExecuTorch;${SITE_PACKAGES}/torch"
+rm -rf submodules/executorch/cmake-android-out/portable/custom_ops
+cmake backend/baremetal \
+    -DCMAKE_TOOLCHAIN_FILE="${ANDROID_NDK}/build/cmake/android.toolchain.cmake" \
+    -DANDROID_ABI="${ANDROID_ABI}" \
+    -DCMAKE_INSTALL_PREFIX=cmake-android-out \
+    -DCMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH" \
+    -DPYTHON_EXECUTABLE="$PYTHON_EXECUTABLE" \
+    -DCMAKE_BUILD_TYPE=Release \
+    -Bcmake-android-out/portable/custom_ops
+
+cmake --build cmake-android-out/portable/custom_ops -j "${CMAKE_JOBS}" --config Release
+
+# Exporting the models of the custome ops in backend/baremetal
+
+
 # Print the config for user verfication
 cd "${BasePath}/ImageInference"
 source config.sh

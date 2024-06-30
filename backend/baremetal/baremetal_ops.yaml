@@ -15,18 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # in the root folder of this project with the name LICENSE. If not, see <http://www.gnu.org/licenses/>.
 
-cmake_minimum_required(VERSION 3.19)
-project(ImageInference)
-
-get_property(IS_MULTI_CONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
-
-if(IS_MULTI_CONFIG)
-    message(NOTICE "Using multi-config generator. Compile with: cmake --build . --config [Debug|Release] --target <target>")
-else()
-    message(NOTICE "Using single-config generator. Generate with: cmake .. -DCMAKE_BUILD_TYPE=[Debug|Release]")
-
-    if(NOT CMAKE_BUILD_TYPE)
-        set(CMAKE_BUILD_TYPE "Release")
-        message(WARNING "No Build type is set. Using Release!")
-    endif()
-endif()
+# important to keep the namespace
+- func: baremetal_ops::resnet50.out(Tensor input, Tensor weights, *, Tensor(a!) out) -> Tensor(a!)
+  kernels:
+    - arg_meta: null
+      kernel_name: custom::resnet50_out_impl # execu_resnet50_out.cpp, sub-namespace native:: is auto-added
