@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!--
+<?xml version="1.0" encoding="utf-8"?><!--
   ~  Copyright (c) 2024 by Vincent Gerlach. All rights reserved.
   ~
   ~  SPDX-License-Identifier: GPL-3.0-or-later
@@ -18,15 +17,16 @@
   ~  in the root folder of this project with the name LICENSE. If not, see <http://www.gnu.org/licenses/>.
   -->
 
-<androidx.recyclerview.widget.RecyclerView xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/list"
-    android:name="com.neuralnetwork.imageinference.ui.MenuFragments"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:layout_marginLeft="16dp"
-    android:layout_marginRight="16dp"
-    app:layoutManager="LinearLayoutManager"
-    tools:context="com.neuralnetwork.imageinference.ui.menu.MenuFragments"
-    tools:listitem="@layout/fragment_menu_fragments" />
+<resources>
+    <style name="ImageInference.Styles.SettingsButton" parent="@style/Widget.Material3.Button.TextButton">
+        <item name="android:textSize">25sp</item>
+    </style>
+
+    <style name="ImageInference.Styles.BaseToolBar" parent="Theme.Material3.Light.NoActionBar">
+        <item name="minHeight">?attr/actionBarSize</item>
+        <item name="navigationIcon">@drawable/ic_arrow_back_google</item>
+        <item name="navigationIconTint">?attr/colorOnPrimary</item>
+        <item name="android:background">?attr/colorPrimary</item>
+        <item name="titleTextColor">?attr/colorOnPrimary</item>
+    </style>
+</resources>

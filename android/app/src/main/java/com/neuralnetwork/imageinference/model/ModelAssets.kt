@@ -19,7 +19,12 @@
 
 package com.neuralnetwork.imageinference.model
 
+import android.content.pm.ApplicationInfo
 import android.content.res.AssetManager
+import android.os.Build
+import android.system.ErrnoException
+import android.system.Os
+import android.util.Log
 
 /**
  * Loads the implemented models from the assets.
@@ -27,9 +32,34 @@ import android.content.res.AssetManager
  * @constructor Creates a new model assets object.
  *
  * @param assets The asset manager to load the models filepath with.
- * @param soc The system on chip (soc) of the current device.
+ * @param applicationInfo The application information to get the native library directory.
  */
-class ModelAssets(assets: AssetManager, private val soc: String) {
+class ModelAssets(assets: AssetManager, applicationInfo: ApplicationInfo) {
+    private val soc = if (Build.VERSION.SDK_INT > Build.VERSION_CODES.S) {
+        Build.SOC_MODEL
+    } else {
+        ""
+    }
+
+    init {
+        // Sets the library path for the Snapdragon Neural Processing Engine SDK.
+        // See https://developer.qualcomm.com/sites/default/files/docs/snpe/dsp_runtime.html for
+        // more information.
+        try {
+            Os.setenv(
+                "ADSP_LIBRARY_PATH",
+                applicationInfo.nativeLibraryDir,
+                true
+            )
+        } catch (e: ErrnoException) {
+            Log.e(
+                "Snapdragon Neural Processing Engine SDK",
+                "Cannot set ADSP_LIBRARY_PATH",
+                e
+            )
+        }
+    }
+
     /**
      * The implemented models that are available in the app.
      */
