@@ -74,8 +74,8 @@
     <string name="selected_collection">Selected Collection</string>
     <string name="save_benchmark">Save Benchmark</string>
     <string name="run_benchmark">Run Benchmark</string>
-    <string name="run">Save</string>
-    <string name="save">Run</string>
+    <string name="run">Run</string>
+    <string name="save">Save</string>
     <string name="help">Help</string>
     <string name="show_help_information">Show help information.</string>
     <string name="benchmark_help">Benchmark Help</string>

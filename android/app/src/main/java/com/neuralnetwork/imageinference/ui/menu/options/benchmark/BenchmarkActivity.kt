@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import android.view.Display.Mode
 import android.view.View
 import android.widget.AdapterView
 import androidx.activity.enableEdgeToEdge
@@ -26,8 +27,11 @@ import com.neuralnetwork.imageinference.model.ModelState
 import com.neuralnetwork.imageinference.ui.details.containers.ModelInputType
 import com.neuralnetwork.imageinference.ui.image.Image
 import com.neuralnetwork.imageinference.ui.menu.options.benchmark.BenchmarkSaveContract.Companion.EXTRA_CONTENT
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.OutputStreamWriter
@@ -88,7 +92,7 @@ class BenchmarkActivity : AppCompatActivity() {
      * The outer map holds the collection name and the inner map holds the model name and the details.
      */
     private val _benchmarks =
-        MutableLiveData<MutableMap<String, MutableMap<String, BenchmarkDetails>>>()
+        MutableLiveData<MutableMap<String, MutableMap<String, BenchmarkDetails>>?>()
 
     private val _saveToFileLauncher = registerForActivityResult(
         BenchmarkSaveContract()
@@ -132,33 +136,6 @@ class BenchmarkActivity : AppCompatActivity() {
         setupBenchmarkDetails()
         setupBenchmarkSave()
         setupBenchmarkShare()
-
-        // DEBUG example
-        _benchmarks.value =
-            mutableMapOf(
-                "Default" to mutableMapOf(
-                    "Example Model" to BenchmarkDetails(
-                        "Example Collection",
-                        "Example Model"
-                    ).apply {
-                        addDetails(
-                            ModelDetails(ModelInputType.IMAGE).apply {
-                                evaluationTimeNano = 1000000
-                            }
-                        )
-                        addDetails(
-                            ModelDetails(ModelInputType.IMAGE).apply {
-                                evaluationTimeNano = 100
-                            }
-                        )
-                        addDetails(
-                            ModelDetails(ModelInputType.IMAGE).apply {
-                                evaluationTimeNano = 5000000
-                            }
-                        )
-                    }
-                )
-            )
     }
 
     /**
@@ -195,6 +172,7 @@ class BenchmarkActivity : AppCompatActivity() {
     private fun observeModelState() {
         val info = binding.modelStateInfo
         val progressbar = binding.benchmarkProgressbar
+        val run = binding.runBenchmark
         _modelState.observe(this) {
             info.text = getString(
                 when (it) {
@@ -210,6 +188,10 @@ class BenchmarkActivity : AppCompatActivity() {
                 ModelState.RUNNING -> View.VISIBLE
                 else -> View.GONE
             }
+            run.text = getString(when(it){
+                ModelState.RUNNING -> R.string.cancel
+                else -> R.string.run
+            })
             checkSaveShareBenchmark()
         }
     }
@@ -220,10 +202,16 @@ class BenchmarkActivity : AppCompatActivity() {
     private fun setupBenchmarkDetails() {
         val details = binding.benchmarkDetails
         _benchmarks.observe(this) {
+            if (it == null)
+            {
+             return@observe
+            }
+
             val benchmarkCollection = it.getOrDefault(_collectionName, null)
             if (benchmarkCollection != null) {
                 details.adapter = BenchmarkDetailsAdapter(benchmarkCollection.values.toTypedArray())
             }
+
             checkSaveShareBenchmark()
         }
     }
@@ -242,9 +230,7 @@ class BenchmarkActivity : AppCompatActivity() {
             val job = _benchmarkJob
             if (job == null || job.isActive.not()) {
                 run.text = getString(R.string.cancel)
-                _benchmarkJob = lifecycleScope.launch {
-                    runBenchmark()
-                }
+                runBenchmark()
             } else {
                 run.text = getString(R.string.run)
                 _benchmarkJob?.cancel(CancellationException("User cancelled the benchmark."))
@@ -364,7 +350,7 @@ class BenchmarkActivity : AppCompatActivity() {
         }
 
         val fixedCollection = _collection
-        if (fixedCollection == null) {
+        if (fixedCollection == null || fixedCollection.imageList.isEmpty()) {
             Log.d("Benchmark", "Failed to get collection.")
             _modelState.value = ModelState.NO_DATA_SELECTED
             return
@@ -373,7 +359,7 @@ class BenchmarkActivity : AppCompatActivity() {
         val progressbar = binding.benchmarkProgressbar
         progressbar.visibility = View.VISIBLE
         progressbar.progress = 0
-        progressbar.min = 1
+        progressbar.min = 0
         progressbar.max = fixedCollection.imageList.size
 
         val benchmarkCollections = _benchmarks.value ?: mutableMapOf()
@@ -387,17 +373,25 @@ class BenchmarkActivity : AppCompatActivity() {
 
         _modelState.value = ModelState.RUNNING
         Log.d("Benchmark", "Running the model.")
-        for (image in fixedCollection.imageList) {
-            val details = ModelDetails(ModelInputType.IMAGE)
-            val bitmap = Image(image).getBitmap(contentResolver)
-            fixedModel.run(bitmap, details)
-            progressbar.setProgress(progressbar.progress + 1, true)
-            benchmark.addDetails(details)
-            _benchmarks.value = benchmarkCollections
-        }
+        _benchmarkJob = lifecycleScope.launch {
+            val warmupImage = fixedCollection.imageList.first()
+            val warmupDetails = ModelDetails(ModelInputType.IMAGE)
+            val warmupBitmap = Image(warmupImage).getBitmap(contentResolver)
+            fixedModel.run(warmupBitmap, warmupDetails)
 
-        _modelState.value = ModelState.SUCCESS
-        progressbar.visibility = View.GONE
+            for (image in fixedCollection.imageList) {
+                val details = ModelDetails(ModelInputType.IMAGE)
+                val bitmap = Image(image).getBitmap(contentResolver)
+                val outputDetails = fixedModel.run(bitmap, details)
+                progressbar.setProgress(progressbar.progress + 1, true)
+                benchmark.addDetails(outputDetails)
+                _benchmarks.value = benchmarkCollections
+            }
+
+            delay(100)
+            _modelState.value = ModelState.SUCCESS
+            progressbar.visibility = View.GONE
+        }
     }
 
     /**
