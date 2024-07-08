@@ -23,7 +23,6 @@ import torch
 
 
 def quantize(model, dataset) -> GraphModule:
-    """This is the official recommended flow for quantization in pytorch 2.0 export"""
     quantizer = XNNPACKQuantizer()
     # if we set is_per_channel to True, we also need to add out_variant of quantize_per_channel/dequantize_per_channel
     operator_config = get_symmetric_quantization_config(is_per_channel=True)

@@ -241,12 +241,12 @@ class BenchmarkActivity : AppCompatActivity() {
 
             val job = _benchmarkJob
             if (job == null || job.isActive.not()) {
-                run.text = getString(R.string.cancel_benchmark)
+                run.text = getString(R.string.cancel)
                 _benchmarkJob = lifecycleScope.launch {
                     runBenchmark()
                 }
             } else {
-                run.text = getString(R.string.run_benchmark)
+                run.text = getString(R.string.run)
                 _benchmarkJob?.cancel(CancellationException("User cancelled the benchmark."))
                 _modelState.value = ModelState.CANCELLED
             }
