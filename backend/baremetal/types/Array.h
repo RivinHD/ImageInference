@@ -15,37 +15,40 @@
 //  You should have received a copy of the GNU General Public License
 //  in the root folder of this project with the name LICENSE. If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef IMAGEINFERENCE_KERNEL_H
-#define IMAGEINFERENCE_KERNEL_H
+#ifndef IMAGEINFERENCE_ARRAY_H
+#define IMAGEINFERENCE_ARRAY_H
 
 #include <stddef.h>
 
-template <typename T, size_t TCount, size_t TChannels, size_t THeight, size_t TWidth>
-class Kernel
+namespace ImageInference
 {
-private:
-    T* data;
+    namespace types
+    {
+        template <typename T, size_t TSize>
+        class Array
+        {
+        private:
+            T *data;
 
-public:
-    const size_t Count = TCount;
-    const size_t Channels = TChannels;
-    const size_t Height = THeight;
-    const size_t Width = TWidth;
-    const T* raw_pointer = data;
+        public:
+            const size_t Size = TSize;
+            const T *raw_pointer = data;
 
-    Kernel(T *data);
-    ~Kernel();
-};
+            Array(T *data);
+            ~Array();
+        };
 
-template <typename T, size_t TCount, size_t TChannels, size_t THeight, size_t TWidth>
-inline Kernel<T, TCount, TChannels, THeight, TWidth>::Kernel(T *data)
-    : data(data)
-{
-}
+        template <typename T, size_t TSize>
+        inline Array<T, TSize>::Array(T *data)
+            : data(data)
+        {
+        }
 
-template <typename T, size_t TCount, size_t TChannels, size_t THeight, size_t TWidth>
-inline Kernel<T, TCount, TChannels, THeight, TWidth>::~Kernel()
-{
-}
+        template <typename T, size_t TSize>
+        inline Array<T, TSize>::~Array()
+        {
+        }
+    } // namespace types
+} // namespace ImageInference
 
-#endif // IMAGEINFERENCE_KERNEL_H
+#endif // IMAGEINFERENCE_ARRAY_H
