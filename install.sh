@@ -58,8 +58,8 @@ fi
 ./install_requirements.sh
 
 # Fix excutorch installation which has some missing modules
-yes | cp backends/ "${BasePath}/miniconda3/envs/imageinfernce/lib/python3.10/site-packages/executorch/" -r
-yes | cp examples/ "${BasePath}/miniconda3/envs/imageinfernce/lib/python3.10/site-packages/executorch/" -r
+yes | cp backends/ "${BasePath}/miniconda3/envs/imageinfernce/lib/python3.10/site-packages/executorch/" -r &> /dev/null
+yes | cp examples/ "${BasePath}/miniconda3/envs/imageinfernce/lib/python3.10/site-packages/executorch/" -r &> /dev/null
 conda install -y numpy
 conda install -y scipy
 ulimit -n 4096
@@ -92,7 +92,7 @@ cd submodules/executorch
 yes | cp schema/program.fbs exir/_serialize/program.fbs
 yes | cp schema/scalar_type.fbs exir/_serialize/scalar_type.fbs
 ./backends/qualcomm/scripts/build.sh
-yes | cp backends/ "${BasePath}/miniconda3/envs/imageinfernce/lib/python3.10/site-packages/executorch/" -r
+yes | cp backends/ "${BasePath}/miniconda3/envs/imageinfernce/lib/python3.10/site-packages/executorch/" -r &> /dev/null
 
 # Number of available processors
 if [ "$(uname)" == "Darwin" ]; then
@@ -150,6 +150,8 @@ yes | cp "${QNN_SDK_ROOT}/lib/aarch64-android/libQnnHtp.so" \
     "${QNN_SDK_ROOT}/lib/aarch64-android/libQnnHtpV75Stub.so" \
     "${QNN_SDK_ROOT}/lib/hexagon-v75/unsigned/libQnnHtpV75Skel.so" \
     "${BasePath}/ImageInference/android/app/src/main/jniLibs/${ANDROID_ABI}"
+
+python "${BasePath}/ImageInference/scripts/copy_imagenet_2012.py"
 
 # Print the config for user verfication
 cd "${BasePath}/ImageInference"
