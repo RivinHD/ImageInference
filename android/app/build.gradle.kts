@@ -21,6 +21,7 @@ plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.jetbrainsKotlinAndroid)
     alias(libs.plugins.googleProtobuf)
+    alias(libs.plugins.jetbrainsJson)
 }
 
 android {
@@ -34,7 +35,7 @@ android {
         versionCode = 1
         versionName = "1.0"
         ndk {
-            abiFilters.addAll(arrayOf("arm64-v8a"))
+            abiFilters.addAll(arrayOf("arm64-v8a", "x86", "x86_64"))
         }
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -64,8 +65,6 @@ android {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
-    }
-    packagingOptions {
         jniLibs {
             useLegacyPackaging = true
         }
@@ -98,6 +97,7 @@ dependencies {
     implementation(libs.com.facebook.soloader)
     implementation(libs.com.facebook.fbjni)
     implementation(libs.com.google.findbugs)
+    implementation(libs.org.jetbrains.kotlin.json)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

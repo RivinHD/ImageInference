@@ -42,5 +42,21 @@ enum class ModelState {
      * The state when a model has failed inference.
      * This state is also used if the requirements for running the model are not met.
      */
-    FAILED
+    FAILED,
+
+    /**
+     * The state when no model is selected.
+     */
+    NO_MODEL_SELECTED,
+
+    /**
+     * The state when no data is selected for the model to do inference on.
+     */
+    NO_DATA_SELECTED,
+
+    /**
+     * The state when the model is cancelled.
+     */
+    CANCELLED
+
 }

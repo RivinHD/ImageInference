@@ -25,6 +25,7 @@ import android.graphics.ImageDecoder
 import android.net.Uri
 import android.widget.ImageView
 import androidx.core.content.res.ResourcesCompat
+import com.neuralnetwork.imageinference.ImageCollections
 import com.neuralnetwork.imageinference.R
 
 /**
@@ -35,6 +36,13 @@ import com.neuralnetwork.imageinference.R
  * @constructor Create an image with the given path and name.
  */
 data class Image(val uri: Uri, val name: String) {
+
+    /**
+     * Creates an image collection from the corresponding data store object.
+     */
+    constructor(dataStore: ImageCollections.ImageCollection.Image)
+            : this(Uri.parse(dataStore.uri), dataStore.name)
+
     companion object {
         /**
          * A predefined default image.
@@ -69,6 +77,13 @@ data class Image(val uri: Uri, val name: String) {
             view.setImageBitmap(image)
             image
         }
+    }
+
+    fun toDataStore(): ImageCollections.ImageCollection.Image {
+        return ImageCollections.ImageCollection.Image.newBuilder()
+            .setName(this.name)
+            .setUri(this.uri.toString())
+            .build()
     }
 
     /**

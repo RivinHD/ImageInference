@@ -58,10 +58,10 @@ fi
 ./install_requirements.sh
 
 # Fix excutorch installation which has some missing modules
-yes | cp backends/ "${BasePath}/miniconda3/envs/imageinfernce/lib/python3.10/site-packages/executorch/" -r
-yes | cp examples/ "${BasePath}/miniconda3/envs/imageinfernce/lib/python3.10/site-packages/executorch/" -r
-conda install -y numpy
-conda install -y scipy
+yes | cp backends/ "${BasePath}/miniconda3/envs/imageinfernce/lib/python3.10/site-packages/executorch/" -r &> /dev/null
+yes | cp examples/ "${BasePath}/miniconda3/envs/imageinfernce/lib/python3.10/site-packages/executorch/" -r &> /dev/null
+pip install numpy==2.0.1
+pip install scipy
 ulimit -n 4096
 
 # Install Flatc
@@ -92,7 +92,7 @@ cd submodules/executorch
 yes | cp schema/program.fbs exir/_serialize/program.fbs
 yes | cp schema/scalar_type.fbs exir/_serialize/scalar_type.fbs
 ./backends/qualcomm/scripts/build.sh
-yes | cp backends/ "${BasePath}/miniconda3/envs/imageinfernce/lib/python3.10/site-packages/executorch/" -r
+yes | cp backends/ "${BasePath}/miniconda3/envs/imageinfernce/lib/python3.10/site-packages/executorch/" -r &> /dev/null
 
 # Number of available processors
 if [ "$(uname)" == "Darwin" ]; then
@@ -173,7 +173,9 @@ cmake backend/baremetal \
 cmake --build cmake-android-out/portable/custom_ops -j "${CMAKE_JOBS}" --config Release
 
 # Exporting the models of the custome ops in backend/baremetal
+# TODO add copy command
 
+python "${BasePath}/ImageInference/scripts/copy_imagenet_2012.py"
 
 # Print the config for user verfication
 cd "${BasePath}/ImageInference"

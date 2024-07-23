@@ -178,7 +178,7 @@ class VideoCameraViewModel : ViewModel(), ImageAnalysis.Analyzer {
         val fixedModel: Model? = model
         if (fixedModel == null) {
             Log.e("VideoCapture", "Failed to get the model.")
-            _modelState.value = ModelState.FAILED
+            _modelState.value = ModelState.NO_MODEL_SELECTED
             return
         }
 

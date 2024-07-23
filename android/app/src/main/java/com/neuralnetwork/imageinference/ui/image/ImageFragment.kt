@@ -39,6 +39,8 @@ import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.DrawableCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.neuralnetwork.imageinference.MainActivity
 import com.neuralnetwork.imageinference.R
 import com.neuralnetwork.imageinference.databinding.FragmentImageBinding
 import com.neuralnetwork.imageinference.datastore.DataStoreViewModelFactory
@@ -203,14 +205,14 @@ class ImageFragment : Fragment(), DetailsConnector {
                 button.isEnabled = (it != ModelState.RUNNING)
             }
 
-            progressBar.visibility = when(it){
+            progressBar.visibility = when (it) {
                 ModelState.RUNNING -> View.VISIBLE
                 else -> View.GONE
             }
         }
     }
 
-    private fun setButtonDrawable(it: ModelState){
+    private fun setButtonDrawable(it: ModelState) {
         val imageSelection = binding.imageSelection
         val colorID = when (it) {
             ModelState.RUNNING -> R.color.loading
@@ -250,6 +252,7 @@ class ImageFragment : Fragment(), DetailsConnector {
     ) {
         val imageSelectionMenu = binding.imageSelectionMenu
 
+
         // Registers a photo picker activity launcher in multi-select mode.
         val imageSelectionMenuPickMultipleMedia = registerForActivityResult(
             ActivityResultContracts.PickMultipleVisualMedia()
@@ -271,22 +274,33 @@ class ImageFragment : Fragment(), DetailsConnector {
             popup.setOnMenuItemClickListener { it1 ->
                 when (it1.itemId) {
                     R.id.image_selection_menu_add -> {
-                        imageSelectionMenuPickMultipleMedia.launch(
-                            PickVisualMediaRequest(
-                                ActivityResultContracts.PickVisualMedia.ImageOnly
+                        if (MainActivity.checkImagePickerPermission(_context)) {
+                            imageSelectionMenuPickMultipleMedia.launch(
+                                PickVisualMediaRequest(
+                                    ActivityResultContracts.PickVisualMedia.ImageOnly
+                                )
                             )
-                        )
+                        }
                         true
                     }
 
                     R.id.image_selection_menu_remove -> {
-                        vm.selectedImage.value?.let { it2 -> vm.removeImage(it2) }
+                        val image = vm.selectedImage.value
+                        if (image != null) {
+                            val uri = vm.removeImage(image)
+                            if (uri != null && Build.VERSION.SDK_INT > Build.VERSION_CODES.Q) {
+                                _context.contentResolver.releasePersistableUriPermission(
+                                    uri,
+                                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                                )
+                            }
+                        }
                         true
                     }
 
                     R.id.image_selection_menu_change_collection -> {
-                        val changeCollectionDialogBuilder = AlertDialog.Builder(_context)
-                            .setTitle("Change Collection")
+                        MaterialAlertDialogBuilder(_context)
+                            .setTitle(getString(R.string.change_collection))
                             .setSingleChoiceItems(
                                 ArrayAdapter(
                                     _context,
@@ -300,42 +314,51 @@ class ImageFragment : Fragment(), DetailsConnector {
                                 item?.let { it1 -> vm.changeCollection(it1) }
                                 dialog.dismiss()
                             }
-                        val dialog = changeCollectionDialogBuilder.create()
-                        dialog.show()
+                            .show()
                         true
                     }
 
                     R.id.image_selection_menu_add_collection -> {
-                        val addCollectionDialogBuilder = AlertDialog.Builder(_context)
-                            .setTitle("Add Collection")
+                        MaterialAlertDialogBuilder(_context)
+                            .setTitle(getString(R.string.add_collection))
                             .setView(R.layout.dialog_add_collection)
-                            .setPositiveButton("Add") { dialog, _ ->
+                            .setPositiveButton(getString(R.string.add)) { dialog, _ ->
                                 val textView =
                                     (dialog as AlertDialog).findViewById<View>(R.id.collection_name) as EditText
                                 vm.addCollection(textView.text.toString())
                                 dialog.dismiss()
                             }
-                            .setNegativeButton("Cancel") { dialog, _ -> dialog.dismiss() }
-                        val dialog = addCollectionDialogBuilder.create()
-                        dialog.show()
+                            .setNegativeButton(getString(R.string.cancel)) { dialog, _ -> dialog.dismiss() }
+                            .show()
                         true
                     }
 
                     R.id.image_selection_menu_remove_collection -> {
                         val currentCollectionName =
                             vm.getCollectionsNames()[vm.getSelectedCollectionIndex()]
-                        val removeCollectionDialogBuilder = AlertDialog.Builder(_context)
-                            .setTitle("Remove Collection")
-                            .setMessage("Are you sure you want to remove the collection: '$currentCollectionName'?")
-                            .setPositiveButton("Yes") { dialog, _ ->
-                                vm.removeCollection()
+                        MaterialAlertDialogBuilder(_context)
+                            .setTitle(getString(R.string.remove_collection))
+                            .setMessage(
+                                getString(
+                                    R.string.are_you_sure_you_want_to_remove_the_collection,
+                                    currentCollectionName
+                                ))
+                            .setPositiveButton(getString(R.string.yes)) { dialog, _ ->
+                                val uris = vm.removeCollection()
+                                if (uris != null && Build.VERSION.SDK_INT > Build.VERSION_CODES.Q) {
+                                    for (uri in uris) {
+                                        _context.contentResolver.releasePersistableUriPermission(
+                                            uri,
+                                            Intent.FLAG_GRANT_READ_URI_PERMISSION
+                                        )
+                                    }
+                                }
                                 dialog.dismiss()
                             }
-                            .setNegativeButton("No") { dialog, _ ->
+                            .setNegativeButton(getString(R.string.no)) { dialog, _ ->
                                 dialog.dismiss()
                             }
-                        val dialog = removeCollectionDialogBuilder.create()
-                        dialog.show()
+                            .show()
                         true
                     }
 
@@ -364,7 +387,7 @@ class ImageFragment : Fragment(), DetailsConnector {
     }
 
     /**
-     * Setup image selection before button with the OnClickListener.
+     * Setup the observe on the view model property hasBefore LiveData.
      *
      * @param vm The view model of this fragment.
      */
@@ -413,20 +436,14 @@ class ImageFragment : Fragment(), DetailsConnector {
         return imageSelectionPopup
     }
 
-    override fun onDetach() {
+    override fun onDestroyView() {
         val vm: ImageViewModel by viewModels {
             DataStoreViewModelFactory(_context.imageCollectionsDataStore)
         }
-        vm.saveDatastore(_context.imageCollectionsDataStore)
-        super.onDetach()
-    }
-
-    override fun onDestroyView() {
-        super.onDestroyView()
-        val vm: ImageViewModel by viewModels()
         val modelConnector = (activity as ModelConnector)
         modelConnector.removeOnModelChangeListener(vm.onModelChangedCallback)
         _binding = null
+        super.onDestroyView()
     }
 
     override fun getDetailViewModel(): DetailsViewModel {

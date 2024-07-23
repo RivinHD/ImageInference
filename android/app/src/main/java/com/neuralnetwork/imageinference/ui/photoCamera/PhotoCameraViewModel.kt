@@ -185,7 +185,7 @@ class PhotoCameraViewModel : ViewModel() {
         val fixedModel: Model? = model
         if (fixedModel == null) {
             Log.e("PhotoCapture", "Failed to get the model.")
-            _modelState.value = ModelState.FAILED
+            _modelState.value = ModelState.NO_MODEL_SELECTED
             return
         }
 

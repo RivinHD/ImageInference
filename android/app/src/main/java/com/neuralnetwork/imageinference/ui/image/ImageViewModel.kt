@@ -45,7 +45,7 @@ import kotlinx.coroutines.withContext
  *
  * @param dataStore The stored data that is used for the image collections.
  */
-class ImageViewModel(dataStore: DataStore<ImageCollections>) :
+class ImageViewModel(private val dataStore: DataStore<ImageCollections>) :
     DataStoreViewModel<ImageCollections>(dataStore) {
 
     /**
@@ -55,13 +55,9 @@ class ImageViewModel(dataStore: DataStore<ImageCollections>) :
         value = mutableListOf(ImageCollection.DEFAULT)
         viewModelScope.launch {
             dataStore.data.collect {
-                var data = MutableList(it.imageCollectionCount) { collectionIndex ->
-                    val collection = it.imageCollectionList[collectionIndex]
-                    ImageCollection(collection.name, List(collection.imageCount) { imageIndex ->
-                        val image = collection.imageList[imageIndex]
-                        Image(Uri.parse(image.uri), image.name)
-                    })
-                }
+                var data = it.imageCollectionList
+                    .map { collection -> ImageCollection(collection) }
+                    .toMutableList()
                 val selectedCollectionIndex: Int
                 val selectedImageIndex: Int
                 if (data.isEmpty()) {
@@ -177,7 +173,7 @@ class ImageViewModel(dataStore: DataStore<ImageCollections>) :
     /**
      * Callback how the model change is handled.
      */
-    val onModelChangedCallback : ((Model?) -> Unit) = {
+    val onModelChangedCallback: ((Model?) -> Unit) = {
         model = it
         _modelState.value = ModelState.INITIAL
         _selectedImage.value = _selectedImage.value
@@ -220,6 +216,7 @@ class ImageViewModel(dataStore: DataStore<ImageCollections>) :
 
         _images.value = selectedCollection.images
         _selectedImage.value = image
+        saveUpdateCollection(selectedCollection, getSelectedCollectionIndex())
         return true
     }
 
@@ -229,10 +226,10 @@ class ImageViewModel(dataStore: DataStore<ImageCollections>) :
      *
      * @param image The image to remove from the list.
      */
-    fun removeImage(image: Image) {
+    fun removeImage(image: Image): Uri? {
         val selectedCollection = getSelectedCollection()
         if (!selectedCollection.images.contains(image)) {
-            return
+            return null
         }
 
         val current: Image? = _selectedImage.value
@@ -242,6 +239,8 @@ class ImageViewModel(dataStore: DataStore<ImageCollections>) :
 
         selectedCollection.removeImage(image)
         _images.value = selectedCollection.images
+        saveUpdateCollection(selectedCollection, getSelectedCollectionIndex())
+        return image.uri
     }
 
 
@@ -288,6 +287,7 @@ class ImageViewModel(dataStore: DataStore<ImageCollections>) :
         _selectedCollection.value = collection
         _images.value = collection.images
         _selectedImage.value = collection.images.firstOrNull() ?: Image.DEFAULT
+        saveSelectedCollectionIndex()
     }
 
     /**
@@ -314,18 +314,19 @@ class ImageViewModel(dataStore: DataStore<ImageCollections>) :
         _selectedCollection.value = new
         _images.value = new.images
         _selectedImage.value = Image.DEFAULT
-
+        saveAddImageCollections(new)
     }
 
     /**
      * Removes the selected collection and selects the first collection.
      */
-    fun removeCollection() {
+    fun removeCollection(): Array<Uri>? {
         val collection = getSelectedCollection()
-        val collections = _collections.value ?: return
+        val index = getSelectedCollectionIndex()
+        val collections = _collections.value ?: return null
 
         if (collections.size == 1 || collection == ImageCollection.DEFAULT) {
-            return
+            return null
         }
 
         collections.remove(collection)
@@ -333,6 +334,8 @@ class ImageViewModel(dataStore: DataStore<ImageCollections>) :
         _selectedCollection.value = collections.first()
         _images.value = collections.first().images
         _selectedImage.value = Image.DEFAULT
+        saveRemoveImageCollections(index)
+        return collection.images.map { it.uri }.toTypedArray()
     }
 
     /**
@@ -381,7 +384,7 @@ class ImageViewModel(dataStore: DataStore<ImageCollections>) :
      * @param resolver The content resolver to get the bitmap from the uri.
      */
     fun runModel(resolver: ContentResolver) {
-        if (_modelState.value == ModelState.RUNNING){
+        if (_modelState.value == ModelState.RUNNING) {
             Log.d("Image", "The model is already running.")
             return
         }
@@ -390,7 +393,7 @@ class ImageViewModel(dataStore: DataStore<ImageCollections>) :
         val fixedModel: Model? = model
         if (fixedModel == null) {
             Log.d("Image", "Failed to get the model.")
-            _modelState.value = ModelState.FAILED
+            _modelState.value = ModelState.NO_MODEL_SELECTED
             return
         }
 
@@ -423,29 +426,56 @@ class ImageViewModel(dataStore: DataStore<ImageCollections>) :
 
     /**
      * Saved the image collections to the system using data store.
-     *
-     * @param dataStore The data store object to write to.
      */
-    fun saveDatastore(dataStore: DataStore<ImageCollections>) {
-        viewModelScope.launch(Dispatchers.IO) {
+    private fun saveUpdateCollection(collection: ImageCollection, index: Int) {
+        viewModelScope.launch {
             dataStore.updateData { data ->
                 data.toBuilder()
-                    .clearImageCollection()
-                    .addAllImageCollection(_collections.value?.map { collection ->
-                        ImageCollections.ImageCollection.newBuilder()
-                            .setName(collection.name)
-                            .addAllImage(collection.images.map { image ->
-                                ImageCollections.ImageCollection.Image.newBuilder()
-                                    .setName(image.name)
-                                    .setUri(image.uri.toString())
-                                    .build()
-                            })
-                            .build()
-                    } ?: listOf(
-                        ImageCollections.ImageCollection.newBuilder()
-                            .setName(ImageCollection.DEFAULT.name)
-                            .build()
-                    ))
+                    .setImageCollection(index, collection.toDataStore())
+                    .build()
+            }
+        }
+    }
+
+    /**
+     * Saved the image collections to the system using data store.
+     */
+    private fun saveRemoveImageCollections(index: Int) {
+        viewModelScope.launch {
+            dataStore.updateData { data ->
+                data.toBuilder()
+                    .removeImageCollection(index)
+                    .setSelectedImageCollectionIndex(
+                        getSelectedCollectionIndex()
+                    )
+                    .build()
+            }
+        }
+    }
+
+    /**
+     * Saved the image collections to the system using data store.
+     */
+    private fun saveAddImageCollections(collection: ImageCollection) {
+        viewModelScope.launch {
+            dataStore.updateData { data ->
+                data.toBuilder()
+                    .addImageCollection(collection.toDataStore())
+                    .setSelectedImageCollectionIndex(
+                        getSelectedCollectionIndex()
+                    )
+                    .build()
+            }
+        }
+    }
+
+    /**
+     * Saved the selected collection index to the system using data store.
+     */
+    private fun saveSelectedCollectionIndex() {
+        viewModelScope.launch {
+            dataStore.updateData { data ->
+                data.toBuilder()
                     .setSelectedImageCollectionIndex(
                         getSelectedCollectionIndex()
                     )

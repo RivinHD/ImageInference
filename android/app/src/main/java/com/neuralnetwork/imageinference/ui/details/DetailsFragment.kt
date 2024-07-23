@@ -111,18 +111,19 @@ class DetailsFragment : Fragment() {
         )
 
         vm.details.observe(viewLifecycleOwner) {
-            val results = it.getTopResults(5)
+            val results = it.getTopResults(TOP_RESULTS_COUNT)
 
             val applier = classes.zip(accuracies).zip(results) { (a, b), c -> Triple(a, b, c) }
             for ((name, accuracy, result) in applier) {
                 name.text = result.name
-                accuracy.text = "${"%.2f".format(result.accuracy * 100)} %"
+                accuracy.text = "${"%.2f".format(result.accuracy * TO_PERCENTAGE)} %"
             }
 
             val time = binding.optionTimeValue
             time.text = it.evaluationTimeString
             val frames = binding.optionFrameValue
-            frames.text = (1_000 / (it.evaluationTimeMillisecond ?: 1000)).toString()
+            frames.text =
+                (SECOND_TO_NANOSECOND / (it.evaluationTimeNano ?: SECOND_TO_NANOSECOND)).toString()
             val timeNano = binding.optionTimeNanoValue
             timeNano.text = it.evaluationTimeNanoString
         }
@@ -142,25 +143,27 @@ class DetailsFragment : Fragment() {
             val details = vm.details.value ?: return@observe
             val type = details.modelInputType
 
-            informationView.visibility = when(type){
+            informationView.visibility = when (type) {
                 ModelInputType.VIDEO -> {
                     View.VISIBLE
                 }
+
                 ModelInputType.PHOTO, ModelInputType.IMAGE -> {
                     when (it) {
-                        null, ModelState.INITIAL, ModelState.RUNNING, ModelState.FAILED -> View.VISIBLE
                         ModelState.SUCCESS -> View.GONE
+                        else -> View.VISIBLE
                     }
                 }
             }
 
-            information.visibility = when (type){
+            information.visibility = when (type) {
                 ModelInputType.VIDEO -> {
                     when (it) {
-                        null, ModelState.INITIAL, ModelState.FAILED -> View.VISIBLE
                         ModelState.RUNNING, ModelState.SUCCESS -> View.GONE
+                        else -> View.VISIBLE
                     }
                 }
+
                 ModelInputType.PHOTO, ModelInputType.IMAGE -> {
                     View.VISIBLE
                 }
@@ -168,24 +171,27 @@ class DetailsFragment : Fragment() {
 
             information.text = getString(
                 when (it) {
-                    null, ModelState.INITIAL -> R.string.no_data
+                    null, ModelState.INITIAL, ModelState.NO_DATA_SELECTED -> R.string.no_data
                     ModelState.RUNNING -> R.string.inference_running
                     ModelState.SUCCESS -> R.string.inference_successful
                     ModelState.FAILED -> R.string.inference_failed
+                    ModelState.NO_MODEL_SELECTED -> R.string.select_a_model_to_start_inference
+                    ModelState.CANCELLED -> R.string.inference_was_cancelled
                 }
             )
 
-            detailsView.visibility = when(type){
+            detailsView.visibility = when (type) {
                 ModelInputType.VIDEO -> {
-                    when (it){
-                        null, ModelState.INITIAL, ModelState.FAILED -> View.GONE
+                    when (it) {
                         ModelState.RUNNING, ModelState.SUCCESS -> View.VISIBLE
+                        else -> View.GONE
                     }
                 }
+
                 ModelInputType.PHOTO, ModelInputType.IMAGE -> {
                     when (it) {
-                        null, ModelState.INITIAL, ModelState.RUNNING, ModelState.FAILED -> View.INVISIBLE
                         ModelState.SUCCESS -> View.VISIBLE
+                        else -> View.INVISIBLE
                     }
                 }
             }
@@ -197,11 +203,11 @@ class DetailsFragment : Fragment() {
      *
      * @param vm The view model of this fragment.
      */
-    private fun setupCorrectDetails(vm: DetailsViewModel){
+    private fun setupCorrectDetails(vm: DetailsViewModel) {
         val details = vm.details.value ?: return
         val type = details.modelInputType
 
-        when (type){
+        when (type) {
             ModelInputType.VIDEO -> {
             }
 
@@ -213,5 +219,11 @@ class DetailsFragment : Fragment() {
                 binding.optionFrames.visibility = View.GONE
             }
         }
+    }
+
+    companion object {
+        private const val TOP_RESULTS_COUNT = 5
+        private const val SECOND_TO_NANOSECOND: Long = 1_000_000_000
+        private const val TO_PERCENTAGE = 100
     }
 }

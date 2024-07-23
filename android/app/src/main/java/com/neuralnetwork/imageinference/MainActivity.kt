@@ -24,11 +24,8 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
-import android.system.ErrnoException
-import android.system.Os
 import android.util.Log
 import android.widget.AdapterView
-import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -42,11 +39,8 @@ import com.neuralnetwork.imageinference.databinding.ActivityMainBinding
 import com.neuralnetwork.imageinference.model.Model
 import com.neuralnetwork.imageinference.model.ModelAssets
 import com.neuralnetwork.imageinference.model.ModelConnector
-import java.io.BufferedReader
 import java.io.File
 import java.io.FileOutputStream
-import java.io.FileReader
-import java.io.IOException
 
 
 class MainActivity : AppCompatActivity(), ModelConnector {
@@ -70,28 +64,15 @@ class MainActivity : AppCompatActivity(), ModelConnector {
      */
     private var _modelChangedCallback: ((m: Model?) -> Unit)? = null
 
+    /**
+     * Checks the available models and loads them into the model selector.
+     */
     private lateinit var _modelAssets: ModelAssets
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Sets the library path for the Snapdragon Neural Processing Engine SDK.
-        // See https://developer.qualcomm.com/sites/default/files/docs/snpe/dsp_runtime.html for
-        // more information.
-        try {
-            Os.setenv(
-                "ADSP_LIBRARY_PATH",
-                applicationInfo.nativeLibraryDir,
-                true)
-        } catch (e: ErrnoException) {
-            Log.e(
-                "Snapdragon Neural Processing Engine SDK",
-                "Cannot set ADSP_LIBRARY_PATH",
-                e
-            )
-        }
-
-        _modelAssets = ModelAssets(assets, getSoc())
+        _modelAssets = ModelAssets(assets, applicationInfo)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         setSupportActionBar(binding.modelToolbar)
@@ -136,14 +117,6 @@ class MainActivity : AppCompatActivity(), ModelConnector {
     }
 
     companion object {
-        private fun getSoc(): String{
-            return if (Build.VERSION.SDK_INT > Build.VERSION_CODES.S){
-                Build.SOC_MODEL
-            } else {
-                ""
-            }
-        }
-
         /**
          * Check for the camera permission and ask if needed.
          *
@@ -168,6 +141,44 @@ class MainActivity : AppCompatActivity(), ModelConnector {
                 android.Manifest.permission.CAMERA
             ) == PackageManager.PERMISSION_GRANTED
         }
+
+        /**
+         * Check for the image media permission and ask if needed.
+         *
+         * @param context The context for the permission check.
+         * @return True if the permission is granted, false otherwise.
+         */
+        fun checkImagePickerPermission(context: Context): Boolean {
+            val permissions =
+                if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q) {
+                    arrayOf(android.Manifest.permission.READ_EXTERNAL_STORAGE)
+                } else {
+                    emptyArray()
+                }
+
+            if (permissions.any {
+                    ContextCompat.checkSelfPermission(
+                        context,
+                        it
+                    ) != PackageManager.PERMISSION_GRANTED
+                }
+            ) {
+
+                ActivityCompat.requestPermissions(
+                    context as Activity,
+                    permissions,
+                    100
+                )
+            }
+
+            return permissions.all {
+                ContextCompat.checkSelfPermission(
+                    context,
+                    it
+                ) == PackageManager.PERMISSION_GRANTED
+            }
+        }
+
 
         /**
          * Loads the selected asset into the directory that holds the applications files
@@ -210,8 +221,7 @@ class MainActivity : AppCompatActivity(), ModelConnector {
     }
 
     override fun removeOnModelChangeListener(callback: (m: Model?) -> Unit) {
-        if (_modelChangedCallback == callback)
-        {
+        if (_modelChangedCallback == callback) {
             _modelChangedCallback = null
         }
     }
