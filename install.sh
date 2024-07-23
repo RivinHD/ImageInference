@@ -60,8 +60,8 @@ fi
 # Fix excutorch installation which has some missing modules
 yes | cp backends/ "${BasePath}/miniconda3/envs/imageinfernce/lib/python3.10/site-packages/executorch/" -r &> /dev/null
 yes | cp examples/ "${BasePath}/miniconda3/envs/imageinfernce/lib/python3.10/site-packages/executorch/" -r &> /dev/null
-conda install -y numpy
-conda install -y scipy
+pip install numpy==2.0.1
+pip install scipy
 ulimit -n 4096
 
 # Install Flatc
