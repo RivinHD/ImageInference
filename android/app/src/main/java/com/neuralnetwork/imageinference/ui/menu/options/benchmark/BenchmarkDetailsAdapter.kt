@@ -21,6 +21,7 @@ package com.neuralnetwork.imageinference.ui.menu.options.benchmark
 
 import android.annotation.SuppressLint
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.neuralnetwork.imageinference.databinding.ItemBenchmarkDetailsBinding
@@ -46,6 +47,15 @@ class BenchmarkDetailsAdapter(private val dataset: Array<BenchmarkDetails>) :
             binding.maxTimeValue.text = "${benchmarkDetails.evaluationTimeNano.max} ns"
             binding.minTimeValue.text = "${benchmarkDetails.evaluationTimeNano.min} ns"
             binding.averageTimeValue.text = "${benchmarkDetails.evaluationTimeNano.average} ns"
+            if (benchmarkDetails.labeled) {
+                binding.top1.visibility = View.VISIBLE
+                binding.top5.visibility = View.VISIBLE
+                binding.top1Value.text = "%.2f %".format(benchmarkDetails.top1 * TO_PERCENTAGE)
+                binding.top5Value.text = "%.2f %".format(benchmarkDetails.top5 * TO_PERCENTAGE)
+            } else {
+                binding.top1.visibility = View.GONE
+                binding.top5.visibility = View.GONE
+            }
         }
     }
 
@@ -69,4 +79,8 @@ class BenchmarkDetailsAdapter(private val dataset: Array<BenchmarkDetails>) :
 
     // Return the size of your dataset (invoked by the layout manager)
     override fun getItemCount() = dataset.size
+
+    companion object {
+        const val TO_PERCENTAGE = 100
+    }
 }

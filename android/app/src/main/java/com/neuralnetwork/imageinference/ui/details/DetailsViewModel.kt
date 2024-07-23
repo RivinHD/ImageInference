@@ -34,8 +34,9 @@ import com.neuralnetwork.imageinference.model.ModelState
  * @param modelState (optional) The model state object that will be used.
  */
 class DetailsViewModel(
-    modelDetail : MutableLiveData<ModelDetails>? = null,
-    modelState : MutableLiveData<ModelState>? = null) : ViewModel() {
+    modelDetail: MutableLiveData<ModelDetails>? = null,
+    modelState: MutableLiveData<ModelState>? = null
+) : ViewModel() {
 
     /**
      * Holds the details that are update by the model and displayed by the details fragment.
@@ -50,11 +51,11 @@ class DetailsViewModel(
     /**
      * Gets the details of the model.
      */
-    val details : LiveData<ModelDetails> = _details
+    val details: LiveData<ModelDetails> = _details
 
     /**
      * Gets the model state.
      */
-    val state : LiveData<ModelState> = _state
+    val state: LiveData<ModelState> = _state
 
 }

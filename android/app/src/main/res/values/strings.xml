@@ -90,4 +90,6 @@
     <string name="average_time">Average Time</string>
     <string name="minimum_time">Minimum Time</string>
     <string name="maximum_time">Maximum Time</string>
+    <string name="top_1_accuracy">Top 1 Accuracy</string>
+    <string name="top_5_accuracy">Top 5 Accuracy</string>
 </resources>

@@ -4,7 +4,6 @@ import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
-import android.view.Display.Mode
 import android.view.View
 import android.widget.AdapterView
 import androidx.activity.enableEdgeToEdge
@@ -16,7 +15,6 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.MaterialAutoCompleteTextView
-import com.neuralnetwork.imageinference.ImageCollections
 import com.neuralnetwork.imageinference.R
 import com.neuralnetwork.imageinference.databinding.ActivityBenchmarkBinding
 import com.neuralnetwork.imageinference.datastore.imageCollectionsDataStore
@@ -25,13 +23,9 @@ import com.neuralnetwork.imageinference.model.ModelAssets
 import com.neuralnetwork.imageinference.model.ModelDetails
 import com.neuralnetwork.imageinference.model.ModelState
 import com.neuralnetwork.imageinference.ui.details.containers.ModelInputType
-import com.neuralnetwork.imageinference.ui.image.Image
 import com.neuralnetwork.imageinference.ui.menu.options.benchmark.BenchmarkSaveContract.Companion.EXTRA_CONTENT
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.OutputStreamWriter
@@ -61,6 +55,11 @@ class BenchmarkActivity : AppCompatActivity() {
     private lateinit var _modelAssets: ModelAssets
 
     /**
+     * Checks the available models and loads them into the model selector.
+     */
+    private lateinit var _benchmarkAssets: BenchmarkCollectionAssets
+
+    /**
      * Holds the state of the model.
      */
     private val _modelState = MutableLiveData<ModelState>().apply {
@@ -70,7 +69,7 @@ class BenchmarkActivity : AppCompatActivity() {
     /**
      * The current selected collection.
      */
-    private var _collection: ImageCollections.ImageCollection? = null
+    private var _collection: BenchmarkCollection? = null
 
     /**
      * The name of the current selected collection.
@@ -80,7 +79,7 @@ class BenchmarkActivity : AppCompatActivity() {
     /**
      * Holds the image collections that are available in the app.
      */
-    private lateinit var _imageCollections: ImageCollections
+    private var _imageCollections = mutableListOf<BenchmarkCollection>()
 
     /**
      * The job that runs the benchmark.
@@ -94,6 +93,9 @@ class BenchmarkActivity : AppCompatActivity() {
     private val _benchmarks =
         MutableLiveData<MutableMap<String, MutableMap<String, BenchmarkDetails>>?>()
 
+    /**
+     * Holds the registered save to file launcher.
+     */
     private val _saveToFileLauncher = registerForActivityResult(
         BenchmarkSaveContract()
     ) {
@@ -123,6 +125,8 @@ class BenchmarkActivity : AppCompatActivity() {
         }
 
         _modelAssets = ModelAssets(assets, applicationInfo)
+        _benchmarkAssets = BenchmarkCollectionAssets(assets)
+        _imageCollections = _benchmarkAssets.collections
 
         checkRunBenchmark()
         checkSaveShareBenchmark()
@@ -188,10 +192,12 @@ class BenchmarkActivity : AppCompatActivity() {
                 ModelState.RUNNING -> View.VISIBLE
                 else -> View.GONE
             }
-            run.text = getString(when(it){
-                ModelState.RUNNING -> R.string.cancel
-                else -> R.string.run
-            })
+            run.text = getString(
+                when (it) {
+                    ModelState.RUNNING -> R.string.cancel
+                    else -> R.string.run
+                }
+            )
             checkSaveShareBenchmark()
         }
     }
@@ -202,9 +208,8 @@ class BenchmarkActivity : AppCompatActivity() {
     private fun setupBenchmarkDetails() {
         val details = binding.benchmarkDetails
         _benchmarks.observe(this) {
-            if (it == null)
-            {
-             return@observe
+            if (it == null) {
+                return@observe
             }
 
             val benchmarkCollection = it.getOrDefault(_collectionName, null)
@@ -291,18 +296,18 @@ class BenchmarkActivity : AppCompatActivity() {
         collectionSelector.isEnabled = false
         lifecycleScope.launch {
             imageCollectionsDataStore.data.collect {
-                _imageCollections = it
+                _imageCollections += it.imageCollectionList.map { it1 -> BenchmarkCollection(it1) }
 
                 (collectionSelector.editText as? MaterialAutoCompleteTextView)?.setSimpleItems(
-                    _imageCollections.imageCollectionList.map { it1 -> it1.name }.toTypedArray()
+                    _imageCollections.map { it1 -> it1.name }.toTypedArray()
                 )
-                collectionSelector.isEnabled = _imageCollections.imageCollectionList.isNotEmpty()
+                collectionSelector.isEnabled = _imageCollections.isNotEmpty()
 
                 (collectionSelector.editText as? MaterialAutoCompleteTextView)?.onItemClickListener =
                     AdapterView.OnItemClickListener { parent, view, position, id ->
                         _collectionName = parent?.getItemAtPosition(position) as String
                         _collection =
-                            _imageCollections.imageCollectionList.first { it1 -> it1.name == _collectionName }
+                            _imageCollections.first { it1 -> it1.name == _collectionName }
                         _benchmarks.value = _benchmarks.value
                     }
                 checkRunBenchmark()
@@ -370,25 +375,33 @@ class BenchmarkActivity : AppCompatActivity() {
                 fixedModel.name
             )
         }
+        val addDetails = if (fixedCollection.isLabeled) {
+            { bench: BenchmarkDetails, details: ModelDetails, label: String ->
+                bench.addDetails(details, label)
+            }
+        } else {
+            { bench: BenchmarkDetails, details: ModelDetails, _: String ->
+                bench.addDetails(details)
+            }
+        }
 
         _modelState.value = ModelState.RUNNING
         Log.d("Benchmark", "Running the model.")
         _benchmarkJob = lifecycleScope.launch {
             val warmupImage = fixedCollection.imageList.first()
             val warmupDetails = ModelDetails(ModelInputType.IMAGE)
-            val warmupBitmap = Image(warmupImage).getBitmap(contentResolver)
+            val warmupBitmap = warmupImage.getBitmap(contentResolver)
             fixedModel.run(warmupBitmap, warmupDetails)
 
             for (image in fixedCollection.imageList) {
                 val details = ModelDetails(ModelInputType.IMAGE)
-                val bitmap = Image(image).getBitmap(contentResolver)
+                val bitmap = image.getBitmap(contentResolver)
                 val outputDetails = fixedModel.run(bitmap, details)
                 progressbar.setProgress(progressbar.progress + 1, true)
-                benchmark.addDetails(outputDetails)
+                addDetails(benchmark, outputDetails, warmupImage.name)
                 _benchmarks.value = benchmarkCollections
             }
 
-            delay(100)
             _modelState.value = ModelState.SUCCESS
             progressbar.visibility = View.GONE
         }

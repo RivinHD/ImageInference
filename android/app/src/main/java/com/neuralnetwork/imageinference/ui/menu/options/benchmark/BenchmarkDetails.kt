@@ -28,14 +28,14 @@ import kotlin.math.min
 /**
  * Holds the details of a benchmark.
  *
- * @property _collectionName The name of the collection that is benchmarked.
- * @property _modelName The name of the model that is benchmarked.
+ * @property collectionName The name of the collection that is benchmarked.
+ * @property modelName The name of the model that is benchmarked.
  * @constructor Creates a new benchmark details object.
  */
 @Serializable
 data class BenchmarkDetails(
-    @SerialName("collectionName") private val _collectionName: String,
-    @SerialName("modelName") private val _modelName: String
+    val collectionName: String,
+    val modelName: String
 ) {
     /**
      * Holds the details of a benchmark for a specific model.
@@ -65,14 +65,19 @@ data class BenchmarkDetails(
     private var _evaluationTimeNano = AverageMinMax(0, Long.MAX_VALUE, Long.MIN_VALUE)
 
     /**
-     * Get the name of the collection this benchmark is based on.
+     * The top1 accuracy of ths benchmark.
      */
-    val collectionName get() = _collectionName
+    private var _top1: Float = 0.0f
 
     /**
-     * Get the name of the model this benchmark is based on.
+     * The top5 accuracy of ths benchmark.
      */
-    val modelName get() = _modelName
+    private var _top5: Float = 0.0f
+
+    /**
+     * Indicates if labeled details where added.
+     */
+    private var _labeled: Boolean = false
 
     /**
      * Get the average, min, max evaluation time of all details of different models in nanoseconds.
@@ -80,9 +85,24 @@ data class BenchmarkDetails(
     val evaluationTimeNano get() = _evaluationTimeNano
 
     /**
+     * Gets the Top 1 accuracy of the benchmark.
+     */
+    val top1 get() = _top1
+
+    /**
+     * Gets the Top 5 accuracy of the benchmark.
+     */
+    val top5 get() = _top5
+
+    /**
+     * Gets the indication if labeled data was added.
+     */
+    val labeled get() = _labeled
+
+    /**
      * Adds details from one inference run to the benchmark.
      *
-     * @param details
+     * @param details The details object that gets added.
      */
     fun addDetails(details: ModelDetails) {
         val timeNano = details.evaluationTimeNano
@@ -93,5 +113,25 @@ data class BenchmarkDetails(
             time.max = max(time.max, timeNano)
             time.count++
         }
+    }
+
+    /**
+     * Adds details from one inference run to the benchmark.
+     *
+     * @param details The details object that gets added.
+     * @param label The label of the image the details evaluated.
+     */
+    fun addDetails(details: ModelDetails, label: String) {
+        _labeled = true
+        val results = details.getTopResults(5)
+        val count = _evaluationTimeNano.count
+        if (results.isNotEmpty()) {
+            val top1Correct = if (results[0].name == label) 1.0f else 0.0f
+            _top1 = (_top1 * count + top1Correct) / (count + 1)
+            val top5Correct = if (results.any { it.name == label }) 1.0f else 0.0f
+            _top5 = (_top5 * count + top5Correct) / (count + 1)
+        }
+
+        addDetails(details)
     }
 }

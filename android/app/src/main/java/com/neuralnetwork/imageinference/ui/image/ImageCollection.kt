@@ -27,10 +27,12 @@ import com.neuralnetwork.imageinference.ImageCollections
  * @property imageList The list of images used to fill the collection.
  * @constructor Creates an image collection filled with the given images.
  */
-data class ImageCollection(private val _name: String, private val imageList: List<Image>) {
+data class ImageCollection(val name: String, private val imageList: List<Image>) {
 
     /**
      * Creates an image collection from the corresponding data store object.
+     *
+     * @param dataStore The data store object to create the image collection from.
      */
     constructor(dataStore: ImageCollections.ImageCollection)
             : this(dataStore.name, dataStore.imageList.map { Image(it) })
@@ -44,11 +46,6 @@ data class ImageCollection(private val _name: String, private val imageList: Lis
      * Gets the images of this collection.
      */
     val images: List<Image> get() = _images
-
-    /**
-     * Gets the name of the image collection.
-     */
-    val name get() = _name
 
     companion object {
         /**

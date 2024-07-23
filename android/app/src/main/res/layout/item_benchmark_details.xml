@@ -115,6 +115,60 @@
                 tools:ignore="HardcodedText" />
         </LinearLayout>
 
+
+        <LinearLayout
+            android:id="@+id/top1"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/top1_key"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="0.6"
+                android:text="@string/top_1_accuracy"
+                android:textSize="16sp" />
+
+            <TextView
+                android:id="@+id/top1_value"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="0.4"
+                android:text="0 %"
+                android:textAlignment="textEnd"
+                android:textSize="16sp"
+                tools:ignore="HardcodedText" />
+        </LinearLayout>
+
+
+        <LinearLayout
+            android:id="@+id/top5"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/top5_key"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="0.6"
+                android:text="@string/top_5_accuracy"
+                android:textSize="16sp" />
+
+            <TextView
+                android:id="@+id/top5_value"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="0.4"
+                android:text="0 %"
+                android:textAlignment="textEnd"
+                android:textSize="16sp"
+                tools:ignore="HardcodedText" />
+        </LinearLayout>
+
     </LinearLayout>
 
 </LinearLayout>

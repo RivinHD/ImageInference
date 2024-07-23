@@ -3,3 +3,4 @@ models-out/
 submodules
 android/app/src/main/jniLibs/arm64-v8a
 *.pte
+android/app/src/main/assets/labeled_collections
