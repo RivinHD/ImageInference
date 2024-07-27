@@ -22,12 +22,14 @@ MODELS = [
     "resnet50v1.5",
 ]
 
-HTP_QUALCOMM = "HTP (Qualcomm)"
+HTP_QUALCOMM = "Qualcomm (HTP)"
+CUSTOM = "Custom"
 
-HARDWARE = [
-    "CPU (XNNPACK)",
-    # "GPU (VULKAN)",
+BACKEND = [
+    "XNNPACK (CPU)",
+    # "VULKAN (GPU)",
     HTP_QUALCOMM,
+    CUSTOM,
 ]
 
 QUALCOMM_DEVICES = [
@@ -49,13 +51,18 @@ MODELS_TO_PYFILE = {
     "resnet50v1.5": "resnet50v15",
 }
 
-HARDWARE_TO_DIRECTORY = {
-    "CPU (XNNPACK)": "xnnpack",
-    "GPU (VULKAN)": "vulkan",
-    HTP_QUALCOMM: "htp",
+MODELS_TO_AOT_LIB = {
+    "resnet50v1.5": "libbaremetal_ops_aot_lib.so",
 }
 
-EXECU_PACKAGE = "backend.execu_python"
+BACKEND_TO_DIRECTORY = {
+    "CPU (XNNPACK)": "execu_python.xnnpack",
+    "GPU (VULKAN)": "execu_python.vulkan",
+    HTP_QUALCOMM: "execu_python.htp",
+    CUSTOM: "baremetal",
+}
+
+EXECU_PACKAGE = "backend"
 
 
 def select_models() -> list[str]:
@@ -79,26 +86,26 @@ def ask_correct_model() -> bool:
     return text.startswith("y")
 
 
-def select_hardware() -> list[str]:
-    hardware = []
-    while len(hardware) == 0:
-        print("Select Hardware to run on separated by comma or 'all' to support every hardware.")
-        print(f"Available hardware is {HARDWARE}")
+def select_backend() -> list[str]:
+    backend = []
+    while len(backend) == 0:
+        print("Select Backend to run on separated by comma or 'all' to support every backend.")
+        print(f"Available backend are {BACKEND}")
         text = input("> ").strip()
         if text == 'all':
-            hardware = HARDWARE
+            backend = BACKEND
         else:
             for h in text.split(","):
                 h = h.strip().lower()
-                for hw in HARDWARE:
+                for hw in BACKEND:
                     if hw.lower().startswith(h):
-                        hardware.append(hw)
-    print(f"Selected hardware is {hardware}")
-    return hardware
+                        backend.append(hw)
+    print(f"Selected backend are {backend}")
+    return backend
 
 
-def ask_correct_hardware() -> bool:
-    text = input("Is the selected hardware correct? (y/n) > ").strip()
+def ask_correct_backend() -> bool:
+    text = input("Is the selected backend correct? (y/n) > ").strip()
     while not (text.startswith("y") or text.startswith("n")):
         text = input("Please enter y or n > ")
     return text.startswith("y")
@@ -172,15 +179,20 @@ def generate_command(
         hardware: list[str],
         quantize: list[str],
         htp_devices: list[str] = []) -> str:
+    executorch_path = os.getenv('EXECUTORCH_ROOT')
+    lib_path = os.path.join(executorch_path, "cmake-out", "lib")
     commands = []
     for model in models:
         for quant in quantize:
             for hw in hardware:
-                package_path = ".".join([EXECU_PACKAGE, HARDWARE_TO_DIRECTORY[hw], MODELS_TO_PYFILE[model]])
+                package_path = ".".join([EXECU_PACKAGE, BACKEND_TO_DIRECTORY[hw], MODELS_TO_PYFILE[model]])
                 base_command = f"python -m {package_path} --quantize {quant}"
                 if hw == HTP_QUALCOMM:
                     for device in htp_devices:
                         commands.append(f"{base_command} --model {device}")
+                elif hw == CUSTOM:
+                    lib_file = os.path.join(lib_path, MODELS_TO_AOT_LIB[model])
+                    commands.append(f"{base_command} --so_library {lib_file}")
                 else:
                     commands.append(base_command)
     return "; ".join(commands)
@@ -195,6 +207,10 @@ def ask_copy_to_assets() -> bool:
 
 if __name__ == "__main__":
 
+    if "EXECUTORCH_ROOT" not in os.environ:
+        raise RuntimeError("Environment variable EXECUTORCH_ROOT must be set")
+    print(f"EXECUTORCH_ROOT={os.getenv('EXECUTORCH_ROOT')}")
+
     # Ask for models
     models = select_models()
     models_correct = ask_correct_model()
@@ -204,20 +220,20 @@ if __name__ == "__main__":
     print()
 
     # Ask for hardware
-    hardware = select_hardware()
-    hardware_correct = ask_correct_hardware()
-    while not hardware_correct:
-        hardware = select_hardware()
-        hardware_correct = ask_correct_hardware()
+    backend = select_backend()
+    backend_correct = ask_correct_backend()
+    while not backend_correct:
+        backend = select_backend()
+        backend_correct = ask_correct_backend()
     print()
 
     htp_devices = ""
-    if HTP_QUALCOMM in hardware:
+    if HTP_QUALCOMM in backend:
         htp_devices = select_htp_devices()
         htp_devices_correct = ask_correct_devices()
         while not htp_devices_correct:
-            hardware = select_htp_devices()
-            hardware_correct = ask_correct_devices()
+            backend = select_htp_devices()
+            backend_correct = ask_correct_devices()
         print()
 
     # Ask for quantization
@@ -229,7 +245,7 @@ if __name__ == "__main__":
     print()
 
     # Generate command and start processing
-    command = generate_command(models, hardware, quantization, htp_devices)
+    command = generate_command(models, backend, quantization, htp_devices)
     print("The command that will be executed is:")
     print("-"*50)
     print(command)

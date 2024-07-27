@@ -33,25 +33,38 @@ namespace ImageInference
 
         public:
             const size_t Channels = TChannels;
-            const T *raw_gamma = gamma;
-            const T *raw_beta = beta;
 
             /// @brief Initialize a batch normalization container.
             /// @param gamma The value gamma that is used in batch normalization.
             /// @param beta The value beta that is used in batch normalization.
-            BatchNorm(T *gamma, T *beta);
+            BatchNorm(void *gamma, void *beta);
             ~BatchNorm();
+
+            T *getGammaPointer();
+            T *getBetaPointer();
         };
 
         template <typename T, size_t TChannels>
-        inline BatchNorm<T, TChannels>::BatchNorm(T *gamma, T *beta)
-            : gamma(gamma), beta(beta)
+        inline BatchNorm<T, TChannels>::BatchNorm(void *gamma, void *beta)
+            : gamma(static_cast<T *>(gamma)), beta(static_cast<T *>(beta))
         {
         }
 
         template <typename T, size_t TChannels>
         inline BatchNorm<T, TChannels>::~BatchNorm()
         {
+        }
+
+        template <typename T, size_t TChannels>
+        inline T *BatchNorm<T, TChannels>::getGammaPointer()
+        {
+            return gamma;
+        }
+
+        template <typename T, size_t TChannels>
+        inline T *BatchNorm<T, TChannels>::getBetaPointer()
+        {
+            return beta;
         }
     } // namespace types
 } // namespace ImageInference

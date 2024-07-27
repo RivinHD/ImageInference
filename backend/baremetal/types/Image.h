@@ -35,18 +35,24 @@ namespace ImageInference
             const size_t Channels = TChannels;
             const size_t Height = THeight;
             const size_t Width = TWidth;
-            const T *raw_pointer = data;
 
-            Image(T *data);
+            Image(void *data);
             ~Image();
 
+            T *getPointer();
             Array<T, TChannels * THeight * TWidth> flatten();
         };
 
         template <typename T, size_t TChannels, size_t THeight, size_t TWidth>
-        inline Image<T, TChannels, THeight, TWidth>::Image(T *data)
-            : data(data)
+        inline Image<T, TChannels, THeight, TWidth>::Image(void *data)
+            : data(static_cast<T *>(data))
         {
+        }
+
+        template <typename T, size_t TChannels, size_t THeight, size_t TWidth>
+        inline T *Image<T, TChannels, THeight, TWidth>::getPointer()
+        {
+            return data;
         }
 
         template <typename T, size_t TChannels, size_t THeight, size_t TWidth>

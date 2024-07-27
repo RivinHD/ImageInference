@@ -112,7 +112,8 @@ fi
 # Build the requiered run time liberary
 rm -rf cmake-android-out
 mkdir cmake-android-out
-cmake . -DCMAKE_INSTALL_PREFIX=cmake-android-out \
+cmake . \
+    -DCMAKE_INSTALL_PREFIX=cmake-android-out \
     -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK/build/cmake/android.toolchain.cmake" \
     -DANDROID_ABI="${ANDROID_ABI}" \
     -DANDROID_NATIVE_API_LEVEL="${ANDROID_VERSION}" \
@@ -174,6 +175,8 @@ option(EXECUTORCH_BUILD_IMAGEINFERENCE_BAREMETAL "Include the imageinference bar
 if(EXECUTORCH_BUILD_IMAGEINFERENCE_BAREMETAL)\
   list(APPEND link_libraries baremetal_ops_lib imageinference_baremetal_kernels)\
   target_link_options_shared_lib(baremetal_ops_lib)\
+  find_package(OpenMP REQUIRED) \
+  list(APPEND link_libraries -static-openmp -fopenmp)\
 endif()\n' extension/android/CMakeLists.txt
 fi
 
@@ -222,10 +225,7 @@ cmake "${BasePath}/ImageInference/backend/baremetal"\
     -DCMAKE_BUILD_TYPE=Release \
     -B"$BUILD_DIR"
 
-cmake --build "$BUILD_DIR" -j "${CMAKE_JOBS}"
-
-# Exporting the models of the custome ops in backend/baremetal
-# TODO add copy command
+cmake --build "$BUILD_DIR" -j "${CMAKE_JOBS}" --target install
 
 python "${BasePath}/ImageInference/scripts/copy_imagenet_2012.py"
 

@@ -47,7 +47,7 @@ export IMAGENET_DATASET_2012="${BasePath}/data/imagenet/ilsvrc_2012"
 
 export FLATC_EXECUTABLE="$(which -- flatc)"
 export LD_LIBRARY_PATH="${QNN_SDK_ROOT}/lib/x86_64-linux-clang/":$LD_LIBRARY_PATH
-export EXECUTORCH_ROOT="${BasePath}/submodules/executorch"
+export EXECUTORCH_ROOT="${BasePath}/ImageInference/submodules/executorch"
 echo "ANDROID_NDK: $ANDROID_NDK"
 echo "ANDROID_ABI: $ANDROID_ABI"
 echo "ANDROID_VERSION: $ANDROID_VERSION"
@@ -55,5 +55,6 @@ echo "QNN_SDK_ROOT: $QNN_SDK_ROOT"
 echo "IMAGENET_DATASET_2012: $IMAGENET_DATASET_2012"
 echo "FLATC_EXECUTABLE: $FLATC_EXECUTABLE"
 echo "LD_LIBRARY_PATH: $LD_LIBRARY_PATH"
+echo "EXECUTORCH_ROOT: $EXECUTORCH_ROOT"
 
 export SETUP_DONE=1  # Mark the setup as done

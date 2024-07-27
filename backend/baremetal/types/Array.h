@@ -32,21 +32,28 @@ namespace ImageInference
 
         public:
             const size_t Size = TSize;
-            const T *raw_pointer = data;
 
-            Array(T *data);
+            Array(void *data);
             ~Array();
+
+            T* getPointer();
         };
 
         template <typename T, size_t TSize>
-        inline Array<T, TSize>::Array(T *data)
-            : data(data)
+        inline Array<T, TSize>::Array(void *data)
+            : data(static_cast<T *>(data))
         {
         }
 
         template <typename T, size_t TSize>
         inline Array<T, TSize>::~Array()
         {
+        }
+
+        template <typename T, size_t TSize>
+        inline T *Array<T, TSize>::getPointer()
+        {
+            return data;
         }
     } // namespace types
 } // namespace ImageInference

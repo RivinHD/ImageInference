@@ -23,7 +23,7 @@ import torch.utils.data as data
 import torch
 import shutil
 
-IMAGES_TO_COPY = 1000
+IMAGES_TO_COPY = 5000
 
 
 if __name__ == "__main__":

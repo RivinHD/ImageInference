@@ -27,6 +27,7 @@
 #include "../types/ScalarTypes.h"
 #include <vector>
 #include <stdint.h>
+#include <omp.h>
 
 #define MAX_RESNET50_SIZE 122 * 122 * 64
 
@@ -46,9 +47,10 @@ namespace ImageInference
         {
         private:
             ScalarType type;
-            std::vector<void*> weights;
+            std::vector<void *> weights;
             void *inputBuffer;
             void *outputBuffer;
+            void *shortcutBuffer;
 
             template <typename T>
             Image<T, 256, 61, 61> block0(Image<T, 64, 61, 61> &input);
@@ -276,7 +278,7 @@ namespace ImageInference
             ///     fc.weight: [1000, 2048]
             ///     fc.bias: [1000]
             /// @endcode
-            ResNet50(const std::vector<void*> &weights, ScalarType type);
+            ResNet50(const std::vector<void *> &weights, ScalarType type);
             ~ResNet50();
 
             enum weightIndex
@@ -452,6 +454,7 @@ namespace ImageInference
         template <typename T>
         inline Image<T, 256, 61, 61> ResNet50::block0(Image<T, 64, 61, 61> &input)
         {
+            std::swap(inputBuffer, shortcutBuffer); // buffer swap so that the input is not overwritten by convolution block as is needed for the shortcut
             auto kernel_0_0 = Kernel<T, 64, 64, 1, 1>(getWeight<T>(weightIndex::layer1_0_conv1_weight));
             auto batchNorm_0_0 = BatchNorm<T, 64>(getWeight<T>(weightIndex::layer1_0_bn1_weight), getWeight<T>(weightIndex::layer1_0_bn1_bias));
             auto image_0_0 = ConvBlock<1>(input, kernel_0_0, batchNorm_0_0);
@@ -464,6 +467,7 @@ namespace ImageInference
             auto projectionBatchNorm = BatchNorm<T, 256>(getWeight<T>(weightIndex::layer1_0_downsample_1_weight), getWeight<T>(weightIndex::layer1_0_downsample_1_bias));
             auto image_0_2 = ConvBlockAddProjection<1, 4>(image_0_1, kernel_0_2, batchNorm_0_2, input, projectionKernel, projectionBatchNorm);
 
+            std::swap(inputBuffer, shortcutBuffer); // buffer swap so that the image_0_2 is not overwritten by convolution block as is needed for the shortcut
             auto kernel_1_0 = Kernel<T, 64, 256, 1, 1>(getWeight<T>(weightIndex::layer1_1_conv1_weight));
             auto batchNorm_1_0 = BatchNorm<T, 64>(getWeight<T>(weightIndex::layer1_1_bn1_weight), getWeight<T>(weightIndex::layer1_1_bn1_bias));
             auto image_1_0 = ConvBlock<1>(image_0_2, kernel_1_0, batchNorm_1_0);
@@ -474,6 +478,7 @@ namespace ImageInference
             auto batchNorm_1_2 = BatchNorm<T, 256>(getWeight<T>(weightIndex::layer1_1_bn3_weight), getWeight<T>(weightIndex::layer1_1_bn3_bias));
             auto image_1_2 = ConvBlockAddIdentity(image_1_1, kernel_1_2, batchNorm_1_2, image_0_2);
 
+            std::swap(inputBuffer, shortcutBuffer); // buffer swap so that the image_1_2 is not overwritten by convolution block as is needed for the shortcut
             auto kernel_2_0 = Kernel<T, 64, 256, 1, 1>(getWeight<T>(weightIndex::layer1_2_conv1_weight));
             auto batchNorm_2_0 = BatchNorm<T, 64>(getWeight<T>(weightIndex::layer1_2_bn1_weight), getWeight<T>(weightIndex::layer1_2_bn1_bias));
             auto image_2_0 = ConvBlock<1>(image_1_2, kernel_2_0, batchNorm_2_0);
@@ -490,6 +495,7 @@ namespace ImageInference
         template <typename T>
         Image<T, 512, 30, 30> ResNet50::block1(Image<T, 256, 61, 61> &input)
         {
+            std::swap(inputBuffer, shortcutBuffer); // buffer swap so that the input is not overwritten by convolution block as is needed for the shortcut
             auto kernel_0_0 = Kernel<T, 128, 256, 1, 1>(getWeight<T>(weightIndex::layer2_0_conv1_weight));
             auto batchNorm_0_0 = BatchNorm<T, 128>(getWeight<T>(weightIndex::layer2_0_bn1_weight), getWeight<T>(weightIndex::layer2_0_bn1_bias));
             auto image_0_0 = ConvBlock<1>(input, kernel_0_0, batchNorm_0_0);
@@ -502,6 +508,7 @@ namespace ImageInference
             auto projectionBatchNorm = BatchNorm<T, 512>(getWeight<T>(weightIndex::layer2_0_downsample_1_weight), getWeight<T>(weightIndex::layer2_0_downsample_1_bias));
             auto image_0_2 = ConvBlockAddProjection<2, 2>(image_0_1, kernel_0_2, batchNorm_0_2, input, projectionKernel, projectionBatchNorm);
 
+            std::swap(inputBuffer, shortcutBuffer); // buffer swap so that the image_0_2 is not overwritten by convolution block as is needed for the shortcut
             auto kernel_1_0 = Kernel<T, 128, 512, 1, 1>(getWeight<T>(weightIndex::layer2_1_conv1_weight));
             auto batchNorm_1_0 = BatchNorm<T, 128>(getWeight<T>(weightIndex::layer2_1_bn1_weight), getWeight<T>(weightIndex::layer2_1_bn1_bias));
             auto image_1_0 = ConvBlock<1>(image_0_2, kernel_1_0, batchNorm_1_0);
@@ -512,6 +519,7 @@ namespace ImageInference
             auto batchNorm_1_2 = BatchNorm<T, 512>(getWeight<T>(weightIndex::layer2_1_bn3_weight), getWeight<T>(weightIndex::layer2_1_bn3_bias));
             auto image_1_2 = ConvBlockAddIdentity(image_1_1, kernel_1_2, batchNorm_1_2, image_0_2);
 
+            std::swap(inputBuffer, shortcutBuffer); // buffer swap so that the image_1_2 is not overwritten by convolution block as is needed for the shortcut
             auto kernel_2_0 = Kernel<T, 128, 512, 1, 1>(getWeight<T>(weightIndex::layer2_2_conv1_weight));
             auto batchNorm_2_0 = BatchNorm<T, 128>(getWeight<T>(weightIndex::layer2_2_bn1_weight), getWeight<T>(weightIndex::layer2_2_bn1_bias));
             auto image_2_0 = ConvBlock<1>(image_1_2, kernel_2_0, batchNorm_2_0);
@@ -522,6 +530,7 @@ namespace ImageInference
             auto batchNorm_2_2 = BatchNorm<T, 512>(getWeight<T>(weightIndex::layer2_2_bn3_weight), getWeight<T>(weightIndex::layer2_2_bn3_bias));
             auto image_2_2 = ConvBlockAddIdentity(image_2_1, kernel_2_2, batchNorm_2_2, image_1_2);
 
+            std::swap(inputBuffer, shortcutBuffer); // buffer swap so that the image_2_2 is not overwritten by convolution block as is needed for the shortcut
             auto kernel_3_0 = Kernel<T, 128, 512, 1, 1>(getWeight<T>(weightIndex::layer2_3_conv1_weight));
             auto batchNorm_3_0 = BatchNorm<T, 128>(getWeight<T>(weightIndex::layer2_3_bn1_weight), getWeight<T>(weightIndex::layer2_3_bn1_bias));
             auto image_3_0 = ConvBlock<1>(image_2_2, kernel_3_0, batchNorm_3_0);
@@ -538,6 +547,7 @@ namespace ImageInference
         template <typename T>
         Image<T, 1024, 15, 15> ResNet50::block2(Image<T, 512, 30, 30> &input)
         {
+            std::swap(inputBuffer, shortcutBuffer); // buffer swap so that the input is not overwritten by convolution block as is needed for the shortcut
             auto kernel_0_0 = Kernel<T, 256, 512, 1, 1>(getWeight<T>(weightIndex::layer3_0_conv1_weight));
             auto batchNorm_0_0 = BatchNorm<T, 256>(getWeight<T>(weightIndex::layer3_0_bn1_weight), getWeight<T>(weightIndex::layer3_0_bn1_bias));
             auto image_0_0 = ConvBlock<1>(input, kernel_0_0, batchNorm_0_0);
@@ -550,6 +560,7 @@ namespace ImageInference
             auto projectionBatchNorm = BatchNorm<T, 1024>(getWeight<T>(weightIndex::layer3_0_downsample_1_weight), getWeight<T>(weightIndex::layer3_0_downsample_1_bias));
             auto image_0_2 = ConvBlockAddProjection<2, 2>(image_0_1, kernel_0_2, batchNorm_0_2, input, projectionKernel, projectionBatchNorm);
 
+            std::swap(inputBuffer, shortcutBuffer); // buffer swap so that the image_0_2 is not overwritten by convolution block as is needed for the shortcut
             auto kernel_1_0 = Kernel<T, 256, 1024, 1, 1>(getWeight<T>(weightIndex::layer3_1_conv1_weight));
             auto batchNorm_1_0 = BatchNorm<T, 256>(getWeight<T>(weightIndex::layer3_1_bn1_weight), getWeight<T>(weightIndex::layer3_1_bn1_bias));
             auto image_1_0 = ConvBlock<1>(image_0_2, kernel_1_0, batchNorm_1_0);
@@ -560,6 +571,7 @@ namespace ImageInference
             auto batchNorm_1_2 = BatchNorm<T, 1024>(getWeight<T>(weightIndex::layer3_1_bn3_weight), getWeight<T>(weightIndex::layer3_1_bn3_bias));
             auto image_1_2 = ConvBlockAddIdentity(image_1_1, kernel_1_2, batchNorm_1_2, image_0_2);
 
+            std::swap(inputBuffer, shortcutBuffer); // buffer swap so that the image_1_2 is not overwritten by convolution block as is needed for the shortcut
             auto kernel_2_0 = Kernel<T, 256, 1024, 1, 1>(getWeight<T>(weightIndex::layer3_2_conv1_weight));
             auto batchNorm_2_0 = BatchNorm<T, 256>(getWeight<T>(weightIndex::layer3_2_bn1_weight), getWeight<T>(weightIndex::layer3_2_bn1_bias));
             auto image_2_0 = ConvBlock<1>(image_1_2, kernel_2_0, batchNorm_2_0);
@@ -570,6 +582,7 @@ namespace ImageInference
             auto batchNorm_2_2 = BatchNorm<T, 1024>(getWeight<T>(weightIndex::layer3_2_bn3_weight), getWeight<T>(weightIndex::layer3_2_bn3_bias));
             auto image_2_2 = ConvBlockAddIdentity(image_2_1, kernel_2_2, batchNorm_2_2, image_1_2);
 
+            std::swap(inputBuffer, shortcutBuffer); // buffer swap so that the image_2_2 is not overwritten by convolution block as is needed for the shortcut
             auto kernel_3_0 = Kernel<T, 256, 1024, 1, 1>(getWeight<T>(weightIndex::layer3_3_conv1_weight));
             auto batchNorm_3_0 = BatchNorm<T, 256>(getWeight<T>(weightIndex::layer3_3_bn1_weight), getWeight<T>(weightIndex::layer3_3_bn1_bias));
             auto image_3_0 = ConvBlock<1>(image_2_2, kernel_3_0, batchNorm_3_0);
@@ -580,6 +593,7 @@ namespace ImageInference
             auto batchNorm_3_2 = BatchNorm<T, 1024>(getWeight<T>(weightIndex::layer3_3_bn3_weight), getWeight<T>(weightIndex::layer3_3_bn3_bias));
             auto image_3_2 = ConvBlockAddIdentity(image_3_1, kernel_3_2, batchNorm_3_2, image_2_2);
 
+            std::swap(inputBuffer, shortcutBuffer); // buffer swap so that the image_3_2 is not overwritten by convolution block as is needed for the shortcut
             auto kernel_4_0 = Kernel<T, 256, 1024, 1, 1>(getWeight<T>(weightIndex::layer3_4_conv1_weight));
             auto batchNorm_4_0 = BatchNorm<T, 256>(getWeight<T>(weightIndex::layer3_4_bn1_weight), getWeight<T>(weightIndex::layer3_4_bn1_bias));
             auto image_4_0 = ConvBlock<1>(image_3_2, kernel_4_0, batchNorm_4_0);
@@ -590,6 +604,7 @@ namespace ImageInference
             auto batchNorm_4_2 = BatchNorm<T, 1024>(getWeight<T>(weightIndex::layer3_4_bn3_weight), getWeight<T>(weightIndex::layer3_4_bn3_bias));
             auto image_4_2 = ConvBlockAddIdentity(image_4_1, kernel_4_2, batchNorm_4_2, image_3_2);
 
+            std::swap(inputBuffer, shortcutBuffer); // buffer swap so that the image_4_2 is not overwritten by convolution block as is needed for the shortcut
             auto kernel_5_0 = Kernel<T, 256, 1024, 1, 1>(getWeight<T>(weightIndex::layer3_5_conv1_weight));
             auto batchNorm_5_0 = BatchNorm<T, 256>(getWeight<T>(weightIndex::layer3_5_bn1_weight), getWeight<T>(weightIndex::layer3_5_bn1_bias));
             auto image_5_0 = ConvBlock<1>(image_4_2, kernel_5_0, batchNorm_5_0);
@@ -606,6 +621,7 @@ namespace ImageInference
         template <typename T>
         Image<T, 2048, 7, 7> ResNet50::block3(Image<T, 1024, 15, 15> &input)
         {
+            std::swap(inputBuffer, shortcutBuffer); // buffer swap so that the input is not overwritten by convolution block as is needed for the shortcut
             auto kernel_0_0 = Kernel<T, 512, 1024, 1, 1>(getWeight<T>(weightIndex::layer4_0_conv1_weight));
             auto batchNorm_0_0 = BatchNorm<T, 512>(getWeight<T>(weightIndex::layer4_0_bn1_weight), getWeight<T>(weightIndex::layer4_0_bn1_bias));
             auto image_0_0 = ConvBlock<1>(input, kernel_0_0, batchNorm_0_0);
@@ -618,6 +634,7 @@ namespace ImageInference
             auto projectionBatchNorm = BatchNorm<T, 2048>(getWeight<T>(weightIndex::layer4_0_downsample_1_weight), getWeight<T>(weightIndex::layer4_0_downsample_1_bias));
             auto image_0_2 = ConvBlockAddProjection<2, 2>(image_0_1, kernel_0_2, batchNorm_0_2, input, projectionKernel, projectionBatchNorm);
 
+            std::swap(inputBuffer, shortcutBuffer); // buffer swap so that the image_0_2 is not overwritten by convolution block as is needed for the shortcut
             auto kernel_1_0 = Kernel<T, 512, 2048, 1, 1>(getWeight<T>(weightIndex::layer4_1_conv1_weight));
             auto batchNorm_1_0 = BatchNorm<T, 512>(getWeight<T>(weightIndex::layer4_1_bn1_weight), getWeight<T>(weightIndex::layer4_1_bn1_bias));
             auto image_1_0 = ConvBlock<1>(image_0_2, kernel_1_0, batchNorm_1_0);
@@ -628,6 +645,7 @@ namespace ImageInference
             auto batchNorm_1_2 = BatchNorm<T, 2048>(getWeight<T>(weightIndex::layer4_1_bn3_weight), getWeight<T>(weightIndex::layer4_1_bn3_bias));
             auto image_1_2 = ConvBlockAddIdentity(image_1_1, kernel_1_2, batchNorm_1_2, image_0_2);
 
+            std::swap(inputBuffer, shortcutBuffer); // buffer swap so that the image_1_2 is not overwritten by convolution block as is needed for the shortcut
             auto kernel_2_0 = Kernel<T, 512, 2048, 1, 1>(getWeight<T>(weightIndex::layer4_2_conv1_weight));
             auto batchNorm_2_0 = BatchNorm<T, 512>(getWeight<T>(weightIndex::layer4_2_bn1_weight), getWeight<T>(weightIndex::layer4_2_bn1_bias));
             auto image_2_0 = ConvBlock<1>(image_1_2, kernel_2_0, batchNorm_2_0);
@@ -640,10 +658,80 @@ namespace ImageInference
 
             return image_2_2;
         }
+
+        template <size_t Stride, typename T, size_t ImageChannels, size_t ImageHeight, size_t ImageWidth, size_t KernelCount, size_t KernelHeight, size_t KernelWidth>
+        inline Image<T, KernelCount, ImageHeight / Stride, ImageWidth / Stride> ResNet50::ConvBlock(Image<T, ImageChannels, ImageHeight, ImageWidth> image, Kernel<T, KernelCount, ImageChannels, KernelHeight, KernelWidth> kernel, BatchNorm<T, KernelCount> batchNorm)
+        {
+            // TODO IMPLEMENT
+            return Image<T, KernelCount, ImageHeight / Stride, ImageWidth / Stride>(outputBuffer);
+        }
+
+        template <typename T, size_t ImageChannels, size_t ImageHeight, size_t ImageWidth, size_t KernelCount, size_t KernelHeight, size_t KernelWidth>
+        inline Image<T, KernelCount, ImageHeight, ImageWidth> ResNet50::ConvBlockAddIdentity(Image<T, ImageChannels, ImageHeight, ImageWidth> image, Kernel<T, KernelCount, ImageChannels, KernelHeight, KernelWidth> kernel, BatchNorm<T, KernelCount> batchNorm, Image<T, KernelCount, ImageHeight, ImageWidth> shortcut)
+        {
+            // TODO IMPLEMENT
+            return Image<T, KernelCount, ImageHeight, ImageWidth>(outputBuffer);
+        }
+
+        template <size_t Stride, size_t ShortcutDimExpand, typename T, size_t ImageChannels, size_t ImageHeight, size_t ImageWidth, size_t KernelCount, size_t KernelHeight, size_t KernelWidth>
+        inline Image<T, KernelCount, ImageHeight / Stride, ImageWidth / Stride> ResNet50::ConvBlockAddProjection(Image<T, ImageChannels, ImageHeight / Stride, ImageWidth / Stride> image, Kernel<T, KernelCount, ImageChannels, KernelHeight, KernelWidth> kernel, BatchNorm<T, KernelCount> batchNorm, Image<T, KernelCount / ShortcutDimExpand, ImageHeight, ImageWidth> shortcut, Kernel<T, KernelCount, KernelCount / ShortcutDimExpand, 1, 1> projectionKernel, BatchNorm<T, KernelCount> projectionBatchNorm)
+        {
+            // TODO IMPLEMENT
+            return Image<T, KernelCount, ImageHeight / Stride, ImageWidth / Stride>(outputBuffer);
+        }
+
+        template <size_t Stride, typename T, size_t ImageChannels, size_t ImageHeight, size_t ImageWidth>
+        inline Image<T, ImageChannels, ImageHeight / Stride, ImageWidth / Stride> ResNet50::MaxPool(Image<T, ImageChannels, ImageHeight, ImageWidth> image)
+        {
+            constexpr size_t strideImageChannels = ImageHeight * ImageWidth;
+            constexpr size_t strideImageHeight = ImageWidth * Stride;
+            constexpr size_t strideImageWidth = Stride;
+
+            constexpr size_t lengthImageChannels = ImageChannels * ImageHeight * ImageWidth;
+            constexpr size_t lengthImageHeight = ImageHeight * ImageWidth;
+            constexpr size_t lengthImageWidth = ImageWidth;
+
+            auto output = Image<T, ImageChannels, ImageHeight / Stride, ImageWidth / Stride>(outputBuffer);
+            auto outputPtr = output.getPointer();
+
+            auto imagePtr = image.getPointer();
+
+            #pragma omp parallel for collapse(2)
+            for (size_t channel = 0; channel < lengthImageChannels; channel += strideImageChannels)
+            {
+                for (size_t height = 0; height < lengthImageHeight; height += strideImageHeight)
+                {
+                    for (size_t width = 0; width < lengthImageWidth; width += strideImageWidth)
+                    {
+                        outputPtr[channel + height + width] = std::max(
+                            std::max(imagePtr[channel + height + width], imagePtr[channel + height + width + 1]),
+                            std::max(imagePtr[channel + height + strideImageWidth + width], imagePtr[channel + height + strideImageWidth + width + 1]));
+                    }
+                }
+            }
+
+            std::swap(inputBuffer, outputBuffer);
+            return output;
+        }
+
+        template <typename T, size_t ImageChannels, size_t ImageHeight, size_t ImageWidth>
+        inline Image<T, ImageChannels, 1, 1> ResNet50::GlobalAveragePool(Image<T, ImageChannels, ImageHeight, ImageWidth> image)
+        {
+            // TODO IMPLEMENT
+            return Image<T, ImageChannels, 1, 1>(outputBuffer);
+        }
+
+        template <typename T>
+        inline Array<T, 1000> ResNet50::fullyConnectedLayer(Array<T, 2048> input, Matrix<T, 1000, 2048> weights, Array<T, 1000> bias)
+        {
+            // TODO IMPLEMENT
+            return Array<T, 1000>(outputBuffer);
+        }
+
         template <typename T>
         inline T *ResNet50::getWeight(size_t index)
         {
-            return static_cast<T*>(weights[index]);
+            return static_cast<T *>(weights[index]);
         }
     } // namespace model
 } // namespace ImageInference

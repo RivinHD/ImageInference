@@ -33,21 +33,28 @@ namespace ImageInference
         public:
             const size_t Rows = TRows;
             const size_t Columns = TColumns;
-            const T *raw_pointer = data;
 
-            Matrix(T *data);
+            Matrix(void *data);
             ~Matrix();
+
+            T *getPointer();
         };
 
         template <typename T, size_t TRows, size_t TColumns>
-        inline Matrix<T, TRows, TColumns>::Matrix(T *data)
-            : data(data)
+        inline Matrix<T, TRows, TColumns>::Matrix(void *data)
+            : data(static_cast<T *>(data))
         {
         }
 
         template <typename T, size_t TRows, size_t TColumns>
         inline Matrix<T, TRows, TColumns>::~Matrix()
         {
+        }
+
+        template <typename T, size_t TRows, size_t TColumns>
+        inline T *Matrix<T, TRows, TColumns>::getPointer()
+        {
+            return data;
         }
     } // namespace types
 } // namespace ImageInference

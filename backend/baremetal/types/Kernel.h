@@ -35,21 +35,28 @@ namespace ImageInference
             const size_t Channels = TChannels;
             const size_t Height = THeight;
             const size_t Width = TWidth;
-            const T *raw_pointer = data;
 
-            Kernel(T *data);
+            Kernel(void *data);
             ~Kernel();
+
+            T *getPointer();
         };
 
         template <typename T, size_t TCount, size_t TChannels, size_t THeight, size_t TWidth>
-        inline Kernel<T, TCount, TChannels, THeight, TWidth>::Kernel(T *data)
-            : data(data)
+        inline Kernel<T, TCount, TChannels, THeight, TWidth>::Kernel(void *data)
+            : data(static_cast<T *>(data))
         {
         }
 
         template <typename T, size_t TCount, size_t TChannels, size_t THeight, size_t TWidth>
         inline Kernel<T, TCount, TChannels, THeight, TWidth>::~Kernel()
         {
+        }
+
+        template <typename T, size_t TCount, size_t TChannels, size_t THeight, size_t TWidth>
+        inline T *Kernel<T, TCount, TChannels, THeight, TWidth>::getPointer()
+        {
+            return data;
         }
     } // namespace types
 } // namespace ImageInference

@@ -25,11 +25,13 @@ ImageInference::model::ResNet50::ResNet50(const std::vector<void*> &weights, Sca
     {
         inputBuffer = new float[MAX_RESNET50_SIZE];
         outputBuffer = new float[MAX_RESNET50_SIZE];
+        shortcutBuffer = new float[MAX_RESNET50_SIZE];
     }
     else if (type == ScalarType::Int8)
     {
         inputBuffer = new int8_t[MAX_RESNET50_SIZE];
         outputBuffer = new int8_t[MAX_RESNET50_SIZE];
+        shortcutBuffer = new int8_t[MAX_RESNET50_SIZE];
     }
 }
 
@@ -39,11 +41,13 @@ ImageInference::model::ResNet50::~ResNet50()
     {
         delete[] static_cast<float *>(inputBuffer);
         delete[] static_cast<float *>(outputBuffer);
+        delete[] static_cast<float *>(shortcutBuffer);
     }
     else if (type == ScalarType::Int8)
     {
         delete[] static_cast<int8_t *>(inputBuffer);
         delete[] static_cast<int8_t *>(outputBuffer);
+        delete[] static_cast<int8_t *>(shortcutBuffer);
     }
 }
 
@@ -71,7 +75,7 @@ const float *ImageInference::model::ResNet50::inference(const float *input)
     auto weights = Matrix<float, 1000, 2048>(getWeight<float>(weightIndex::fc_weight));
     auto biases = Array<float, 1000>(getWeight<float>(weightIndex::fc_bias));
     auto array = fullyConnectedLayer(imageGAP.flatten(), weights, biases);
-    return array.raw_pointer;
+    return array.getPointer();
 }
 
 const int8_t *ImageInference::model::ResNet50::inference(const int8_t *input)
@@ -98,7 +102,7 @@ const int8_t *ImageInference::model::ResNet50::inference(const int8_t *input)
     auto weights = Matrix<int8_t, 1000, 2048>(getWeight<int8_t>(weightIndex::fc_weight));
     auto biases = Array<int8_t, 1000>(getWeight<int8_t>(weightIndex::fc_bias));
     auto array = fullyConnectedLayer(imageGAP.flatten(), weights, biases);
-    return array.raw_pointer;
+    return array.getPointer();
 }
 
 ImageInference::types::ScalarType ImageInference::model::ResNet50::getType()

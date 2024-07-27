@@ -30,8 +30,7 @@ namespace ImageInference
         class IModel
         {
         public:
-            IModel();
-            ~IModel();
+            virtual ~IModel() {}
 
             /// @brief
             /// @param input

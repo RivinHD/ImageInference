@@ -16,12 +16,14 @@
 # in the root folder of this project with the name LICENSE. If not, see <http://www.gnu.org/licenses/>.
 
 import argparse
+import os
 
 import torch
-from executorch.exir import EdgeCompileConfig
 from torchvision import models
 from torchvision.models import ResNet50_Weights
 from torchvision.models._api import WeightsEnum
+from executorch.examples.portable.utils import export_to_exec_prog
+from executorch.exir import EdgeCompileConfig
 
 
 class custom_resnet50(torch.nn.Module):
@@ -29,10 +31,16 @@ class custom_resnet50(torch.nn.Module):
         super(custom_resnet50, self).__init__()
 
         self._torch_model = models.resnet50(weights=weights)
-        self.register_parameter("resnet50_weights", [weight.data for weight in self._torch_model.parameters()])
+        self._parameters = self._torch_model._parameters
+        self.weight_list = [weight.data for weight in self._torch_model.parameters()]
 
     def forward(self, a):
-        return torch.ops.baremetal_ops.resnet50.default(a, self.get_parameter("resnet50_weights"))
+        return torch.ops.baremetal_ops.resnet50.default(a, self.weight_list)
+
+
+@torch.ops.baremetal_ops.resnet50.register_fake
+def _(input: torch.Tensor, weights: list[torch.Tensor]) -> torch.Tensor:
+    return torch.zeros([1000])
 
 
 if __name__ == "__main__":
@@ -44,7 +52,17 @@ if __name__ == "__main__":
         required=True,
         help="Provide path to so library. E.g., cmake-out/portable/custom_ops/baremetal_ops_aot_lib.so",
     )
+    parser.add_argument(
+        "-q",
+        "--quantize",
+        required=False,
+        default=False,
+        help="Flag for producing quantized or floating-point model",
+        choices=["false"],
+    )
     args = parser.parse_args()
+
+    print("Processing ResNet50v15 model with Custom implementation.")
 
     # See if we have custom op  baremetal_ops::resnet50.out registered
     has_out_ops = True
@@ -55,6 +73,7 @@ if __name__ == "__main__":
         has_out_ops = False
     if not has_out_ops:
         if args.so_library:
+            print(f"Loading library at {args.so_library}")
             torch.ops.load_library(args.so_library)
         else:
             raise RuntimeError(
@@ -63,7 +82,17 @@ if __name__ == "__main__":
                 "backend/baremetal/CMakeLists.txt if you are using CMake build,"
                 "libcustom_ops_aot_lib.[so|dylib]."
             )
-    print(args.so_library)
 
     # Lowering the Model with Executorch
-    model = custom_resnet50(weights=ResNet50_Weights.IMAGENET1K_V2).eval()
+    model = custom_resnet50(weights=ResNet50_Weights.IMAGENET1K_V2)
+    sample_input = (torch.randn(1, 3, 224, 224),)
+    exec_program = export_to_exec_prog(
+        model,
+        sample_input,
+        edge_compile_config=EdgeCompileConfig(_check_ir_validity=False)
+    )
+
+    quantize_tag = args.quantize if args.quantize != "false" else "fp32"
+    os.makedirs("models-out", exist_ok=True)
+    with open(f"models-out/resnet50v15_custom_{quantize_tag}.pte", "wb") as file:
+        exec_program.write_to_file(file)

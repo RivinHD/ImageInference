@@ -37,6 +37,8 @@ if(NOT CMAKE_CXX_STANDARD)
     set(CMAKE_CXX_STANDARD 17)
 endif()
 
+# set(CMAKE_VERBOSE_MAKEFILE on)
+
 # Source root directory for executorch.
 if(NOT EXECUTORCH_ROOT)
     set(EXECUTORCH_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../../submodules/executorch)
@@ -49,12 +51,13 @@ if(NOT PYTHON_EXECUTABLE)
     resolve_python_executable()
 endif()
 
-set(_common_compile_options -Wno-deprecated-declarations -fPIC)
+set(_common_compile_options -Wno-deprecated-declarations -fPIC -fopenmp)
 
 # Let files say "include <executorch/path/to/header.h>".
 set(_common_include_directories ${EXECUTORCH_ROOT}/..)
 
 find_package(executorch CONFIG REQUIRED)
+find_package(OpenMP REQUIRED)
 
 target_include_directories(executorch INTERFACE ${_common_include_directories})
 
@@ -92,6 +95,12 @@ set(kernel_sources ${shared_shource}
 
 add_library(imageinference_baremetal_kernels ${kernel_sources})
 target_link_libraries(imageinference_baremetal_kernels PRIVATE executorch)
+if(OpenMP_CXX_FOUND AND NOT ANDROID)
+    target_link_libraries(imageinference_baremetal_kernels PUBLIC OpenMP::OpenMP_CXX)
+endif()
+if(OpenMP_CXX_FOUND AND ANDROID)
+    target_link_libraries(imageinference_baremetal_kernels PUBLIC -static-openmp -fopenmp)
+endif()
 target_compile_options(imageinference_baremetal_kernels PUBLIC ${_common_compile_options})
 
 gen_operators_lib(
@@ -101,6 +110,7 @@ gen_operators_lib(
 install(TARGETS imageinference_baremetal_kernels baremetal_ops_lib DESTINATION lib)
 
 if(NOT ANDROID)
+    find_package(Torch CONFIG REQUIRED)
     # C++ library to register custom ops into PyTorch.
     gen_selected_ops(LIB_NAME "baremetal_ops_aot_lib" ROOT_OPS "baremetal_ops::resnet50.out")
     generate_bindings_for_kernels(
@@ -116,7 +126,9 @@ if(NOT ANDROID)
     gen_custom_ops_aot_lib(
         LIB_NAME "baremetal_ops_aot_lib" KERNEL_SOURCES "${custom_ops_kernel_sources}"
     )
-
+    
+    target_link_libraries(baremetal_ops_aot_lib PUBLIC torch)
+    target_link_libraries(baremetal_ops_aot_lib PRIVATE OpenMP::OpenMP_CXX)
     target_include_directories(
         baremetal_ops_aot_lib PUBLIC ${_common_include_directories}
     )
