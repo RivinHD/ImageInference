@@ -22,7 +22,6 @@
 #include <torch/library.h>
 #include "execu_resnet50_out.h"
 
-
 namespace custom
 {
     namespace native

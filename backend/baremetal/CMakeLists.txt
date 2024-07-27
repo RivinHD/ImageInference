@@ -120,7 +120,7 @@ if(NOT ANDROID)
     target_include_directories(
         baremetal_ops_aot_lib PUBLIC ${_common_include_directories}
     )
-    
+
     target_compile_options(baremetal_ops_aot_lib PUBLIC ${_common_compile_options})
 
     install(TARGETS baremetal_ops_aot_lib DESTINATION lib)

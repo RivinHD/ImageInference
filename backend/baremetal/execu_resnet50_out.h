@@ -45,14 +45,14 @@ namespace custom
 
         namespace
         {
-            std::string to_string(const ARRAY_REF shape);
-            void check_preconditions(const Tensor &in, const TensorList &weights, Tensor &out);
-            void check_weights(const TensorList &weights);
+            std::string to_string(ARRAY_REF shape);
+            void check_preconditions(const Tensor &in, TensorList weights, Tensor &out);
+            void check_weights(TensorList weights);
         } // namespace
 
-        Tensor &resnet50_out_impl(const Tensor &in, const TensorList &weights, Tensor &out);
+        Tensor &resnet50_out_impl(const Tensor &in, TensorList weights, Tensor &out);
 
-        Tensor &resnet50_out_impl(RuntimeContext &ctx, const Tensor &in, const TensorList &weights, Tensor &out);
+        Tensor &resnet50_out_impl(RuntimeContext &ctx, const Tensor &in, TensorList weights, Tensor &out);
     } // namespace native
 } // namespace custom
 

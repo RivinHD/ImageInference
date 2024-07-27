@@ -25,7 +25,7 @@ namespace custom
     {
         namespace
         {
-            std::string to_string(const ARRAY_REF shape)
+            std::string to_string(ARRAY_REF shape)
             {
                 std::stringstream ss;
                 ss << "[" << *shape.begin();
@@ -37,7 +37,7 @@ namespace custom
                 return ss.str();
             }
 
-            void check_preconditions(const Tensor &in, const TensorList &weights, Tensor &out)
+            void check_preconditions(const Tensor &in, TensorList weights, Tensor &out)
             {
                 // Type checks
                 ET_CHECK_MSG(
@@ -84,7 +84,7 @@ namespace custom
                 check_weights(weights);
             }
 
-            void check_weights(const TensorList &weights)
+            void check_weights(TensorList weights)
             {
                 ET_CHECK_MSG(
                     weights[ResNet50::conv1_weight].sizes().equals(MAKE_ARRAY_REF({64, 3, 7, 7})),
@@ -894,7 +894,7 @@ namespace custom
             }
         } // namespace
 
-        Tensor &resnet50_out_impl(const Tensor &in, const TensorList &weights, Tensor &out)
+        Tensor &resnet50_out_impl(const Tensor &in, TensorList weights, Tensor &out)
         {
             check_preconditions(in, weights, out);
 
@@ -917,7 +917,7 @@ namespace custom
             {
                 raw_weights.push_back(iter->mutable_data_ptr());
             }
-            
+
             ResNet50 resnet50 = ResNet50(raw_weights, type);
 
             if (resnet50.getType() == ImageInference::types::ScalarType::Float)
@@ -948,7 +948,7 @@ namespace custom
             return out;
         }
 
-        Tensor &resnet50_out_impl(RuntimeContext &ctx, const Tensor &in, const TensorList &weights, Tensor &out)
+        Tensor &resnet50_out_impl(RuntimeContext &ctx, const Tensor &in, TensorList weights, Tensor &out)
         {
             (void)ctx;
             resnet50_out_impl(in, weights, out);
