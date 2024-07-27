@@ -24,8 +24,10 @@ import com.neuralnetwork.imageinference.model.ModelDetails
 import com.neuralnetwork.imageinference.model.ModelState
 import com.neuralnetwork.imageinference.ui.details.containers.ModelInputType
 import com.neuralnetwork.imageinference.ui.menu.options.benchmark.BenchmarkSaveContract.Companion.EXTRA_CONTENT
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.OutputStreamWriter
@@ -125,7 +127,7 @@ class BenchmarkActivity : AppCompatActivity() {
         }
 
         _modelAssets = ModelAssets(assets, applicationInfo)
-        _benchmarkAssets = BenchmarkCollectionAssets(assets)
+        _benchmarkAssets = BenchmarkCollectionAssets(this)
         _imageCollections = _benchmarkAssets.collections
 
         checkRunBenchmark()
@@ -240,6 +242,8 @@ class BenchmarkActivity : AppCompatActivity() {
                 run.text = getString(R.string.run)
                 _benchmarkJob?.cancel(CancellationException("User cancelled the benchmark."))
                 _modelState.value = ModelState.CANCELLED
+                binding.modelSelector.isEnabled = true
+                binding.collectionSelector.isEnabled = true
             }
         }
     }
@@ -386,24 +390,32 @@ class BenchmarkActivity : AppCompatActivity() {
         }
 
         _modelState.value = ModelState.RUNNING
+        binding.modelSelector.isEnabled = false
+        binding.collectionSelector.isEnabled = false
         Log.d("Benchmark", "Running the model.")
         _benchmarkJob = lifecycleScope.launch {
-            val warmupImage = fixedCollection.imageList.first()
-            val warmupDetails = ModelDetails(ModelInputType.IMAGE)
-            val warmupBitmap = warmupImage.getBitmap(contentResolver)
-            fixedModel.run(warmupBitmap, warmupDetails)
+            withContext(Dispatchers.Default){
+                val warmupImage = fixedCollection.imageList.first()
+                val warmupDetails = ModelDetails(ModelInputType.IMAGE)
+                val warmupBitmap = warmupImage.getBitmap(contentResolver)
+                fixedModel.run(warmupBitmap, warmupDetails)
+            }
 
             for (image in fixedCollection.imageList) {
-                val details = ModelDetails(ModelInputType.IMAGE)
-                val bitmap = image.getBitmap(contentResolver)
-                val outputDetails = fixedModel.run(bitmap, details)
-                progressbar.setProgress(progressbar.progress + 1, true)
-                addDetails(benchmark, outputDetails, warmupImage.name)
+                val outputDetails = withContext(Dispatchers.Default){
+                    val details = ModelDetails(ModelInputType.IMAGE)
+                    val bitmap = image.getBitmap(contentResolver)
+                    fixedModel.run(bitmap, details)
+                }
+                progressbar.setProgress(progressbar.progress + 1, false)
+                addDetails(benchmark, outputDetails, image.name)
                 _benchmarks.value = benchmarkCollections
             }
 
             _modelState.value = ModelState.SUCCESS
             progressbar.visibility = View.GONE
+            binding.modelSelector.isEnabled = true
+            binding.collectionSelector.isEnabled = true
         }
     }
 

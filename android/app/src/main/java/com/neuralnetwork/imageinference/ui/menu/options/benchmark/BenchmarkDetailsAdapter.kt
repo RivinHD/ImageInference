@@ -25,6 +25,8 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.neuralnetwork.imageinference.databinding.ItemBenchmarkDetailsBinding
+import com.neuralnetwork.imageinference.ui.details.DetailsFragment
+import com.neuralnetwork.imageinference.ui.details.DetailsFragment.Companion
 
 class BenchmarkDetailsAdapter(private val dataset: Array<BenchmarkDetails>) :
     RecyclerView.Adapter<BenchmarkDetailsAdapter.ViewHolder>() {
@@ -50,8 +52,8 @@ class BenchmarkDetailsAdapter(private val dataset: Array<BenchmarkDetails>) :
             if (benchmarkDetails.labeled) {
                 binding.top1.visibility = View.VISIBLE
                 binding.top5.visibility = View.VISIBLE
-                binding.top1Value.text = "%.2f %".format(benchmarkDetails.top1 * TO_PERCENTAGE)
-                binding.top5Value.text = "%.2f %".format(benchmarkDetails.top5 * TO_PERCENTAGE)
+                binding.top1Value.text = "${"%.2f".format(benchmarkDetails.top1 * TO_PERCENTAGE)} %"
+                binding.top5Value.text = "${"%.2f".format(benchmarkDetails.top5 * TO_PERCENTAGE)} %"
             } else {
                 binding.top1.visibility = View.GONE
                 binding.top5.visibility = View.GONE
