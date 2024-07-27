@@ -15,20 +15,21 @@
 // You should have received a copy of the GNU General Public License
 // in the root folder of this project with the name LICENSE. If not, see <http://www.gnu.org/licenses/>.
 
+#ifndef USE_ATEN_LIB
+#define USE_ATEN_LIB
+#endif // !USE_ATEN_LIB
+#include <ATen/ATen.h>
 #include <torch/library.h>
-#include "execu_resnet50_out.cpp"
-#include <make_aten_functor_from_et_functor.h>
+#include "execu_resnet50_out.h"
+
 
 namespace custom
 {
     namespace native
     {
-        using at::Tensor;
-        using c10::ScalarType;
-
-        Tensor resnet50_impl(const Tensor &in, const Tensor &weights)
+        Tensor resnet50_impl(const Tensor &in, const TensorList &weights)
         {
-            at::Tensor out = at::zeros({1000});
+            Tensor out = at::zeros({1000});
 
             resnet50_out_impl(in, weights, out);
             return out;

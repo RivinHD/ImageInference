@@ -27,6 +27,9 @@ cmake_minimum_required(VERSION 3.19)
 project(ImageInference)
 
 message(STATUS "Build Type: ${CMAKE_BUILD_TYPE}")
+message(STATUS "CMAKE_PREFIX_PATH: ${CMAKE_PREFIX_PATH}")
+
+set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE BOTH)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -52,9 +55,6 @@ set(_common_compile_options -Wno-deprecated-declarations -fPIC)
 set(_common_include_directories ${EXECUTORCH_ROOT}/..)
 
 find_package(executorch CONFIG REQUIRED)
-find_package(
-    gflags REQUIRED PATHS ${CMAKE_CURRENT_BINARY_DIR}/../../../third-party
-)
 
 target_include_directories(executorch INTERFACE ${_common_include_directories})
 
@@ -62,7 +62,7 @@ target_include_directories(executorch INTERFACE ${_common_include_directories})
 # The `_<target>_srcs` lists are defined by including ${EXECUTORCH_SRCS_FILE}.
 #
 set(EXECUTORCH_SRCS_FILE
-    "${CMAKE_CURRENT_BINARY_DIR}/../../../executorch_srcs.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/../../executorch_srcs.cmake"
 )
 
 extract_sources(${EXECUTORCH_SRCS_FILE})
@@ -70,12 +70,13 @@ extract_sources(${EXECUTORCH_SRCS_FILE})
 include(${EXECUTORCH_SRCS_FILE})
 
 # Generate C++ bindings to register kernels into both PyTorch (for AOT)
+# Executorch (for runtime).
 gen_selected_ops(LIB_NAME "baremetal_ops_lib" ROOT_OPS "baremetal_ops::resnet50.out")
 
 # Expect gen_selected_ops output file to be selected_operators.yaml
 generate_bindings_for_kernels(
-    LIB_NAME "baremetal_ops" CUSTOM_OPS_YAML
-    ${CMAKE_CURRENT_LIST_DIR}/custom_ops.yaml
+    LIB_NAME "baremetal_ops_lib" CUSTOM_OPS_YAML
+    ${CMAKE_CURRENT_LIST_DIR}/baremetal_ops.yaml
 )
 message("Generated files ${gen_command_sources}")
 
@@ -84,42 +85,43 @@ file(GLOB shared_shource
     ${CMAKE_CURRENT_LIST_DIR}/model/*.cpp
 )
 
-# C++ library to register custom ops into PyTorch.
-gen_selected_ops(LIB_NAME "custom_ops_aot_lib" ROOT_OPS "baremetal_ops::resnet50.out")
-generate_bindings_for_kernels(
-    LIB_NAME "custom_ops_aot_lib" CUSTOM_OPS_YAML
-    ${CMAKE_CURRENT_LIST_DIR}/baremetal_ops.yaml
-)
-set(custom_ops_kernel_sources ${shared_shource}
-    ${CMAKE_CURRENT_LIST_DIR}/execu_resnet50.cpp # register baremetal_ops::resnet50
-    ${CMAKE_CURRENT_LIST_DIR}/execu_resnet50_out.cpp # register baremetal_ops::resnet50.out
-)
-gen_custom_ops_aot_lib(
-    LIB_NAME "custom_ops_aot_lib" KERNEL_SOURCES "${custom_ops_kernel_sources}"
-)
-target_include_directories(
-    custom_ops_aot_lib PUBLIC ${_common_include_directories}
-)
-
 # C++ library to register custom ops into Executorch runtime.
 set(kernel_sources ${shared_shource}
     ${CMAKE_CURRENT_LIST_DIR}/execu_resnet50_out.cpp
 )
 
-add_library(custom_kernels ${kernel_sources})
-target_link_libraries(custom_kernels PRIVATE executorch)
-target_compile_options(custom_kernels PUBLIC ${_common_compile_options})
+add_library(imageinference_baremetal_kernels ${kernel_sources})
+target_link_libraries(imageinference_baremetal_kernels PRIVATE executorch)
+target_compile_options(imageinference_baremetal_kernels PUBLIC ${_common_compile_options})
 
 gen_operators_lib(
-    LIB_NAME "baremetal_ops" KERNEL_LIBS custom_kernels DEPS executorch
+    LIB_NAME "baremetal_ops_lib" KERNEL_LIBS imageinference_baremetal_kernels DEPS executorch
 )
 
-list(TRANSFORM _executor_runner__srcs PREPEND "${EXECUTORCH_ROOT}/")
+install(TARGETS imageinference_baremetal_kernels baremetal_ops_lib DESTINATION lib)
 
-add_executable(custom_ops_executor_runner ${_executor_runner__srcs})
-target_link_libraries(
-    custom_ops_executor_runner baremetal_ops executorch gflags
-)
-target_compile_options(
-    custom_ops_executor_runner PUBLIC ${_common_compile_options}
-)
+if(NOT ANDROID)
+    # C++ library to register custom ops into PyTorch.
+    gen_selected_ops(LIB_NAME "baremetal_ops_aot_lib" ROOT_OPS "baremetal_ops::resnet50.out")
+    generate_bindings_for_kernels(
+        LIB_NAME "baremetal_ops_aot_lib" CUSTOM_OPS_YAML
+        ${CMAKE_CURRENT_LIST_DIR}/baremetal_ops.yaml
+    )
+
+    set(custom_ops_kernel_sources ${shared_shource}
+        ${CMAKE_CURRENT_LIST_DIR}/execu_resnet50.cpp # register baremetal_ops::resnet50
+        ${CMAKE_CURRENT_LIST_DIR}/execu_resnet50_out.cpp # register baremetal_ops::resnet50.out
+    )
+
+    gen_custom_ops_aot_lib(
+        LIB_NAME "baremetal_ops_aot_lib" KERNEL_SOURCES "${custom_ops_kernel_sources}"
+    )
+
+    target_include_directories(
+        baremetal_ops_aot_lib PUBLIC ${_common_include_directories}
+    )
+    
+    target_compile_options(baremetal_ops_aot_lib PUBLIC ${_common_compile_options})
+
+    install(TARGETS baremetal_ops_aot_lib DESTINATION lib)
+endif()

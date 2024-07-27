@@ -16,18 +16,17 @@
 //  in the root folder of this project with the name LICENSE. If not, see <http://www.gnu.org/licenses/>.
 
 #include "ResNet50.h"
-#include "types/Image.h"
 #include <cstring>
 
-ImageInference::model::ResNet50::ResNet50(const TensorList &weights)
-    : weights(weights)
+ImageInference::model::ResNet50::ResNet50(const std::vector<void*> &weights, ScalarType type)
+    : weights(weights), type(type)
 {
-    if (weights[0].scalar_type() == exec_aten::ScalarType::Float)
+    if (type == ScalarType::Float)
     {
         inputBuffer = new float[MAX_RESNET50_SIZE];
         outputBuffer = new float[MAX_RESNET50_SIZE];
     }
-    else if (weights[0].scalar_type() == exec_aten::ScalarType::Char)
+    else if (type == ScalarType::Int8)
     {
         inputBuffer = new int8_t[MAX_RESNET50_SIZE];
         outputBuffer = new int8_t[MAX_RESNET50_SIZE];
@@ -36,12 +35,12 @@ ImageInference::model::ResNet50::ResNet50(const TensorList &weights)
 
 ImageInference::model::ResNet50::~ResNet50()
 {
-    if (weights[0].scalar_type() == exec_aten::ScalarType::Float)
+    if (type == ScalarType::Float)
     {
         delete[] static_cast<float *>(inputBuffer);
         delete[] static_cast<float *>(outputBuffer);
     }
-    else if (weights[0].scalar_type() == exec_aten::ScalarType::Char)
+    else if (type == ScalarType::Int8)
     {
         delete[] static_cast<int8_t *>(inputBuffer);
         delete[] static_cast<int8_t *>(outputBuffer);
@@ -102,7 +101,7 @@ const int8_t *ImageInference::model::ResNet50::inference(const int8_t *input)
     return array.raw_pointer;
 }
 
-exec_aten::ScalarType ImageInference::model::ResNet50::getType()
+ImageInference::types::ScalarType ImageInference::model::ResNet50::getType()
 {
-    return weights[0].scalar_type();
+    return type;
 }

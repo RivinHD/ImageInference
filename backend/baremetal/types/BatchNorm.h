@@ -33,7 +33,8 @@ namespace ImageInference
 
         public:
             const size_t Channels = TChannels;
-            const T *raw_pointer = data;
+            const T *raw_gamma = gamma;
+            const T *raw_beta = beta;
 
             /// @brief Initialize a batch normalization container.
             /// @param gamma The value gamma that is used in batch normalization.

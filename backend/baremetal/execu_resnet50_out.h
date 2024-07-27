@@ -15,18 +15,29 @@
 // You should have received a copy of the GNU General Public License
 // in the root folder of this project with the name LICENSE. If not, see <http://www.gnu.org/licenses/>.
 
-#define USE_ATEN_LIB
+#ifndef IMAGEINFERENCE_EXECU_RESNET50_OUT_H
+#define IMAGEINFERENCE_EXECU_RESNET50_OUT_H
+
 #include <executorch/runtime/kernel/kernel_includes.h>
-#include <model/ResNet50.h>
+
+#ifdef USE_ATEN_LIB
+#define MAKE_ARRAY_REF(...) __VA_ARGS__
+#define ARRAY_REF IntArrayRef
+#endif // !USE_ATEN_LIB
+#ifndef USE_ATEN_LIB
+#define MAKE_ARRAY_REF(...) torch::executor::makeArrayRef(__VA_ARGS__)
+#define ARRAY_REF torch::executor::ArrayRef<torch::executor::TensorImpl::SizesType>
+#endif // USE_ATEN_LIB
+
+#include "model/ResNet50.h"
 #include <string>
 
 namespace custom
 {
     namespace native
     {
-        using exec_aten::optional;
-        using exec_aten::ScalarType;
         using exec_aten::IntArrayRef;
+        using exec_aten::optional;
         using exec_aten::Tensor;
         using exec_aten::TensorList;
         using ImageInference::model::ResNet50;
@@ -34,7 +45,7 @@ namespace custom
 
         namespace
         {
-            std::string to_string(IntArrayRef shape);
+            std::string to_string(const ARRAY_REF shape);
             void check_preconditions(const Tensor &in, const TensorList &weights, Tensor &out);
             void check_weights(const TensorList &weights);
         } // namespace
@@ -44,3 +55,5 @@ namespace custom
         Tensor &resnet50_out_impl(RuntimeContext &ctx, const Tensor &in, const TensorList &weights, Tensor &out);
     } // namespace native
 } // namespace custom
+
+#endif // IMAGEINFERENCE_EXECU_RESNET50_OUT_H

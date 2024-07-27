@@ -52,7 +52,7 @@ namespace ImageInference
         template <typename T, size_t TChannels, size_t THeight, size_t TWidth>
         inline Array<T, TChannels * THeight * TWidth> Image<T, TChannels, THeight, TWidth>::flatten()
         {
-            return Array<T, TChannels * THeight * TWidth>(this.data);
+            return Array<T, TChannels * THeight * TWidth>(this->data);
         }
 
         template <typename T, size_t TChannels, size_t THeight, size_t TWidth>

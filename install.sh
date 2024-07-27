@@ -46,6 +46,7 @@ git submodule init
 git submodule sync
 git submodule update --init --recursive
 
+
 # Create conda environment
 conda create -yn imageinfernce python=3.10.0
 eval "$(conda shell.bash hook)"
@@ -55,6 +56,13 @@ if [ -f "pip-out/temp.linux-x86_64-cpython-310/cmake-out/buck2-bin/buck2-3bbde7d
     pip-out/temp.linux-x86_64-cpython-310/cmake-out/buck2-bin/buck2-3bbde7daa94987db468d021ad625bc93dc62ba7fcb16945cb09b64aab077f284 clean
 fi
 
+# Update the executorch install_requierements with existing pytorch versions
+sed -i 's/NIGHTLY_VERSION=dev20240507/NIGHTLY_VERSION=dev20240716/' install_requirements.sh
+sed -i 's/torch=="2.4.0.${NIGHTLY_VERSION}"/torch=="2.5.0.${NIGHTLY_VERSION}"/' install_requirements.sh
+sed -i 's/torchvision=="0.19.0.${NIGHTLY_VERSION}"/torchvision=="0.20.0.${NIGHTLY_VERSION}"/' install_requirements.sh
+sed -i 's/torchaudio=="2.2.0.${NIGHTLY_VERSION}"/torchaudio=="2.4.0.${NIGHTLY_VERSION}"/' install_requirements.sh
+
+# Install the requiered software for executorch
 ./install_requirements.sh
 
 # Fix excutorch installation which has some missing modules
@@ -124,6 +132,51 @@ cmake . -DCMAKE_INSTALL_PREFIX=cmake-android-out \
 
 cmake --build cmake-android-out -j "${CMAKE_JOBS}" --target install
 
+# Building the custome ops in backend/baremetal for the android application
+if [[ -z $PYTHON_EXECUTABLE ]];
+then
+  PYTHON_EXECUTABLE=python3
+fi
+
+SITE_PACKAGES="$(${PYTHON_EXECUTABLE} -c 'from distutils.sysconfig import get_python_lib; print(get_python_lib())')"
+CMAKE_INSTALL_PATH="${BasePath}/ImageInference/submodules/executorch/cmake-android-out"
+CMAKE_PREFIX_PATH="${CMAKE_INSTALL_PATH}/lib/cmake/ExecuTorch;${SITE_PACKAGES}/torch/share/cmake/Torch;"
+BUILD_DIR="cmake-android-out/portable/custom_ops"
+
+cd submodules/executorch
+
+rm -rf "$BUILD_DIR"
+cmake \
+    -DCMAKE_TOOLCHAIN_FILE="${ANDROID_NDK}/build/cmake/android.toolchain.cmake" \
+    -DANDROID_ABI="${ANDROID_ABI}" \
+    -DCMAKE_INSTALL_PREFIX=cmake-android-out \
+    -DCMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH" \
+    -DPYTHON_EXECUTABLE="$PYTHON_EXECUTABLE" \
+    -DCMAKE_BUILD_TYPE=Release \
+    -B"$BUILD_DIR" \
+    "${BasePath}/ImageInference/backend/baremetal"
+
+cmake --build "$BUILD_DIR" -j "${CMAKE_JOBS}" --target install
+
+# Register the libarary in the executorch-config.cmake
+if ! grep -q 'if(EXECUTORCH_BUILD_IMAGEINFERENCE_BAREMETAL)' cmake-android-out/lib/cmake/ExecuTorch/executorch-config.cmake; then
+    sed -i '/foreach(lib ${lib_list})/i \
+option(EXECUTORCH_BUILD_IMAGEINFERENCE_BAREMETAL "Include the imageinference baremetal custome kernels" OFF)\
+if(EXECUTORCH_BUILD_IMAGEINFERENCE_BAREMETAL)\
+  list(APPEND lib_list baremetal_ops_lib imageinference_baremetal_kernels)\
+endif()\n' cmake-android-out/lib/cmake/ExecuTorch/executorch-config.cmake
+fi
+
+# Register the custome operater into the android CMakeLists.txt
+if ! grep -q 'if(EXECUTORCH_BUILD_IMAGEINFERENCE_BAREMETAL)' extension/android/CMakeLists.txt; then
+    sed -i '/add_library(executorch_jni SHARED jni\/jni_layer.cpp)/i \
+option(EXECUTORCH_BUILD_IMAGEINFERENCE_BAREMETAL "Include the imageinference baremetal custome kernels" OFF)\
+if(EXECUTORCH_BUILD_IMAGEINFERENCE_BAREMETAL)\
+  list(APPEND link_libraries baremetal_ops_lib imageinference_baremetal_kernels)\
+  target_link_options_shared_lib(baremetal_ops_lib)\
+endif()\n' extension/android/CMakeLists.txt
+fi
+
 # Build the android extension
 cmake extension/android \
   -DCMAKE_TOOLCHAIN_FILE="${ANDROID_NDK}/build/cmake/android.toolchain.cmake" \
@@ -131,6 +184,7 @@ cmake extension/android \
   -DCMAKE_INSTALL_PREFIX=cmake-android-out \
   -DANDROID_PLATFORM="${ANDROID_VERSION}" \
   -DCMAKE_BUILD_TYPE=Release \
+  -DEXECUTORCH_BUILD_IMAGEINFERENCE_BAREMETAL=ON \
   -Bcmake-android-out/extension/android
 
 cmake --build cmake-android-out/extension/android -j "${CMAKE_JOBS}"
@@ -151,26 +205,24 @@ yes | cp "${QNN_SDK_ROOT}/lib/aarch64-android/libQnnHtp.so" \
     "${QNN_SDK_ROOT}/lib/hexagon-v75/unsigned/libQnnHtpV75Skel.so" \
     "${BasePath}/ImageInference/android/app/src/main/jniLibs/${ANDROID_ABI}"
 
-# Building the custome ops in backend/baremetal
-cd "${BasePath}/ImageInference"
-if [[ -z $PYTHON_EXECUTABLE ]];
-then
-  PYTHON_EXECUTABLE=python3
-fi
+# Building the custome ops in backend/baremetal for the pytorch usage
+source "${BasePath}/ImageInference/submodules/executorch/.ci/scripts/utils.sh"
+cmake_install_executorch_lib
 
 SITE_PACKAGES="$(${PYTHON_EXECUTABLE} -c 'from distutils.sysconfig import get_python_lib; print(get_python_lib())')"
-CMAKE_PREFIX_PATH="${BasePath}/ImageInference/submodules/executorch/cmake-out/lib/cmake/ExecuTorch;${SITE_PACKAGES}/torch"
-rm -rf submodules/executorch/cmake-android-out/portable/custom_ops
-cmake backend/baremetal \
-    -DCMAKE_TOOLCHAIN_FILE="${ANDROID_NDK}/build/cmake/android.toolchain.cmake" \
-    -DANDROID_ABI="${ANDROID_ABI}" \
-    -DCMAKE_INSTALL_PREFIX=cmake-android-out \
+CMAKE_INSTALL_PATH="${BasePath}/ImageInference/submodules/executorch/cmake-out"
+CMAKE_PREFIX_PATH="${CMAKE_INSTALL_PATH}/lib/cmake/ExecuTorch;${SITE_PACKAGES}/torch/share/cmake/Torch;${SITE_PACKAGES}/torch/lib;"
+BUILD_DIR="cmake-out/portable/custom_ops"
+
+rm -rf "$BUILD_DIR"
+cmake "${BasePath}/ImageInference/backend/baremetal"\
+    -DCMAKE_INSTALL_PREFIX=cmake-out \
     -DCMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH" \
     -DPYTHON_EXECUTABLE="$PYTHON_EXECUTABLE" \
     -DCMAKE_BUILD_TYPE=Release \
-    -Bcmake-android-out/portable/custom_ops
+    -B"$BUILD_DIR"
 
-cmake --build cmake-android-out/portable/custom_ops -j "${CMAKE_JOBS}" --config Release
+cmake --build "$BUILD_DIR" -j "${CMAKE_JOBS}"
 
 # Exporting the models of the custome ops in backend/baremetal
 # TODO add copy command

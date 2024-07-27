@@ -28,11 +28,11 @@ class custom_resnet50(torch.nn.Module):
     def __init__(self, weights: WeightsEnum):
         super(custom_resnet50, self).__init__()
 
-        model = models.resnet50(weights=weights)
-        self.weights = [weight.data for weight in model.parameters()]
+        self._torch_model = models.resnet50(weights=weights)
+        self.register_parameter("resnet50_weights", [weight.data for weight in self._torch_model.parameters()])
 
     def forward(self, a):
-        return torch.ops.baremetal_ops.resnet50.default(a, self.weights)
+        return torch.ops.baremetal_ops.resnet50.default(a, self.get_parameter("resnet50_weights"))
 
 
 if __name__ == "__main__":
@@ -42,11 +42,11 @@ if __name__ == "__main__":
         "-s",
         "--so_library",
         required=True,
-        help="Provide path to so library. E.g., cmake-android-out/portable/custom_ops/libcustom_ops_aot_lib.so",
+        help="Provide path to so library. E.g., cmake-out/portable/custom_ops/baremetal_ops_aot_lib.so",
     )
     args = parser.parse_args()
 
-    # See if we have custom op my_ops::mul4.out registered
+    # See if we have custom op  baremetal_ops::resnet50.out registered
     has_out_ops = True
     try:
         op = torch.ops.baremetal_ops.resnet50.out
@@ -58,12 +58,9 @@ if __name__ == "__main__":
             torch.ops.load_library(args.so_library)
         else:
             raise RuntimeError(
-                "Need to specify shared library path to register custom op my_ops::mul4.out into"
-                "EXIR. The required shared library is defined as `custom_ops_aot_lib` in "
-                "examples/portable/custom_ops/CMakeLists.txt if you are using CMake build,"
-                " or `custom_ops_aot_lib_2` in "
-                "examples/portable/custom_ops/targets.bzl for buck2."
-                "One example path would be cmake-out/examples/portable/custom_ops/"
+                "Need to specify shared library path to register custom op baremetal_ops::resnet50.out into"
+                "EXIR. The required shared library is defined as `baremetal_ops_aot_lib` in "
+                "backend/baremetal/CMakeLists.txt if you are using CMake build,"
                 "libcustom_ops_aot_lib.[so|dylib]."
             )
     print(args.so_library)

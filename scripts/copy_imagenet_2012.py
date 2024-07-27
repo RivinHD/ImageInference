@@ -23,6 +23,9 @@ import torch.utils.data as data
 import torch
 import shutil
 
+IMAGES_TO_COPY = 1000
+
+
 if __name__ == "__main__":
     if "IMAGENET_DATASET_2012" not in os.environ:
         raise RuntimeError("Environment variable IMAGENET_DATASET_2012 must be set")
@@ -45,7 +48,7 @@ if __name__ == "__main__":
     )
 
     torch.manual_seed(123)
-    ran_sampler = data.RandomSampler(dataset, num_samples=5000)
+    ran_sampler = data.RandomSampler(dataset, num_samples=IMAGES_TO_COPY)
 
     working_directory = os.path.dirname(os.path.dirname(__file__))
     destinationDirectory = os.path.join(
@@ -53,7 +56,11 @@ if __name__ == "__main__":
         "android", "app", "src", "main", "assets",
         "labeled_collections", "imagenet_2012"
     )
+
+    if os.path.exists(destinationDirectory):
+        shutil.rmtree(destinationDirectory)
     os.makedirs(destinationDirectory, exist_ok=True)
+
     print("Copying ImageNet 2012 as benchmark collection to android app.")
 
     for i in ran_sampler:

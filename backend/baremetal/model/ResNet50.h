@@ -19,13 +19,14 @@
 #define IMAGEINFERENCE_RESNET50_H
 
 #include "IModel.h"
-#include <stddef.h>
-#include "types/Image.h"
-#include "types/Kernel.h"
-#include "types/Array.h"
-#include "types/BatchNorm.h"
-#include "types/Matrix.h"
-#include <executorch/runtime/kernel/kernel_includes.h>
+#include "../types/Image.h"
+#include "../types/Kernel.h"
+#include "../types/Array.h"
+#include "../types/BatchNorm.h"
+#include "../types/Matrix.h"
+#include "../types/ScalarTypes.h"
+#include <vector>
+#include <stdint.h>
 
 #define MAX_RESNET50_SIZE 122 * 122 * 64
 
@@ -33,20 +34,19 @@ namespace ImageInference
 {
     namespace model
     {
-        using exec_aten::ScalarType;
-        using exec_aten::Tensor;
-        using exec_aten::TensorList;
         using types::Array;
         using types::BatchNorm;
         using types::Image;
         using types::Kernel;
         using types::Matrix;
+        using types::ScalarType;
 
         /// @brief The resnet50 v1.5 model from https://catalog.ngc.nvidia.com/orgs/nvidia/resources/resnet_50_v1_5_for_pytorch
         class ResNet50 : public IModel<float>, public IModel<int8_t>
         {
         private:
-            TensorList weights;
+            ScalarType type;
+            std::vector<void*> weights;
             void *inputBuffer;
             void *outputBuffer;
 
@@ -111,6 +111,7 @@ namespace ImageInference
         public:
             /// @brief Initialize the model with the weights
             /// @param weights The weights of the model with the following shape.
+            /// @param type The scalar type of the weights.
             ///
             /// @code
             ///     conv1.weight: [64, 3, 7, 7]
@@ -275,7 +276,7 @@ namespace ImageInference
             ///     fc.weight: [1000, 2048]
             ///     fc.bias: [1000]
             /// @endcode
-            ResNet50(const TensorList &weights);
+            ResNet50(const std::vector<void*> &weights, ScalarType type);
             ~ResNet50();
 
             enum weightIndex
@@ -557,7 +558,7 @@ namespace ImageInference
             auto image_1_1 = ConvBlock<1>(image_1_0, kernel_1_1, batchNorm_1_1);
             auto kernel_1_2 = Kernel<T, 1024, 256, 1, 1>(getWeight<T>(weightIndex::layer3_1_conv3_weight));
             auto batchNorm_1_2 = BatchNorm<T, 1024>(getWeight<T>(weightIndex::layer3_1_bn3_weight), getWeight<T>(weightIndex::layer3_1_bn3_bias));
-            auto image_1_2 = ConvBlockAddIdentity(image_1_1, kernel_1_2, image_0_2, batchNorm_1_2);
+            auto image_1_2 = ConvBlockAddIdentity(image_1_1, kernel_1_2, batchNorm_1_2, image_0_2);
 
             auto kernel_2_0 = Kernel<T, 256, 1024, 1, 1>(getWeight<T>(weightIndex::layer3_2_conv1_weight));
             auto batchNorm_2_0 = BatchNorm<T, 256>(getWeight<T>(weightIndex::layer3_2_bn1_weight), getWeight<T>(weightIndex::layer3_2_bn1_bias));
@@ -642,7 +643,7 @@ namespace ImageInference
         template <typename T>
         inline T *ResNet50::getWeight(size_t index)
         {
-            return weights[index].mutable_data_ptr<T>();
+            return static_cast<T*>(weights[index]);
         }
     } // namespace model
 } // namespace ImageInference
