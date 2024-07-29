@@ -38,11 +38,6 @@ class custom_resnet50(torch.nn.Module):
         return torch.ops.baremetal_ops.resnet50.default(a, self.weight_list)
 
 
-@torch.ops.baremetal_ops.resnet50.register_fake
-def _(input: torch.Tensor, weights: list[torch.Tensor]) -> torch.Tensor:
-    return torch.zeros([1000])
-
-
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
@@ -83,6 +78,11 @@ if __name__ == "__main__":
                 "libcustom_ops_aot_lib.[so|dylib]."
             )
 
+    # Registering a opaque operator for the custom implementation to not trace into it
+    @torch.library.register_fake("baremetal_ops::resnet50")
+    def _(input: torch.Tensor, weights: list[torch.Tensor]) -> torch.Tensor:
+        return torch.zeros([1000])
+
     # Lowering the Model with Executorch
     model = custom_resnet50(weights=ResNet50_Weights.IMAGENET1K_V2)
     sample_input = (torch.randn(1, 3, 224, 224),)
@@ -96,3 +96,5 @@ if __name__ == "__main__":
     os.makedirs("models-out", exist_ok=True)
     with open(f"models-out/resnet50v15_custom_{quantize_tag}.pte", "wb") as file:
         exec_program.write_to_file(file)
+
+    print("Finished processing ResNet50v15 model with Custom implementation.")
