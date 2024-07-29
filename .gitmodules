@@ -2,6 +2,3 @@
 	path = submodules/executorch
 	url = https://github.com/pytorch/executorch.git
 	branch = v0.2.0
-[submodule "submodules/llamafile"]
-	path = submodules/llamafile
-	url = https://github.com/Mozilla-Ocho/llamafile.git
