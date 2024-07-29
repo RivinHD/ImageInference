@@ -31,10 +31,10 @@ namespace ImageInference
             T *data;
 
         public:
-            const size_t Count = TCount;
-            const size_t Channels = TChannels;
-            const size_t Height = THeight;
-            const size_t Width = TWidth;
+            constexpr const size_t Count = TCount;
+            constexpr const size_t Channels = TChannels;
+            constexpr const size_t Height = THeight;
+            constexpr const size_t Width = TWidth;
 
             Kernel(void *data);
             ~Kernel();

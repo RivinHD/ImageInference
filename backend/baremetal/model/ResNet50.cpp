@@ -17,21 +17,23 @@
 
 #include "ResNet50.h"
 #include <cstring>
+#include <new>
 
-ImageInference::model::ResNet50::ResNet50(const std::vector<void*> &weights, ScalarType type)
+ImageInference::model::ResNet50::ResNet50(const std::vector<void *> &weights, ScalarType type)
     : weights(weights), type(type)
 {
+    // Align buffers to 4096 bytes for llamafile matrix multiplication
     if (type == ScalarType::Float)
     {
-        inputBuffer = new float[MAX_RESNET50_SIZE];
-        outputBuffer = new float[MAX_RESNET50_SIZE];
-        shortcutBuffer = new float[MAX_RESNET50_SIZE];
+        inputBuffer = new (std::align_val_t{4096}) float[MAX_RESNET50_SIZE];
+        outputBuffer = new (std::align_val_t{4096}) float[MAX_RESNET50_SIZE];
+        shortcutBuffer = new (std::align_val_t{4096}) float[MAX_RESNET50_SIZE];
     }
     else if (type == ScalarType::Int8)
     {
-        inputBuffer = new int8_t[MAX_RESNET50_SIZE];
-        outputBuffer = new int8_t[MAX_RESNET50_SIZE];
-        shortcutBuffer = new int8_t[MAX_RESNET50_SIZE];
+        inputBuffer = new (std::align_val_t{4096}) int8_t[MAX_RESNET50_SIZE];
+        outputBuffer = new (std::align_val_t{4096}) int8_t[MAX_RESNET50_SIZE];
+        shortcutBuffer = new (std::align_val_t{4096}) int8_t[MAX_RESNET50_SIZE];
     }
 }
 
@@ -72,6 +74,7 @@ const float *ImageInference::model::ResNet50::inference(const float *input)
 
     // Output
     auto imageGAP = GlobalAveragePool(imageB3);
+    std::swap(inputBuffer, outputBuffer);
     auto weights = Matrix<float, 1000, 2048>(getWeight<float>(weightIndex::fc_weight));
     auto biases = Array<float, 1000>(getWeight<float>(weightIndex::fc_bias));
     auto array = fullyConnectedLayer(imageGAP.flatten(), weights, biases);
@@ -99,6 +102,7 @@ const int8_t *ImageInference::model::ResNet50::inference(const int8_t *input)
 
     // Output
     auto imageGAP = GlobalAveragePool(imageB3);
+    std::swap(inputBuffer, outputBuffer);
     auto weights = Matrix<int8_t, 1000, 2048>(getWeight<int8_t>(weightIndex::fc_weight));
     auto biases = Array<int8_t, 1000>(getWeight<int8_t>(weightIndex::fc_bias));
     auto array = fullyConnectedLayer(imageGAP.flatten(), weights, biases);

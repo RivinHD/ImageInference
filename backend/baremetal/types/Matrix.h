@@ -24,15 +24,15 @@ namespace ImageInference
 {
     namespace types
     {
-        template <typename T, size_t TRows, size_t TColumns>
+        template <typename T, size_t TColumns, size_t TRows>
         class Matrix
         {
         private:
             T *data;
 
         public:
-            const size_t Rows = TRows;
-            const size_t Columns = TColumns;
+            constexpr const size_t Rows = TRows;
+            constexpr const size_t Columns = TColumns;
 
             Matrix(void *data);
             ~Matrix();
@@ -40,19 +40,19 @@ namespace ImageInference
             T *getPointer();
         };
 
-        template <typename T, size_t TRows, size_t TColumns>
-        inline Matrix<T, TRows, TColumns>::Matrix(void *data)
+        template <typename T, size_t TColumns, size_t TRows>
+        inline Matrix<T, TColumns, TRows>::Matrix(void *data)
             : data(static_cast<T *>(data))
         {
         }
 
-        template <typename T, size_t TRows, size_t TColumns>
-        inline Matrix<T, TRows, TColumns>::~Matrix()
+        template <typename T, size_t TColumns, size_t TRows>
+        inline Matrix<T, TColumns, TRows>::~Matrix()
         {
         }
 
-        template <typename T, size_t TRows, size_t TColumns>
-        inline T *Matrix<T, TRows, TColumns>::getPointer()
+        template <typename T, size_t TColumns, size_t TRows>
+        inline T *Matrix<T, TColumns, TRows>::getPointer()
         {
             return data;
         }
