@@ -32,10 +32,6 @@ namespace ImageInference
             T *data;
 
         public:
-            constexpr const size_t Channels = TChannels;
-            constexpr const size_t Height = THeight;
-            constexpr const size_t Width = TWidth;
-
             Image(void *data);
             ~Image();
 

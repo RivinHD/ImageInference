@@ -737,13 +737,13 @@ namespace ImageInference
             auto gammaPtr = batchNorm.getGammaPointer();
 
 #pragma omp parallel for collapse(2)
-            for (size_t kernel = 0; kernel < KernelCount; kernel++)
+            for (size_t iKernel = 0; iKernel < KernelCount; iKernel++)
             {
-                auto offsetKernelCount = kernel * strideKernelCount;
-                auto offsetOutputChannels = kernel * strideOutputChannels;
-
                 for (size_t height = 0; height < lengthHeightCount; height++)
                 {
+                    size_t offsetKernelCount = iKernel * strideKernelCount;
+                    size_t offsetOutputChannels = iKernel * strideOutputChannels;
+
                     int lowerHeight = static_cast<int>(height);
                     int upperHeight = static_cast<int>(lengthHeightCount - height);
                     int lowerKernelHeight = -1 * (lowerHalfKernelHeight & (lowerHeight || (lowerHeight > lowerHalfKernelHeight)));
@@ -756,14 +756,13 @@ namespace ImageInference
                         int lowerKernelWidth = -1 * (lowerHalfKernelWidth & (lowerWidth || (lowerWidth > lowerHalfKernelWidth)));
                         int upperKernelWidth = upperHalfKernelWidth & (upperWidth || (upperWidth > upperHalfKernelWidth));
 
-                        auto offsetOutput = offsetOutputChannels + height * strideOutputHeight + width * strideOutputWidth;
-                        auto offsetImage = offsetImageChannels + height * strideImageHeight + width * strideImageWidth;
+                        size_t offsetOutput = offsetOutputChannels + height * strideOutputHeight + width * strideOutputWidth;
                         outputPtr[offsetOutput] = 0;
 
                         for (size_t channel = 0; channel < ImageChannels; channel++)
                         {
-                            auto offsetKernel = offsetKernelCount + channel * strideKernelChannels - lowerKernelHeight * strideKernelHeight - lowerKernelWidth * strideKernelWidth;
-                            auto offsetImageChannels = channel * strideImageChannels;
+                            size_t offsetKernel = offsetKernelCount + channel * strideKernelChannels - lowerKernelHeight * strideKernelHeight - lowerKernelWidth * strideKernelWidth;
+                            size_t offsetImage = channel * strideImageChannels + height * strideImageHeight + width * strideImageWidth;
 
 #pragma omp simd collapse(2) reduction(+ : outputPtr[offsetOutput])
                             for (int kernelHeight = lowerKernelHeight; kernelHeight < upperKernelHeight; kernelHeight += strideKernelHeight)
@@ -777,7 +776,7 @@ namespace ImageInference
                             }
                         }
 
-                        outputPtr[offsetOutput] = relu<T>(gammaPtr[kernel] * outputPtr[offsetOutput] + betaPtr[kernel]);
+                        outputPtr[offsetOutput] = relu<T>(gammaPtr[iKernel] * outputPtr[offsetOutput] + betaPtr[iKernel]);
                     }
                 }
             }
@@ -794,10 +793,10 @@ namespace ImageInference
         {
             constexpr size_t strideImageChannels = ImageHeight * ImageWidth;
             constexpr size_t strideImageHeight = ImageWidth;
-            constexpr size_t strideImageWidth = Stride;
+            constexpr size_t strideImageWidth = 1;
 
-            constexpr size_t strideOutputChannels = ImageHeight * ImageWidth / (Stride * Stride);
-            constexpr size_t strideOutputHeight = ImageWidth / Stride;
+            constexpr size_t strideOutputChannels = ImageHeight * ImageWidth;
+            constexpr size_t strideOutputHeight = ImageWidth;
             constexpr size_t strideOutputWidth = 1;
 
             constexpr size_t strideKernelCount = ImageChannels * KernelHeight * KernelWidth;
@@ -805,15 +804,15 @@ namespace ImageInference
             constexpr int strideKernelHeight = static_cast<int>(KernelWidth);
             constexpr int strideKernelWidth = 1;
 
-            constexpr size_t lengthHeightCount = ImageHeight / Stride;
-            constexpr size_t lengthWidthCount = ImageWidth / Stride;
+            constexpr size_t lengthHeightCount = ImageHeight;
+            constexpr size_t lengthWidthCount = ImageWidth;
 
             constexpr int lowerHalfKernelHeight = static_cast<int>(KernelHeight) / 2;
             constexpr int upperHalfKernelHeight = static_cast<int>(KernelHeight - 1) / 2;
             constexpr int lowerHalfKernelWidth = static_cast<int>(KernelWidth) / 2;
             constexpr int upperHalfKernelWidth = static_cast<int>(KernelWidth - 1) / 2;
 
-            auto output = Image<T, KernelCount, ImageHeight / Stride, ImageWidth / Stride>(outputBuffer);
+            auto output = Image<T, KernelCount, ImageHeight, ImageWidth>(outputBuffer);
             auto outputPtr = output.getPointer();
 
             auto imagePtr = image.getPointer();
@@ -823,13 +822,13 @@ namespace ImageInference
             auto shortcutPtr = shortcut.getPointer();
 
 #pragma omp parallel for collapse(2)
-            for (size_t kernel = 0; kernel < KernelCount; kernel++)
+            for (size_t iKernel = 0; iKernel < KernelCount; iKernel++)
             {
-                auto offsetKernelCount = kernel * strideKernelCount;
-                auto offsetOutputChannels = kernel * strideOutputChannels;
-
                 for (size_t height = 0; height < lengthHeightCount; height++)
                 {
+                    size_t offsetKernelCount = iKernel * strideKernelCount;
+                    size_t offsetOutputChannels = iKernel * strideOutputChannels;
+
                     int lowerHeight = static_cast<int>(height);
                     int upperHeight = static_cast<int>(lengthHeightCount - height);
                     int lowerKernelHeight = -1 * (lowerHalfKernelHeight & (lowerHeight || (lowerHeight > lowerHalfKernelHeight)));
@@ -842,14 +841,13 @@ namespace ImageInference
                         int lowerKernelWidth = -1 * (lowerHalfKernelWidth & (lowerWidth || (lowerWidth > lowerHalfKernelWidth)));
                         int upperKernelWidth = upperHalfKernelWidth & (upperWidth || (upperWidth > upperHalfKernelWidth));
 
-                        auto offsetOutput = offsetOutputChannels + height * strideOutputHeight + width * strideOutputWidth;
-                        auto offsetImage = offsetImageChannels + height * strideImageHeight + width * strideImageWidth;
+                        size_t offsetOutput = offsetOutputChannels + height * strideOutputHeight + width * strideOutputWidth;
                         outputPtr[offsetOutput] = 0;
 
                         for (size_t channel = 0; channel < ImageChannels; channel++)
                         {
-                            auto offsetKernel = offsetKernelCount + channel * strideKernelChannels - lowerKernelHeight * strideKernelHeight - lowerKernelWidth * strideKernelWidth;
-                            auto offsetImageChannels = channel * strideImageChannels;
+                            size_t offsetKernel = offsetKernelCount + channel * strideKernelChannels - lowerKernelHeight * strideKernelHeight - lowerKernelWidth * strideKernelWidth;
+                            size_t offsetImage = channel * strideImageChannels + height * strideImageHeight + width * strideImageWidth;
 
 #pragma omp simd collapse(2) reduction(+ : outputPtr[offsetOutput])
                             for (int kernelHeight = lowerKernelHeight; kernelHeight < upperKernelHeight; kernelHeight += strideKernelHeight)
@@ -863,7 +861,7 @@ namespace ImageInference
                             }
                         }
 
-                        outputPtr[offsetOutput] = relu<T>(gammaPtr[kernel] * outputPtr[offsetOutput] + betaPtr[kernel] + shortcutPtr[offsetOutput]);
+                        outputPtr[offsetOutput] = relu<T>(gammaPtr[iKernel] * outputPtr[offsetOutput] + betaPtr[iKernel] + shortcutPtr[offsetOutput]);
                     }
                 }
             }
@@ -914,13 +912,13 @@ namespace ImageInference
             auto projectionGammaPtr = projectionBatchNorm.getGammaPointer();
 
 #pragma omp parallel for collapse(2)
-            for (size_t kernel = 0; kernel < KernelCount; kernel++)
+            for (size_t iKernel = 0; iKernel < KernelCount; iKernel++)
             {
-                auto offsetKernelCount = kernel * strideKernelCount;
-                auto offsetOutputChannels = kernel * strideOutputChannels;
-
                 for (size_t height = 0; height < lengthHeightCount; height++)
                 {
+                    size_t offsetKernelCount = iKernel * strideKernelCount;
+                    size_t offsetOutputChannels = iKernel * strideOutputChannels;
+
                     int lowerHeight = static_cast<int>(height);
                     int upperHeight = static_cast<int>(lengthHeightCount - height);
                     int lowerKernelHeight = -1 * (lowerHalfKernelHeight & (lowerHeight || (lowerHeight > lowerHalfKernelHeight)));
@@ -933,17 +931,16 @@ namespace ImageInference
                         int lowerKernelWidth = -1 * (lowerHalfKernelWidth & (lowerWidth || (lowerWidth > lowerHalfKernelWidth)));
                         int upperKernelWidth = upperHalfKernelWidth & (upperWidth || (upperWidth > upperHalfKernelWidth));
 
-                        auto offsetOutput = offsetOutputChannels + height * strideOutputHeight + width * strideOutputWidth;
-                        auto offsetImage = offsetImageChannels + height * strideImageHeight + width * strideImageWidth;
-                        auto offsetShortcut = offsetOutputChannels + height * strideImageHeight + width * strideImageWidth;
+                        size_t offsetOutput = offsetOutputChannels + height * strideOutputHeight + width * strideOutputWidth;
+                        size_t offsetShortcut = offsetOutputChannels + height * strideImageHeight + width * strideImageWidth;
                         outputPtr[offsetOutput] = 0;
                         T shortcutValue = 0;
 
                         for (size_t channel = 0; channel < ImageChannels; channel++)
                         {
-                            auto offsetKernel = offsetKernelCount + channel * strideKernelChannels - lowerKernelHeight * strideKernelHeight - lowerKernelWidth * strideKernelWidth;
-                            auto offsetProjectionKernel = offsetKernelCount + channel;
-                            auto offsetImageChannels = channel * strideImageChannels;
+                            size_t offsetKernel = offsetKernelCount + channel * strideKernelChannels - lowerKernelHeight * strideKernelHeight - lowerKernelWidth * strideKernelWidth;
+                            size_t offsetProjectionKernel = offsetKernelCount + channel;
+                            size_t offsetImage = channel * strideImageChannels + height * strideImageHeight + width * strideImageWidth;
 
                             shortcutValue += shortcutPtr[offsetShortcut] * projectionKernelPtr[offsetProjectionKernel];
 
@@ -959,8 +956,8 @@ namespace ImageInference
                             }
                         }
 
-                        outputPtr[offsetOutput] = relu<T>(gammaPtr[kernel] * outputPtr[offsetOutput] + betaPtr[kernel] +
-                                                           projectionGammaPtr[kernel] * shortcutValue + projectionBetaPtr[kernel]);
+                        outputPtr[offsetOutput] = relu<T>(gammaPtr[iKernel] * outputPtr[offsetOutput] + betaPtr[iKernel] +
+                                                          projectionGammaPtr[iKernel] * shortcutValue + projectionBetaPtr[iKernel]);
                     }
                 }
             }

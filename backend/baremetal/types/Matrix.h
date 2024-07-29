@@ -31,9 +31,6 @@ namespace ImageInference
             T *data;
 
         public:
-            constexpr const size_t Rows = TRows;
-            constexpr const size_t Columns = TColumns;
-
             Matrix(void *data);
             ~Matrix();
 

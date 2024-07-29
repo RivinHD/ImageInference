@@ -31,8 +31,6 @@ namespace ImageInference
             T *data;
 
         public:
-            constexpr const size_t Size = TSize;
-
             Array(void *data);
             ~Array();
 
