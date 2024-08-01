@@ -2,3 +2,9 @@
 	path = submodules/executorch
 	url = https://github.com/pytorch/executorch.git
 	branch = v0.2.0
+[submodule "submodules/libxsmm"]
+	path = submodules/libxsmm
+	url = https://github.com/libxsmm/libxsmm.git
+[submodule "submodules/fastor"]
+	path = submodules/fastor
+	url = https://github.com/romeric/Fastor.git
