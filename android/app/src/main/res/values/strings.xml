@@ -92,4 +92,5 @@
     <string name="maximum_time">Maximum Time</string>
     <string name="top_1_accuracy">Top 1 Accuracy</string>
     <string name="top_5_accuracy">Top 5 Accuracy</string>
+    <string name="processed_images">Processed Images</string>
 </resources>

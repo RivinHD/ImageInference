@@ -19,8 +19,12 @@
 
 package com.neuralnetwork.imageinference.ui.menu.options.benchmark
 
+import android.content.Context
 import android.content.res.AssetManager
+import android.net.Uri
+import android.provider.ContactsContract.Directory
 import androidx.core.net.toUri
+import com.neuralnetwork.imageinference.MainActivity
 import com.neuralnetwork.imageinference.model.ImageNet
 import com.neuralnetwork.imageinference.ui.image.Image
 import java.io.File
@@ -30,9 +34,9 @@ import java.io.File
  *
  * @constructor Creates a new model assets object.
  *
- * @param assets The asset manager to load the models filepath with.
+ * @param context The current context to use.
  */
-class BenchmarkCollectionAssets(assets: AssetManager) {
+class BenchmarkCollectionAssets(context: Context) {
 
     private val _collections = mutableListOf<BenchmarkCollection>()
 
@@ -46,15 +50,14 @@ class BenchmarkCollectionAssets(assets: AssetManager) {
         _collectionsPaths.forEach {
             // Load the collection from the assets.
             val images = mutableListOf<Image>()
-            if (File(it).isDirectory) {
-                assets.list(it)?.forEach { fileName ->
-                    val file = File(it, fileName)
-                    if (file.isFile) {
-                        val classIndex = file.name.split("_")[0].toInt()
-                        val className = ImageNet.getClass(classIndex)
-                        val image = Image(file.toUri(), className)
-                        images.add(image)
-                    }
+
+            context.assets.list(it)?.forEach { fileName ->
+                val file = File(MainActivity.getAsset(context, File(it, fileName).path))
+                if (file.isFile) {
+                    val classIndex = file.name.split("_")[0].toInt()
+                    val className = ImageNet.getClass(classIndex)
+                    val image = Image(file.toUri(), className)
+                    images.add(image)
                 }
             }
 

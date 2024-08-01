@@ -49,6 +49,7 @@ class BenchmarkDetailsAdapter(private val dataset: Array<BenchmarkDetails>) :
             binding.maxTimeValue.text = "${benchmarkDetails.evaluationTimeNano.max} ns"
             binding.minTimeValue.text = "${benchmarkDetails.evaluationTimeNano.min} ns"
             binding.averageTimeValue.text = "${benchmarkDetails.evaluationTimeNano.average} ns"
+            binding.counterValue.text = "${benchmarkDetails.evaluationTimeNano.count}"
             if (benchmarkDetails.labeled) {
                 binding.top1.visibility = View.VISIBLE
                 binding.top5.visibility = View.VISIBLE

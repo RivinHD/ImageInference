@@ -429,10 +429,20 @@ class ImageViewModel(private val dataStore: DataStore<ImageCollections>) :
      */
     private fun saveUpdateCollection(collection: ImageCollection, index: Int) {
         viewModelScope.launch {
-            dataStore.updateData { data ->
-                data.toBuilder()
-                    .setImageCollection(index, collection.toDataStore())
-                    .build()
+            withContext(Dispatchers.IO)
+            {
+                dataStore.updateData { data ->
+                    if (data.imageCollectionList.size <= index) {
+                        data.toBuilder()
+                            .addImageCollection(index, collection.toDataStore())
+                            .build()
+                    } else {
+                        data.toBuilder()
+                            .setImageCollection(index, collection.toDataStore())
+                            .build()
+                    }
+
+                }
             }
         }
     }
