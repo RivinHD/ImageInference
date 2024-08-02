@@ -8,3 +8,6 @@
 [submodule "submodules/fastor"]
 	path = submodules/fastor
 	url = https://github.com/romeric/Fastor.git
+[submodule "submodules/catch2"]
+	path = submodules/catch2
+	url = https://github.com/catchorg/Catch2.git
