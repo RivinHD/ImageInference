@@ -18,95 +18,43 @@
 #include "ResNet50.h"
 #include <cstring>
 #include <new>
+#include <algorithm>
 
 ImageInference::model::ResNet50::ResNet50(const std::vector<void *> &weights, ScalarType type)
     : weights(weights), type(type)
 {
-    // Align buffers to 4096 bytes for llamafile matrix multiplication
-    if (type == ScalarType::Float)
-    {
-        inputBuffer = new (std::align_val_t{4096}) float[MAX_RESNET50_SIZE];
-        outputBuffer = new (std::align_val_t{4096}) float[MAX_RESNET50_SIZE];
-        shortcutBuffer = new (std::align_val_t{4096}) float[MAX_RESNET50_SIZE];
-    }
-    else if (type == ScalarType::Int8)
-    {
-        inputBuffer = new (std::align_val_t{4096}) int8_t[MAX_RESNET50_SIZE];
-        outputBuffer = new (std::align_val_t{4096}) int8_t[MAX_RESNET50_SIZE];
-        shortcutBuffer = new (std::align_val_t{4096}) int8_t[MAX_RESNET50_SIZE];
-    }
 }
 
 ImageInference::model::ResNet50::~ResNet50()
 {
-    if (type == ScalarType::Float)
-    {
-        delete[] static_cast<float *>(inputBuffer);
-        delete[] static_cast<float *>(outputBuffer);
-        delete[] static_cast<float *>(shortcutBuffer);
-    }
-    else if (type == ScalarType::Int8)
-    {
-        delete[] static_cast<int8_t *>(inputBuffer);
-        delete[] static_cast<int8_t *>(outputBuffer);
-        delete[] static_cast<int8_t *>(shortcutBuffer);
-    }
 }
 
-const float *ImageInference::model::ResNet50::inference(const float *input)
+void ImageInference::model::ResNet50::inference(const float *input, float* output)
 {
-    std::memcpy(inputBuffer, input, 3 * 244 * 244 * sizeof(float));
+    // For a 7x7 kernel we need to add padding of 3.
+    auto image = Image<float, 3, 3, 3, 244, 244>(input);
 
-    /// Input
-    auto image = Image<float, 3, 244, 244>(static_cast<float *>(inputBuffer));
-
-    auto kernel0 = Kernel<float, 64, 3, 7, 7>(getWeight<float>(weightIndex::conv1_weight));
+    auto kernel0 = Kernel<float, RESNET50_BLOCK_SIZE, 3, 64, 3, 7, 7>(getWeight<float>(weightIndex::conv1_weight));
     auto batchNorm0 = BatchNorm<float, 64>(getWeight<float>(weightIndex::bn1_weight), getWeight<float>(weightIndex::bn1_bias));
-    auto imagePreConv = ConvBlock<2>(image, kernel0, batchNorm0);
-
-    auto imageMax0 = MaxPool<2>(imagePreConv);
-
-    // Blocks
-    auto imageB0 = block0(imageMax0);
-    auto imageB1 = block1(imageB0);
-    auto imageB2 = block2(imageB1);
-    auto imageB3 = block3(imageB2);
-
-    // Output
-    auto imageGAP = GlobalAveragePool(imageB3);
-    std::swap(inputBuffer, outputBuffer);
-    auto weights = Matrix<float, 1000, 2048>(getWeight<float>(weightIndex::fc_weight));
-    auto biases = Array<float, 1000>(getWeight<float>(weightIndex::fc_bias));
-    auto array = fullyConnectedLayer(imageGAP.flatten(), weights, biases);
-    return array.getPointer();
-}
-
-const int8_t *ImageInference::model::ResNet50::inference(const int8_t *input)
-{
-    std::memcpy(inputBuffer, input, 3 * 244 * 244 * sizeof(int8_t));
-
-    /// Input
-    auto image = Image<int8_t, 3, 244, 244>(static_cast<int8_t *>(inputBuffer));
-
-    auto kernel0 = Kernel<int8_t, 64, 3, 7, 7>(getWeight<int8_t>(weightIndex::conv1_weight));
-    auto batchNorm0 = BatchNorm<int8_t, 64>(getWeight<int8_t>(weightIndex::bn1_weight), getWeight<int8_t>(weightIndex::bn1_bias));
-    auto imagePreConv = ConvBlock<2>(image, kernel0, batchNorm0);
-
-    auto imageMax0 = MaxPool<2>(imagePreConv);
+    // For Max Pooling we don't need padding.
+    auto imagePreConv = convBlock<2, 0>(image, kernel0, batchNorm0);
+    
+    // Next is a 1x1 Kernel. Therefore no padding required.
+    // FIX auto imageMax0 = maxPool<2, 0>(imagePreConv);
 
     // Blocks
-    auto imageB0 = block0(imageMax0);
-    auto imageB1 = block1(imageB0);
-    auto imageB2 = block2(imageB1);
-    auto imageB3 = block3(imageB2);
+    // auto imageB0 = block0(imageMax0);
+    // auto imageB1 = block1(imageB0);
+    // auto imageB2 = block2(imageB1);
+    // auto imageB3 = block3(imageB2);
 
-    // Output
-    auto imageGAP = GlobalAveragePool(imageB3);
-    std::swap(inputBuffer, outputBuffer);
-    auto weights = Matrix<int8_t, 1000, 2048>(getWeight<int8_t>(weightIndex::fc_weight));
-    auto biases = Array<int8_t, 1000>(getWeight<int8_t>(weightIndex::fc_bias));
-    auto array = fullyConnectedLayer(imageGAP.flatten(), weights, biases);
-    return array.getPointer();
+    // // Output
+    // auto imageGAP = globalAveragePool<0>(imageB3);  // We don't need padding for a fully connected layer.
+    // auto weights = Matrix<float, 1000, 2048>(getWeight<float>(weightIndex::fc_weight));
+    // auto biases = Array<float, 1000>(getWeight<float>(weightIndex::fc_bias));
+    // auto flatten = imageGAP.flatten();
+    // auto array = fullyConnectedLayer(flatten, weights, biases);
+    // std::copy(array.getPointer(), array.getPointer() + array.size, output);
 }
 
 ImageInference::types::ScalarType ImageInference::model::ResNet50::getType()

@@ -33,15 +33,28 @@ set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE BOTH)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-if(NOT CMAKE_CXX_STANDARD)
+if(NOT CMAKE_CXX_STANDARD OR CMAKE_CXX_STANDARD LESS 17)
     set(CMAKE_CXX_STANDARD 17)
 endif()
+set(CMAKE_CXX_STANDARD_REQUIRED on)
 
-# set(CMAKE_VERBOSE_MAKEFILE on)
+set(CMAKE_VERBOSE_MAKEFILE off)
 
 # Source root directory for executorch.
 if(NOT EXECUTORCH_ROOT)
     set(EXECUTORCH_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../../submodules/executorch)
+endif()
+
+if(NOT FASTOR_ROOT)
+    set(FASTOR_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../../submodules/fastor)
+endif()
+
+if(NOT LIBXSMM_ROOT)
+    set(LIBXSMM_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../../submodules/libxsmm)
+endif()
+
+if(NOT CATCH2_ROOT)
+    set(CATCH2_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../../submodules/catch2)
 endif()
 
 include(${EXECUTORCH_ROOT}/build/Utils.cmake)
@@ -51,15 +64,29 @@ if(NOT PYTHON_EXECUTABLE)
     resolve_python_executable()
 endif()
 
-set(_common_compile_options -Wno-deprecated-declarations -fPIC -fopenmp)
+set(_common_compile_options -Wno-deprecated-declarations -fPIC -fopenmp -lxsmm -lblas -ldl)
 
 # Let files say "include <executorch/path/to/header.h>".
 set(_common_include_directories ${EXECUTORCH_ROOT}/..)
 
 find_package(executorch CONFIG REQUIRED)
 find_package(OpenMP REQUIRED)
+#add_compile_definitions(USE_OMP) # Enable OpenMP usage in the Project.
 
 target_include_directories(executorch INTERFACE ${_common_include_directories})
+
+# Include Fastor with libxsmm backend for matrix matrix multiplication.
+add_library(Fastor_HEADER_ONLY INTERFACE)
+target_include_directories(Fastor_HEADER_ONLY INTERFACE ${FASTOR_ROOT})
+#add_compile_definitions(FASTOR_USE_LIBXSMM)
+
+add_library(libxsmm SHARED IMPORTED)
+target_include_directories(libxsmm INTERFACE ${LIBXSMM_ROOT}/include)
+file(REAL_PATH ${LIBXSMM_ROOT}/lib/libxsmm.so LIBXSMM_LIB_PATH)
+set_target_properties(libxsmm PROPERTIES IMPORTED_LOCATION ${LIBXSMM_LIB_PATH})
+target_link_libraries(Fastor_HEADER_ONLY INTERFACE libxsmm)
+file(GLOB LIBXSMM_LIBS_VERSIONS_PATHS ${LIBXSMM_ROOT}/lib/libxsmm.so*)
+install(FILES ${LIBXSMM_LIBS_VERSIONS_PATHS} DESTINATION lib)
 
 #
 # The `_<target>_srcs` lists are defined by including ${EXECUTORCH_SRCS_FILE}.
@@ -84,23 +111,28 @@ generate_bindings_for_kernels(
 message("Generated files ${gen_command_sources}")
 
 # Prepare for C++ libraries.
-file(GLOB shared_shource
+file(GLOB shared_source
     ${CMAKE_CURRENT_LIST_DIR}/model/*.cpp
 )
 
 # C++ library to register custom ops into Executorch runtime.
-set(kernel_sources ${shared_shource}
+set(kernel_sources ${shared_source}
     ${CMAKE_CURRENT_LIST_DIR}/execu_resnet50_out.cpp
 )
 
 add_library(imageinference_baremetal_kernels ${kernel_sources})
 target_link_libraries(imageinference_baremetal_kernels PRIVATE executorch)
+
 if(OpenMP_CXX_FOUND AND NOT ANDROID)
     target_link_libraries(imageinference_baremetal_kernels PUBLIC OpenMP::OpenMP_CXX)
 endif()
+
 if(OpenMP_CXX_FOUND AND ANDROID)
     target_link_libraries(imageinference_baremetal_kernels PUBLIC -static-openmp -fopenmp)
 endif()
+
+target_link_libraries(imageinference_baremetal_kernels PUBLIC Fastor_HEADER_ONLY)
+target_link_libraries(imageinference_baremetal_kernels PUBLIC libxsmm)
 target_compile_options(imageinference_baremetal_kernels PUBLIC ${_common_compile_options})
 
 gen_operators_lib(
@@ -110,7 +142,10 @@ gen_operators_lib(
 install(TARGETS imageinference_baremetal_kernels baremetal_ops_lib DESTINATION lib)
 
 if(NOT ANDROID)
+    add_compile_definitions(IMAGEINFERENCE_TESTING)
+
     find_package(Torch CONFIG REQUIRED)
+
     # C++ library to register custom ops into PyTorch.
     gen_selected_ops(LIB_NAME "baremetal_ops_aot_lib" ROOT_OPS "baremetal_ops::resnet50.out")
     generate_bindings_for_kernels(
@@ -118,7 +153,7 @@ if(NOT ANDROID)
         ${CMAKE_CURRENT_LIST_DIR}/baremetal_ops.yaml
     )
 
-    set(custom_ops_kernel_sources ${shared_shource}
+    set(custom_ops_kernel_sources ${shared_source}
         ${CMAKE_CURRENT_LIST_DIR}/execu_resnet50.cpp # register baremetal_ops::resnet50
         ${CMAKE_CURRENT_LIST_DIR}/execu_resnet50_out.cpp # register baremetal_ops::resnet50.out
     )
@@ -126,9 +161,11 @@ if(NOT ANDROID)
     gen_custom_ops_aot_lib(
         LIB_NAME "baremetal_ops_aot_lib" KERNEL_SOURCES "${custom_ops_kernel_sources}"
     )
-    
+
     target_link_libraries(baremetal_ops_aot_lib PUBLIC torch)
-    target_link_libraries(baremetal_ops_aot_lib PRIVATE OpenMP::OpenMP_CXX)
+    target_link_libraries(baremetal_ops_aot_lib PUBLIC OpenMP::OpenMP_CXX)
+    target_link_libraries(baremetal_ops_aot_lib PUBLIC Fastor_HEADER_ONLY)
+    target_link_libraries(baremetal_ops_aot_lib PUBLIC libxsmm)
     target_include_directories(
         baremetal_ops_aot_lib PUBLIC ${_common_include_directories}
     )
@@ -136,4 +173,39 @@ if(NOT ANDROID)
     target_compile_options(baremetal_ops_aot_lib PUBLIC ${_common_compile_options})
 
     install(TARGETS baremetal_ops_aot_lib DESTINATION lib)
+
+    # ################################
+    # ######## Setup Testing #########
+    # ################################
+    find_package(Catch2 REQUIRED PATHS ${CATCH2_ROOT}/.build/lib/cmake)
+    list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
+    
+    set(CURRENT_TEST_DIR ${CMAKE_CURRENT_LIST_DIR}/test)
+
+    file(GLOB shared_test_source
+        ${CMAKE_CURRENT_LIST_DIR}/model/test/*.cpp
+    )
+
+    file(GLOB TEST_FILES
+        ${CURRENT_TEST_DIR}/model/*.cpp
+        ${CURRENT_TEST_DIR}/types/*.cpp
+    )
+
+    list(APPEND TEST_FILES ${shared_source} ${shared_test_source})
+
+    add_executable(tests ${TEST_FILES})
+    target_link_libraries(tests PUBLIC torch)
+    target_link_libraries(tests PUBLIC OpenMP::OpenMP_CXX)
+    target_link_libraries(tests PUBLIC Fastor_HEADER_ONLY)
+    target_link_libraries(tests PUBLIC libxsmm)
+    target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
+    target_compile_definitions(tests PRIVATE IMAGEINFERENCE_TESTING)
+    target_compile_options(tests PUBLIC ${_common_compile_options})
+    target_compile_options(tests PRIVATE -fsanitize=address -fsanitize=leak -fsanitize=undefined -fno-omit-frame-pointer)
+    target_link_options(tests PRIVATE -fsanitize=address -fsanitize=leak -fsanitize=undefined -fno-omit-frame-pointer)
+    include(CTest)
+    include(Catch)
+
+    enable_testing()
+    catch_discover_tests(tests)
 endif()

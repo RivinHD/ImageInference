@@ -39,7 +39,7 @@ namespace ImageInference
             /// @brief Do a forward pass through the model without any evaluation for training.
             /// @param input The input data to the model.
             /// @return The output data from the model.
-            virtual const T *inference(const T *input) = 0;
+            virtual void inference(const T *input, T* output) = 0;
         };
     } // namespace model
 } // namespace ImageInference

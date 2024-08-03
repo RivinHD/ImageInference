@@ -26,8 +26,8 @@ if [[ ${sourced} -eq 0 ]]; then
 fi
 
 # Set the base path
-BasePath="$(dirname -- "${BASH_SOURCE[0]}")"  # relative
-BasePath="$(cd -- "$BasePath" && pwd)"  # absolutized and normalized
+BasePath="$(dirname -- "${BASH_SOURCE[0]:-$0}")"  # relative
+BasePath="$(cd -- "$BasePath" &> /dev/null && pwd 2> /dev/null)"  # absolutized and normalized
 BasePath="$(dirname -- "$BasePath")" # go up one directory
 
 # ==============================================================================
@@ -48,6 +48,9 @@ export IMAGENET_DATASET_2012="${BasePath}/data/imagenet/ilsvrc_2012"
 export FLATC_EXECUTABLE="$(which -- flatc)"
 export LD_LIBRARY_PATH="${QNN_SDK_ROOT}/lib/x86_64-linux-clang/":$LD_LIBRARY_PATH
 export EXECUTORCH_ROOT="${BasePath}/ImageInference/submodules/executorch"
+export FASTOR_ROOT="${BasePath}/ImageInference/submodules/fastor"
+export LIBXSMM_ROOT="${BasePath}/ImageInference/submodules/libxsmm"
+export CATCH2_ROOT="${BasePath}/ImageInference/submodules/catch2"
 echo "ANDROID_NDK: $ANDROID_NDK"
 echo "ANDROID_ABI: $ANDROID_ABI"
 echo "ANDROID_VERSION: $ANDROID_VERSION"
@@ -56,5 +59,8 @@ echo "IMAGENET_DATASET_2012: $IMAGENET_DATASET_2012"
 echo "FLATC_EXECUTABLE: $FLATC_EXECUTABLE"
 echo "LD_LIBRARY_PATH: $LD_LIBRARY_PATH"
 echo "EXECUTORCH_ROOT: $EXECUTORCH_ROOT"
+echo "FASTOR_ROOT: $FASTOR_ROOT"
+echo "LIBXSMM_ROOT: $LIBXSMM_ROOT"
+echo "CATCH2_ROOT: $CATCH2_ROOT"
 
 export SETUP_DONE=1  # Mark the setup as done

@@ -26,8 +26,8 @@ if [[ ${sourced} -eq 0 ]]; then
 fi
 
 # Set the base path
-ProjectPath="$(dirname -- "${BASH_SOURCE[0]}")"  # relative
-ProjectPath="$(cd -- "$ProjectPath" && pwd)"  # absolutized and normalized
+ProjectPath="$(dirname -- "${BASH_SOURCE[0]:-$0}")"  # relative
+ProjectPath="$(cd -- "$ProjectPath" &> /dev/null && pwd 2> /dev/null)"  # absolutized and normalized
 
 echo "Welcome to the ImageInference interactive build helper"
 

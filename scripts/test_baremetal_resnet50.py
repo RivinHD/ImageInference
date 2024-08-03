@@ -47,17 +47,9 @@ if __name__ == "__main__":
         required=True,
         help="Provide path to so library. E.g., cmake-out/portable/custom_ops/baremetal_ops_aot_lib.so",
     )
-    parser.add_argument(
-        "-q",
-        "--quantize",
-        required=False,
-        default=False,
-        help="Flag for producing quantized or floating-point model",
-        choices=["false"],
-    )
     args = parser.parse_args()
 
-    print("Processing ResNet50v15 model with Custom implementation.")
+    print("Starting the testing process.")
 
     # See if we have custom op  baremetal_ops::resnet50.out registered
     has_out_ops = True
@@ -78,23 +70,25 @@ if __name__ == "__main__":
                 "libcustom_ops_aot_lib.[so|dylib]."
             )
 
-    # Registering a opaque operator for the custom implementation to not trace into it
-    @torch.library.register_fake("baremetal_ops::resnet50")
-    def _(input: torch.Tensor, weights: list[torch.Tensor]) -> torch.Tensor:
-        return torch.zeros([1000])
+    op = torch.ops.baremetal_ops.test_resnet50_conv3x3_channels16x16.default
 
     # Lowering the Model with Executorch
-    model = custom_resnet50(weights=ResNet50_Weights.IMAGENET1K_V2)
-    sample_input = (torch.randn(1, 3, 224, 224),)
-    exec_program = export_to_exec_prog(
-        model,
-        sample_input,
-        edge_compile_config=EdgeCompileConfig(_check_ir_validity=False)
-    )
+    model = custom_resnet50(weights=ResNet50_Weights.IMAGENET1K_V2).eval()
+    torch_model = model._torch_model.eval()
 
-    quantize_tag = args.quantize if args.quantize != "false" else "fp32"
-    os.makedirs("models-out", exist_ok=True)
-    with open(f"models-out/resnet50v15_custom_{quantize_tag}.pte", "wb") as file:
-        exec_program.write_to_file(file)
+    torch.manual_seed(123)
 
-    print("Finished processing ResNet50v15 model with Custom implementation.")
+    with torch.no_grad():
+        input = torch.randn(1, 3, 244, 244)
+        output = model(input.clone().detach())
+
+        out = model._torch_model.conv1(input)
+        # out = model._torch_model.bn1(out)
+        # out = model._torch_model.relu(out)
+
+        torch.testing.assert_close(output, out[0])
+
+        # expected_output = torch_model(input)
+        # torch.testing.assert_close(output, expected_output[0])
+
+    print("Successfully finished testing.")

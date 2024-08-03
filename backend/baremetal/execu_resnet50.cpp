@@ -29,7 +29,6 @@ namespace custom
         Tensor resnet50_impl(const Tensor &in, TensorList weights)
         {
             Tensor out = at::zeros({1000});
-
             resnet50_out_impl(in, weights, out);
             return out;
         }
@@ -38,6 +37,7 @@ namespace custom
         TORCH_LIBRARY_FRAGMENT(baremetal_ops, m)
         {
             m.def("baremetal_ops::resnet50(Tensor input, Tensor[] weights) -> Tensor");
+            m.def("baremetal_ops::test_resnet50_conv3x3_channels16x16(Tensor input, Tensor weight) -> Tensor");
         }
 
         TORCH_LIBRARY_IMPL(baremetal_ops, CompositeExplicitAutograd, m)

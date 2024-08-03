@@ -18,7 +18,9 @@
 #ifndef IMAGEINFERENCE_ARRAY_H
 #define IMAGEINFERENCE_ARRAY_H
 
+#include "Macros.h"
 #include <stddef.h>
+#include <algorithm>
 
 namespace ImageInference
 {
@@ -28,19 +30,29 @@ namespace ImageInference
         class Array
         {
         private:
-            T *data;
+            // https://github.com/Mozilla-Ocho/llamafile/blob/05493179b70429ff32fb55942ee7bdb76367cfba/llamafile/tinyblas_cpu.h#L53
+            // Following the alingment of llamafile i.e Row alignment is 64 bytes.
+            CACHE_ALIGN(sizeof(T), TSize) T data[TSize]{0};
 
         public:
-            Array(void *data);
+            static constexpr const size_t size = TSize;
+
+            Array();
+            Array(const T* input);
             ~Array();
 
             T* getPointer();
         };
 
         template <typename T, size_t TSize>
-        inline Array<T, TSize>::Array(void *data)
-            : data(static_cast<T *>(data))
+        inline Array<T, TSize>::Array()
         {
+        }
+
+        template <typename T, size_t TSize>
+        inline Array<T, TSize>::Array(const T *input)
+        {
+            std::copy(input, input + TSize, data);
         }
 
         template <typename T, size_t TSize>

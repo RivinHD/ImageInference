@@ -18,6 +18,7 @@
 
 #include "execu_resnet50_out.h"
 #include <sstream>
+#include <iostream>
 
 namespace custom
 {
@@ -45,8 +46,8 @@ namespace custom
                     "Expected out tensor to have dtype Float, but got %hhd instead",
                     out.scalar_type());
                 ET_CHECK_MSG(
-                    weights[0].scalar_type() == exec_aten::ScalarType::Float || weights[0].scalar_type() == exec_aten::ScalarType::Char, // Float or Int8
-                    "Expected weights tensor to have dtype Float or Byte (Int8), but got %hhd instead",
+                    weights[0].scalar_type() == exec_aten::ScalarType::Float, // Float
+                    "Expected weights tensor to have dtype Float, but got %hhd instead",
                     weights[0].scalar_type());
                 ET_CHECK_MSG(
                     in.scalar_type() == exec_aten::ScalarType::Float,
@@ -896,7 +897,7 @@ namespace custom
 
         Tensor &resnet50_out_impl(const Tensor &in, TensorList weights, Tensor &out)
         {
-            check_preconditions(in, weights, out);
+            // check_preconditions(in, weights, out);
 
             ImageInference::types::ScalarType type = ImageInference::types::ScalarType::Undefined;
             switch (weights[0].scalar_type())
@@ -913,10 +914,12 @@ namespace custom
             }
 
             std::vector<void *> raw_weights = std::vector<void *>(weights.size());
-            for (auto iter = weights.begin(); iter < weights.end(); iter++)
+            for (size_t i = 0; i < weights.size(); i++)
             {
-                raw_weights.push_back(iter->mutable_data_ptr());
+                raw_weights[i] = weights[i].mutable_data_ptr();
             }
+
+            std::cout << "DEBUG POINT 1" << std::endl;
 
             ResNet50 resnet50 = ResNet50(raw_weights, type);
 
@@ -926,23 +929,7 @@ namespace custom
                 float *out_data = out.mutable_data_ptr<float>();
                 const float *in_data = in.const_data_ptr<float>();
 
-                const float *output = resnet50.inference(in_data);
-                std::memcpy(out_data, output, out.numel() * sizeof(float));
-            }
-            else if (resnet50.getType() == ImageInference::types::ScalarType::Int8)
-            {
-                // Int8
-                // Convert Input to Int8
-                // Tensor in_int8 = in.to(exec_aten::ScalarType::Char);
-
-                // const int8_t *in_data = in_int8.const_data_ptr<int8_t>();
-                // float *out_data = out.mutable_data_ptr<float>();
-
-                // const int8_t *output = resnet50.inference(in_data);
-                // Tensor out_int8 = at::from_blob((void *)output, {1000}, at::TensorOptions().dtype(at::kChar));
-
-                // // Convert output back to Float
-                // std::memcpy(out_data, out_int8.to(exec_aten::ScalarType::Float).mutable_data_ptr<float>(), out.numel() * sizeof(float));
+                resnet50.inference(in_data, out_data);
             }
 
             return out;

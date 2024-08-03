@@ -27,8 +27,8 @@ if [[ ${sourced} -eq 0 ]]; then
 fi
 
 # Set the base path
-BasePath="$(dirname -- "${BASH_SOURCE[0]}")"  # relative
-BasePath="$(cd -- "$BasePath" && pwd)"  # absolutized and normalized
+BasePath="$(dirname -- "${BASH_SOURCE[0]:-$0}")"  # relative
+BasePath="$(cd -- "$BasePath" &> /dev/null && pwd 2> /dev/null)"  # absolutized and normalized
 BasePath="$(dirname -- "$BasePath")" # go up one directory
 echo "Setup the project with BasePath at $BasePath"
 

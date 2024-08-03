@@ -27,8 +27,8 @@ if [[ ${sourced} -eq 0 ]]; then
 fi
 
 # Set the base path
-BasePath="$(dirname -- "${BASH_SOURCE[0]}")"  # relative
-BasePath="$(cd -- "$BasePath" && pwd)"  # absolutized and normalized
+BasePath="$(dirname -- "${BASH_SOURCE[0]:-$0}")"  # relative
+BasePath="$(cd -- "$BasePath" &> /dev/null && pwd 2> /dev/null)"  # absolutized and normalized
 BasePath="$(dirname -- "$BasePath")" # go up one directory
 echo "Installing needed software and dependencies in $BasePath"
 
@@ -94,20 +94,32 @@ fi
 cd ImageInference
 source config.sh
 
-# Setup the qualcomm backend
-cd submodules/executorch
-# Workaround for fbs files in exir/_serialize
-yes | cp schema/program.fbs exir/_serialize/program.fbs
-yes | cp schema/scalar_type.fbs exir/_serialize/scalar_type.fbs
-./backends/qualcomm/scripts/build.sh
-yes | cp backends/ "${BasePath}/miniconda3/envs/imageinfernce/lib/python3.10/site-packages/executorch/" -r &> /dev/null
-
 # Number of available processors
 if [ "$(uname)" == "Darwin" ]; then
   CMAKE_JOBS=$(( $(sysctl -n hw.ncpu) - 1 ))
 else
   CMAKE_JOBS=$(( $(nproc) - 1 ))
 fi
+
+# Install libxsmm
+cd "${BasePath}/ImageInference/submodules/libxsmm"
+make -j "${CMAKE_JOBS}" STATIC=0
+
+# Install catch2
+cd "${BasePath}/ImageInference/submodules/catch2"
+cmake . \
+  -DCMAKE_INSTALL_PREFIX=.build \
+  -DCMAKE_BUILD_TYPE=Release \
+  -B.build 
+cmake --build .build -j "${CMAKE_JOBS}" --target install
+
+# Setup the qualcomm backend
+cd "${BasePath}/ImageInference/submodules/executorch"
+# Workaround for fbs files in exir/_serialize
+yes | cp schema/program.fbs exir/_serialize/program.fbs
+yes | cp schema/scalar_type.fbs exir/_serialize/scalar_type.fbs
+./backends/qualcomm/scripts/build.sh
+yes | cp backends/ "${BasePath}/miniconda3/envs/imageinfernce/lib/python3.10/site-packages/executorch/" -r &> /dev/null
 
 # Build the requiered run time liberary
 rm -rf cmake-android-out
@@ -177,6 +189,15 @@ if(EXECUTORCH_BUILD_IMAGEINFERENCE_BAREMETAL)\
   target_link_options_shared_lib(baremetal_ops_lib)\
   find_package(OpenMP REQUIRED) \
   list(APPEND link_libraries -static-openmp -fopenmp)\
+  add_library(Fastor_HEADER_ONLY INTERFACE)\
+  target_include_directories(Fastor_HEADER_ONLY INTERFACE ${FASTOR_ROOT})\
+  add_compile_definitions(FASTOR_USE_LIBXSMM)\
+  add_library(libxsmm SHARED IMPORTED)\
+  target_include_directories(libxsmm INTERFACE ${LIBXSMM_ROOT}/include)\
+  set_target_properties(libxsmm PROPERTIES IMPORTED_LOCATION ${LIBXSMM_ROOT}/lib/libxsmm.so)\
+  target_link_libraries(Fastor_HEADER_ONLY INTERFACE libxsmm)\
+  list(APPEND link_libraries Fastor_HEADER_ONLY libxsmm)\
+  list(APPEND _common_compile_options -lxsmm -lblas -ldl)\
 endif()\n' extension/android/CMakeLists.txt
 fi
 
@@ -197,6 +218,8 @@ mkdir -p "${BasePath}/ImageInference/android/app/src/main/jniLibs/${ANDROID_ABI}
 yes | cp "cmake-android-out/extension/android/libexecutorch_jni.so" \
     "${BasePath}/ImageInference/android/app/src/main/jniLibs/${ANDROID_ABI}/libexecutorch.so"
 yes | cp "cmake-android-out/lib/libqnn_executorch_backend.so" \
+   "${BasePath}/ImageInference/android/app/src/main/jniLibs/${ANDROID_ABI}"
+yes | cp "cmake-android-out/lib/libxsmm.so*" \
    "${BasePath}/ImageInference/android/app/src/main/jniLibs/${ANDROID_ABI}"
 yes | cp "${QNN_SDK_ROOT}/lib/aarch64-android/libQnnHtp.so" \
     "${QNN_SDK_ROOT}/lib/aarch64-android/libQnnSystem.so" \
@@ -226,6 +249,9 @@ cmake "${BasePath}/ImageInference/backend/baremetal"\
     -B"$BUILD_DIR"
 
 cmake --build "$BUILD_DIR" -j "${CMAKE_JOBS}" --target install
+
+cd "$BUILD_DIR"
+ctest -j "${CMAKE_JOBS}" --output-on-failure -C Release
 
 python "${BasePath}/ImageInference/scripts/copy_imagenet_2012.py"
 
