@@ -67,16 +67,19 @@ data class BenchmarkDetails(
     /**
      * The top1 accuracy of ths benchmark.
      */
+    @SerialName("top1")
     private var _top1: Float = 0.0f
 
     /**
      * The top5 accuracy of ths benchmark.
      */
+    @SerialName("top5")
     private var _top5: Float = 0.0f
 
     /**
      * Indicates if labeled details where added.
      */
+    @SerialName("labeled")
     private var _labeled: Boolean = false
 
     /**

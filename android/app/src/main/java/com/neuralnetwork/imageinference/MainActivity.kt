@@ -29,6 +29,7 @@ import android.widget.AdapterView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import androidx.navigation.findNavController
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.setupActionBarWithNavController
@@ -41,6 +42,7 @@ import com.neuralnetwork.imageinference.model.ModelAssets
 import com.neuralnetwork.imageinference.model.ModelConnector
 import java.io.File
 import java.io.FileOutputStream
+import java.io.OutputStreamWriter
 
 
 class MainActivity : AppCompatActivity(), ModelConnector {
@@ -190,6 +192,8 @@ class MainActivity : AppCompatActivity(), ModelConnector {
          */
         fun getAsset(context: Context, assetName: String): String {
             val file = File(context.filesDir, assetName)
+            file.parentFile?.mkdirs()
+
             if (file.exists() && file.length() > 0) {
                 return file.absolutePath
             }
@@ -204,6 +208,48 @@ class MainActivity : AppCompatActivity(), ModelConnector {
                     outStream.flush()
                 }
                 return file.absolutePath
+            }
+        }
+
+        /**
+         * Save a file to the cache
+         *
+         * @param context The context for the application file directory.
+         * @param content The content of the file to write.
+         * @return The created file.
+         */
+        fun cacheSave(context: Context, filename: String, content: String): File? {
+            val directory = context.cacheDir
+            val file = File(directory, filename)
+            file.parentFile?.mkdirs()
+
+            val outputStream = context.contentResolver.openOutputStream(file.toUri()) ?: return null
+            val outputWriter = OutputStreamWriter(outputStream)
+            outputWriter.write(content)
+            outputWriter.close()
+            outputStream.close()
+            return file
+        }
+
+        /**
+         * Remove a file from the cache.
+         * Also checks if the given uri is part of the cache.
+         *
+         * @param context The context for the application file directory.
+         * @param file The file to remove.
+         */
+        fun cacheRemove(context: Context, file: File) {
+            try {
+                val directory = context.cacheDir
+
+                if (directory != null && directory.startsWith(file) && file.isFile) {
+                    file.delete()
+                }
+            } catch (e: Exception) {
+                when (e) {
+                    is IllegalArgumentException, is SecurityException -> return
+                    else -> throw e
+                }
             }
         }
     }

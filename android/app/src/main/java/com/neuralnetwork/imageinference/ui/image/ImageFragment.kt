@@ -167,19 +167,13 @@ class ImageFragment : Fragment(), DetailsConnector {
         vm: ImageViewModel,
         imageSelectionPopup: ListPopupWindow
     ) {
-        val imageSelection = binding.imageSelection
-        val imageSelectionBefore = binding.imageSelectionBefore
-        val imageSelectionNext = binding.imageSelectionNext
-
         vm.images.observe(viewLifecycleOwner) { images ->
             val imageAdapter = ImageArrayAdapter(
                 _context,
                 images
             )
             imageSelectionPopup.setAdapter(imageAdapter)
-            imageSelectionBefore.isEnabled = images.size > 1
-            imageSelectionNext.isEnabled = images.size > 1
-            imageSelection.isEnabled = images.isNotEmpty()
+            checkSelection(vm)
         }
     }
 
@@ -192,24 +186,32 @@ class ImageFragment : Fragment(), DetailsConnector {
         vm: ImageViewModel
     ) {
         val progressBar = binding.imageProgressbar
-        val selectionButtons = arrayOf(
-            binding.imageSelectionNext,
-            binding.imageSelectionBefore,
-            binding.imageSelectionMenu,
-            binding.imageSelection
-        )
 
         vm.modelState.observe(viewLifecycleOwner) {
             setButtonDrawable(it)
-            selectionButtons.forEach { button ->
-                button.isEnabled = (it != ModelState.RUNNING)
-            }
+            checkSelection(vm)
 
             progressBar.visibility = when (it) {
                 ModelState.RUNNING -> View.VISIBLE
                 else -> View.GONE
             }
         }
+    }
+
+    private fun checkSelection(vm: ImageViewModel){
+        val selectionNext = binding.imageSelectionNext
+        val selectionBefore = binding.imageSelectionBefore
+        val selectionMenu = binding.imageSelectionMenu
+        val selection = binding.imageSelection
+
+        val isNotRunning = vm.modelState.value != ModelState.RUNNING
+        val isImagesNotEmpty = vm.images.value?.isNotEmpty() ?: false
+        val isImagesLarger1 = (vm.images.value?.size ?: 0) > 1
+
+        selectionNext.isEnabled = isNotRunning && isImagesLarger1
+        selectionBefore.isEnabled = isNotRunning && isImagesLarger1
+        selection.isEnabled = isNotRunning && isImagesNotEmpty
+        selectionMenu.isEnabled = isNotRunning
     }
 
     private fun setButtonDrawable(it: ModelState) {
@@ -342,7 +344,8 @@ class ImageFragment : Fragment(), DetailsConnector {
                                 getString(
                                     R.string.are_you_sure_you_want_to_remove_the_collection,
                                     currentCollectionName
-                                ))
+                                )
+                            )
                             .setPositiveButton(getString(R.string.yes)) { dialog, _ ->
                                 val uris = vm.removeCollection()
                                 if (uris != null && Build.VERSION.SDK_INT > Build.VERSION_CODES.Q) {

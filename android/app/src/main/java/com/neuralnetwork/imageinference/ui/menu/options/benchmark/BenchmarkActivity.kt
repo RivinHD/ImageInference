@@ -9,12 +9,14 @@ import android.widget.AdapterView
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.ActivityResult
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.FileProvider
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.MaterialAutoCompleteTextView
+import com.neuralnetwork.imageinference.MainActivity
 import com.neuralnetwork.imageinference.R
 import com.neuralnetwork.imageinference.databinding.ActivityBenchmarkBinding
 import com.neuralnetwork.imageinference.datastore.imageCollectionsDataStore
@@ -394,7 +396,7 @@ class BenchmarkActivity : AppCompatActivity() {
         binding.collectionSelector.isEnabled = false
         Log.d("Benchmark", "Running the model.")
         _benchmarkJob = lifecycleScope.launch {
-            withContext(Dispatchers.Default){
+            withContext(Dispatchers.Default) {
                 val warmupImage = fixedCollection.imageList.first()
                 val warmupDetails = ModelDetails(ModelInputType.IMAGE)
                 val warmupBitmap = warmupImage.getBitmap(contentResolver)
@@ -402,7 +404,7 @@ class BenchmarkActivity : AppCompatActivity() {
             }
 
             for (image in fixedCollection.imageList) {
-                val outputDetails = withContext(Dispatchers.Default){
+                val outputDetails = withContext(Dispatchers.Default) {
                     val details = ModelDetails(ModelInputType.IMAGE)
                     val bitmap = image.getBitmap(contentResolver)
                     fixedModel.run(bitmap, details)
@@ -463,15 +465,32 @@ class BenchmarkActivity : AppCompatActivity() {
      * @param content The content of the file to share.
      */
     private fun shareFile(filename: String, content: String) {
-        val sendIntent = Intent().apply {
-            action = Intent.ACTION_SEND
-            type = MIMETYPE_JSON
-            putExtra(Intent.EXTRA_TITLE, filename)
-            putExtra(Intent.EXTRA_TEXT, content)
+        val file = MainActivity.cacheSave(this, FILE_PROVIDER_NAME, content)
+
+        val sendIntent = if (file == null) {
+            Intent().apply {
+                action = Intent.ACTION_SEND
+                type = "text/plain"
+                putExtra(Intent.EXTRA_TITLE, filename)
+                putExtra(Intent.EXTRA_TEXT, content)
+            }
+        } else {
+            val shareUri = FileProvider.getUriForFile(this, FILE_PROVIDER_AUTHORITY, file, filename)
+            Intent().apply {
+                action = Intent.ACTION_SEND
+                type = MIMETYPE_JSON
+                putExtra(Intent.EXTRA_TITLE, filename)
+                putExtra(Intent.EXTRA_STREAM, shareUri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
         }
 
         val shareIntent = Intent.createChooser(sendIntent, getString(R.string.save_benchmark))
         startActivity(shareIntent)
+
+        if (file != null) {
+            MainActivity.cacheRemove(this, file)
+        }
     }
 
     /**
@@ -506,5 +525,7 @@ class BenchmarkActivity : AppCompatActivity() {
 
     companion object {
         private const val MIMETYPE_JSON = "application/json"
+        private const val FILE_PROVIDER_AUTHORITY = "com.neuralnetwork.imageinference.fileprovider"
+        private const val FILE_PROVIDER_NAME = "shared_benchmark.json"
     }
 }
