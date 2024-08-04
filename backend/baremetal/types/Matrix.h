@@ -38,14 +38,7 @@ namespace ImageInference
         class Matrix
         {
         private:
-            // https://github.com/Mozilla-Ocho/llamafile/blob/05493179b70429ff32fb55942ee7bdb76367cfba/llamafile/tinyblas_cpu.h#L54
-            // Following the alignment of llamafile i.e Matrix alignment is 4096 bytes.
-            PAGE_CACHE_ALIGN(sizeof(T), TColumns *TRows)
-            T data[TColumns * TRows] { 0 };
-
-#ifdef IMAGEINFERENCE_TESTING
-            T overflow_test[TColumns * TRows]{0};
-#endif // IMAGEINFERENCE_TESTING
+            T* data;
 
         public:
             static constexpr const size_t strideColumn = TRows;
@@ -63,17 +56,20 @@ namespace ImageInference
         template <typename T, size_t TColumns, size_t TRows>
         inline Matrix<T, TColumns, TRows>::Matrix()
         {
+            data = new (std::align_val_t(PAGE_CACHE_ALIGN(T, size))) T[size]{0};
         }
 
         template <typename T, size_t TColumns, size_t TRows>
         inline Matrix<T, TColumns, TRows>::Matrix(const T *input)
         {
+            data = new (std::align_val_t(PAGE_CACHE_ALIGN(T, size))) T[size]{0};
             std::copy(input, input + TColumns * TRows, data);
         }
 
         template <typename T, size_t TColumns, size_t TRows>
         inline Matrix<T, TColumns, TRows>::~Matrix()
         {
+            delete[] data;
         }
 
         template <typename T, size_t TColumns, size_t TRows>
@@ -90,7 +86,7 @@ namespace ImageInference
 #ifdef IMAGEINFERENCE_TESTING
             if (offset >= size)
             {
-                std::cerr << "Matrix (" << this << "):Offset is out of bounds: " << offset << " >= " << size << std::endl
+                std::cerr << "Matrix (" << this << "): Offset is out of bounds: " << offset << " >= " << size << std::endl
                           << "Indices:= Column" << iColumn << " Row:= " << iRow << std::endl
                           << "Stride:= Column" << strideColumn << " Row:= " << strideRow << std::endl
                           << std::endl;

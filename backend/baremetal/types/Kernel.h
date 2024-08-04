@@ -33,9 +33,7 @@ namespace ImageInference
         class Kernel
         {
         private:
-            // https://github.com/Mozilla-Ocho/llamafile/blob/05493179b70429ff32fb55942ee7bdb76367cfba/llamafile/tinyblas_cpu.h#L54
-            // Following the alignment of llamafile i.e Matrix alignment is 4096 bytes.
-            PAGE_CACHE_ALIGN(sizeof(T), TCount * TChannels * THeight * TWidth) T data[TCount * TChannels * THeight * TWidth]{0};
+             T* data;
 
         public:
             static constexpr const size_t strideCountBlock = TChannels * THeight * TWidth * TBlockSizeCount;
@@ -83,6 +81,8 @@ namespace ImageInference
                 throw std::runtime_error("Image: The number of channels should be a multiple of the channel block size!");
             }
 
+            data = new (std::align_val_t(PAGE_CACHE_ALIGN(T, size))) T[size]{0};
+
             constexpr size_t countBlocks = TCount / TBlockSizeCount;
             constexpr size_t channelBlocks = TChannels / TBlockSizeChannel;
 
@@ -127,6 +127,7 @@ namespace ImageInference
         template <typename T, size_t TBlockSizeCount, size_t TBlockSizeChannel, size_t TCount, size_t TChannels, size_t THeight, size_t TWidth>
         inline Kernel<T, TBlockSizeCount, TBlockSizeChannel, TCount, TChannels, THeight, TWidth>::~Kernel()
         {
+            delete[] data;
         }
 
         /// Get the pointer of the data.

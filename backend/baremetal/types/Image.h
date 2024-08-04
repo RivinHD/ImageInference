@@ -26,6 +26,7 @@
 #include <stddef.h>
 #include <cmath>
 #include "Array.h"
+#include <new>
 
 namespace ImageInference
 {
@@ -35,16 +36,11 @@ namespace ImageInference
         class Image
         {
         private:
-            // https://github.com/Mozilla-Ocho/llamafile/blob/05493179b70429ff32fb55942ee7bdb76367cfba/llamafile/tinyblas_cpu.h#L54
-            // Following the alignment of llamafile i.e Matrix alignment is 4096 bytes.
-            PAGE_CACHE_ALIGN(sizeof(T), TChannels *(THeight + 2 * TPadding) * (TWidth + 2 * TPadding))
-            T data[TChannels * (THeight + 2 * TPadding) * (TWidth + 2 * TPadding)]{0};
+            T* data;
 
-            PAGE_CACHE_ALIGN(sizeof(T), TChannels)
-            T mean[TChannels]{0};
+            T* mean;
 
-            PAGE_CACHE_ALIGN(sizeof(T), TChannels)
-            T batch_variance[TChannels]{0};
+            T* batch_variance;
 
             bool isMeanVarianceCalculated = false;
 
@@ -133,6 +129,10 @@ namespace ImageInference
                           << " BlockSize: " << TBlockSize << std::endl;
                 throw std::runtime_error("Image: The number of channels should be a multiple of the block size!");
             }
+
+            data = new (std::align_val_t(PAGE_CACHE_ALIGN(T, size))) T[size]{0};
+            mean = new (std::align_val_t(PAGE_CACHE_ALIGN(T, TChannels))) T[TChannels]{0};
+            batch_variance = new (std::align_val_t(PAGE_CACHE_ALIGN(T, TChannels))) T[TChannels]{0};
         }
 
         /// Converts the input data in format Channel x Height x Width to the blocked format ChannelBlocks x Height x Width x ChannelElements.
@@ -155,6 +155,10 @@ namespace ImageInference
                           << std::endl;
                 throw std::runtime_error("Image: The number of channels should be a multiple of the block size!");
             }
+
+            data = new (std::align_val_t(PAGE_CACHE_ALIGN(T, size))) T[size]{0};
+            mean = new (std::align_val_t(PAGE_CACHE_ALIGN(T, TChannels))) T[TChannels]{0};
+            batch_variance = new (std::align_val_t(PAGE_CACHE_ALIGN(T, TChannels))) T[TChannels]{0};
 
             constexpr size_t channelBlocks = TChannels / TBlockSize;
 
@@ -360,6 +364,9 @@ namespace ImageInference
         template <typename T, size_t TPadding, size_t TBlockSize, size_t TChannels, size_t THeight, size_t TWidth>
         inline Image<T, TPadding, TBlockSize, TChannels, THeight, TWidth>::~Image()
         {
+            delete[] data;
+            delete[] mean;
+            delete[] batch_variance;
         }
     } // namespace types
 } // namespace ImageInference

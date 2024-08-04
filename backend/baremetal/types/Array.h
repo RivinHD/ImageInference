@@ -21,6 +21,7 @@
 #include "Macros.h"
 #include <stddef.h>
 #include <algorithm>
+#include <new>
 
 namespace ImageInference
 {
@@ -30,9 +31,7 @@ namespace ImageInference
         class Array
         {
         private:
-            // https://github.com/Mozilla-Ocho/llamafile/blob/05493179b70429ff32fb55942ee7bdb76367cfba/llamafile/tinyblas_cpu.h#L53
-            // Following the alingment of llamafile i.e Row alignment is 64 bytes.
-            CACHE_ALIGN(sizeof(T), TSize) T data[TSize]{0};
+            T* data;
 
         public:
             static constexpr const size_t size = TSize;
@@ -47,17 +46,20 @@ namespace ImageInference
         template <typename T, size_t TSize>
         inline Array<T, TSize>::Array()
         {
+            data = new (std::align_val_t(PAGE_CACHE_ALIGN(T, TSize))) T[TSize];
         }
 
         template <typename T, size_t TSize>
         inline Array<T, TSize>::Array(const T *input)
         {
+            data = new (std::align_val_t(PAGE_CACHE_ALIGN(T, TSize))) T[TSize];
             std::copy(input, input + TSize, data);
         }
 
         template <typename T, size_t TSize>
         inline Array<T, TSize>::~Array()
         {
+            delete[] data;
         }
 
         template <typename T, size_t TSize>

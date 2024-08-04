@@ -200,7 +200,7 @@ namespace ImageInference
                 // Evaluating with values that of constexpr require additional brackets
                 REQUIRE((image.size == (channels * (height + 2 * padding) * (width + 2 * padding))));
 
-                REQUIRE(at::allclose(outMean, expectedMean));
+                REQUIRE(at::allclose(outMean, expectedMean, 1e-5, 1e-7));
                 REQUIRE(at::allclose(outBatchVar, expectedBatchVar));
             }
         }

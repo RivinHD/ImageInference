@@ -897,7 +897,7 @@ namespace custom
 
         Tensor &resnet50_out_impl(const Tensor &in, TensorList weights, Tensor &out)
         {
-            // check_preconditions(in, weights, out);
+            check_preconditions(in, weights, out);
 
             ImageInference::types::ScalarType type = ImageInference::types::ScalarType::Undefined;
             switch (weights[0].scalar_type())

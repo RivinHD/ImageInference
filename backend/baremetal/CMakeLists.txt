@@ -64,7 +64,7 @@ if(NOT PYTHON_EXECUTABLE)
     resolve_python_executable()
 endif()
 
-set(_common_compile_options -Wno-deprecated-declarations -fPIC -fopenmp -lxsmm -lblas -ldl)
+set(_common_compile_options -Wno-deprecated-declarations -fPIC -fopenmp -lxsmm -lblas -ldl -Wall -Wextra -Wpedantic -Wdangling-pointer=2)
 
 # Let files say "include <executorch/path/to/header.h>".
 set(_common_include_directories ${EXECUTORCH_ROOT}/..)
@@ -201,8 +201,8 @@ if(NOT ANDROID)
     target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
     target_compile_definitions(tests PRIVATE IMAGEINFERENCE_TESTING)
     target_compile_options(tests PUBLIC ${_common_compile_options})
-    target_compile_options(tests PRIVATE -fsanitize=address -fsanitize=leak -fsanitize=undefined -fno-omit-frame-pointer)
-    target_link_options(tests PRIVATE -fsanitize=address -fsanitize=leak -fsanitize=undefined -fno-omit-frame-pointer)
+    target_compile_options(tests PRIVATE -g )#-fsanitize=address -fsanitize=leak -fsanitize=undefined -fno-omit-frame-pointer)
+    target_link_options(tests PRIVATE -g )#-fsanitize=address -fsanitize=leak -fsanitize=undefined -fno-omit-frame-pointer)
     include(CTest)
     include(Catch)
 

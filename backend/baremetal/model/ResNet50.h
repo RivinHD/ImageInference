@@ -30,7 +30,7 @@
 #include <omp.h>
 #include <iostream>
 #ifndef FASTOR_USE_LIBXSMM
-// #define FASTOR_USE_LIBXSMM
+#define FASTOR_USE_LIBXSMM
 #endif // !FASTOR_USE_LIBXSMM
 #include <Fastor/Fastor.h>
 #include <libxsmm.h>
@@ -49,83 +49,75 @@ namespace ImageInference
 {
     namespace model
     {
-
-        using types::Array;
-        using types::BatchNorm;
-        using types::Image;
-        using types::Kernel;
-        using types::Matrix;
-        using types::ScalarType;
-
         /// @brief The resnet50 v1.5 model from https://catalog.ngc.nvidia.com/orgs/nvidia/resources/resnet_50_v1_5_for_pytorch
         class ResNet50 : public IModel<float>
         {
         private:
-            ScalarType type;
-            std::vector<void *> weights;
+            std::vector<void *> modelWeights;
+            ImageInference::types::ScalarType type;
 
             // All the blocks start with a 1x1 kernel. Therefore no padding is required.
 
             template <typename T, size_t BlockSize>
-            Image<T, 0, BlockSize, 256, 61, 61> block0(Image<T, 0, BlockSize, 64, 61, 61> &input);
+            ImageInference::types::Image<T, 0, BlockSize, 256, 61, 61> block0(ImageInference::types::Image<T, 0, BlockSize, 64, 61, 61> &input);
 
             template <typename T, size_t BlockSize>
-            Image<T, 0, BlockSize, 512, 30, 30> block1(Image<T, 0, BlockSize, 256, 61, 61> &input);
+            ImageInference::types::Image<T, 0, BlockSize, 512, 30, 30> block1(ImageInference::types::Image<T, 0, BlockSize, 256, 61, 61> &input);
 
             template <typename T, size_t BlockSize>
-            Image<T, 0, BlockSize, 1024, 15, 15> block2(Image<T, 0, BlockSize, 512, 30, 30> &input);
+            ImageInference::types::Image<T, 0, BlockSize, 1024, 15, 15> block2(ImageInference::types::Image<T, 0, BlockSize, 512, 30, 30> &input);
 
             template <typename T, size_t BlockSize>
-            Image<T, 0, BlockSize, 2048, 7, 7> block3(Image<T, 0, BlockSize, 1024, 15, 15> &input);
+            ImageInference::types::Image<T, 0, BlockSize, 2048, 7, 7> block3(ImageInference::types::Image<T, 0, BlockSize, 1024, 15, 15> &input);
 
             template <size_t Stride, size_t OutPadding, size_t InPadding,
                       typename T, size_t BlockSizeCount, size_t BlockSizeChannel,
                       size_t ImageChannels, size_t ImageHeight, size_t ImageWidth,
                       size_t KernelCount, size_t KernelHeight, size_t KernelWidth>
-            static Image<T, OutPadding, BlockSizeCount, KernelCount, ImageHeight / Stride, ImageWidth / Stride> convBlock(
-                Image<T, InPadding, BlockSizeChannel, ImageChannels, ImageHeight, ImageWidth> &image,
-                Kernel<T, BlockSizeCount, BlockSizeChannel, KernelCount, ImageChannels, KernelHeight, KernelWidth> &kernel,
-                BatchNorm<T, KernelCount> &batchNorm);
+            static ImageInference::types::Image<T, OutPadding, BlockSizeCount, KernelCount, ImageHeight / Stride, ImageWidth / Stride> convBlock(
+                ImageInference::types::Image<T, InPadding, BlockSizeChannel, ImageChannels, ImageHeight, ImageWidth> &image,
+                ImageInference::types::Kernel<T, BlockSizeCount, BlockSizeChannel, KernelCount, ImageChannels, KernelHeight, KernelWidth> &kernel,
+                ImageInference::types::BatchNorm<T, KernelCount> &batchNorm);
 
             template <size_t OutPadding, size_t InPadding, size_t ShortcutPadding,
                       typename T, size_t BlockSizeCount, size_t BlockSizeChannel,
                       size_t ImageChannels, size_t ImageHeight, size_t ImageWidth,
                       size_t KernelCount, size_t KernelHeight, size_t KernelWidth>
-            static Image<T, OutPadding, BlockSizeCount, KernelCount, ImageHeight, ImageWidth> convBlockAddIdentity(
-                Image<T, InPadding, BlockSizeChannel, ImageChannels, ImageHeight, ImageWidth> &image,
-                Kernel<T, BlockSizeCount, BlockSizeChannel, KernelCount, ImageChannels, KernelHeight, KernelWidth> &kernel,
-                BatchNorm<T, KernelCount> &batchNorm,
-                Image<T, ShortcutPadding, BlockSizeCount, KernelCount, ImageHeight, ImageWidth> &shortcut);
+            static ImageInference::types::Image<T, OutPadding, BlockSizeCount, KernelCount, ImageHeight, ImageWidth> convBlockAddIdentity(
+                ImageInference::types::Image<T, InPadding, BlockSizeChannel, ImageChannels, ImageHeight, ImageWidth> &image,
+                ImageInference::types::Kernel<T, BlockSizeCount, BlockSizeChannel, KernelCount, ImageChannels, KernelHeight, KernelWidth> &kernel,
+                ImageInference::types::BatchNorm<T, KernelCount> &batchNorm,
+                ImageInference::types::Image<T, ShortcutPadding, BlockSizeCount, KernelCount, ImageHeight, ImageWidth> &shortcut);
 
             template <size_t Stride, size_t ShortcutDimExpand,
                       size_t OutPadding, size_t InPadding, size_t ShortcutPadding,
                       typename T, size_t BlockSizeCount, size_t BlockSizeChannel,
                       size_t ImageChannels, size_t ImageHeight, size_t ImageWidth,
                       size_t KernelCount, size_t KernelHeight, size_t KernelWidth>
-            static Image<T, OutPadding, BlockSizeCount, KernelCount, ImageHeight / Stride, ImageWidth / Stride> convBlockAddProjection(
-                Image<T, InPadding, BlockSizeChannel, ImageChannels, ImageHeight / Stride, ImageWidth / Stride> &image,
-                Kernel<T, BlockSizeCount, BlockSizeChannel, KernelCount, ImageChannels, KernelHeight, KernelWidth> &kernel,
-                BatchNorm<T, KernelCount> &batchNorm,
-                Image<T, ShortcutPadding, BlockSizeCount, KernelCount / ShortcutDimExpand, ImageHeight, ImageWidth> &shortcut,
-                Kernel<T, BlockSizeCount, BlockSizeCount, KernelCount, KernelCount / ShortcutDimExpand, 1, 1> &projectionKernel,
-                BatchNorm<T, KernelCount> &projectionBatchNorm);
+            static ImageInference::types::Image<T, OutPadding, BlockSizeCount, KernelCount, ImageHeight / Stride, ImageWidth / Stride> convBlockAddProjection(
+                ImageInference::types::Image<T, InPadding, BlockSizeChannel, ImageChannels, ImageHeight / Stride, ImageWidth / Stride> &image,
+                ImageInference::types::Kernel<T, BlockSizeCount, BlockSizeChannel, KernelCount, ImageChannels, KernelHeight, KernelWidth> &kernel,
+                ImageInference::types::BatchNorm<T, KernelCount> &batchNorm,
+                ImageInference::types::Image<T, ShortcutPadding, BlockSizeCount, KernelCount / ShortcutDimExpand, ImageHeight, ImageWidth> &shortcut,
+                ImageInference::types::Kernel<T, BlockSizeCount, BlockSizeCount, KernelCount, KernelCount / ShortcutDimExpand, 1, 1> &projectionKernel,
+                ImageInference::types::BatchNorm<T, KernelCount> &projectionBatchNorm);
 
             template <size_t Stride, size_t OutPadding, size_t InPadding,
                       typename T, size_t BlockSize,
                       size_t ImageChannels, size_t ImageHeight, size_t ImageWidth>
-            static Image<T, OutPadding, BlockSize, ImageChannels, ImageHeight / Stride, ImageWidth / Stride> maxPool(
-                Image<T, InPadding, BlockSize, ImageChannels, ImageHeight, ImageWidth> &image);
+            static ImageInference::types::Image<T, OutPadding, BlockSize, ImageChannels, ImageHeight / Stride, ImageWidth / Stride> maxPool(
+                ImageInference::types::Image<T, InPadding, BlockSize, ImageChannels, ImageHeight, ImageWidth> &image);
 
             template <size_t OutPadding, size_t InPadding, typename T, size_t BlockSize,
                       size_t ImageChannels, size_t ImageHeight, size_t ImageWidth>
-            static Image<T, OutPadding, BlockSize, ImageChannels, 1, 1> globalAveragePool(
-                Image<T, InPadding, BlockSize, ImageChannels, ImageHeight, ImageWidth> &image);
+            static ImageInference::types::Image<T, OutPadding, BlockSize, ImageChannels, 1, 1> globalAveragePool(
+                ImageInference::types::Image<T, InPadding, BlockSize, ImageChannels, ImageHeight, ImageWidth> &image);
 
-            template <typename T>
-            static Array<T, 1000> fullyConnectedLayer(
-                Array<T, 2048> &input,
-                Matrix<T, 1000, 2048> &weights,
-                Array<T, 1000> &bias);
+            template <typename T, size_t Columns, size_t Rows>
+            static void fullyConnectedLayer(
+                ImageInference::types::Array<T, Rows> &input,
+                ImageInference::types::Matrix<T, Columns, Rows> &weight,
+                ImageInference::types::Array<T, Columns> &biasAccumulator);
 
             template <typename T>
             T *getWeight(size_t index);
@@ -304,7 +296,7 @@ namespace ImageInference
             ///     fc.weight: [1000, 2048]
             ///     fc.bias: [1000]
             /// @endcode
-            ResNet50(const std::vector<void *> &weights, ScalarType type);
+            ResNet50(const std::vector<void *> &modelWeights, ImageInference::types::ScalarType type);
             ~ResNet50();
 
             enum weightIndex
@@ -473,7 +465,7 @@ namespace ImageInference
             };
 
             void inference(const float *input, float *output) override;
-            ScalarType getType();
+            ImageInference::types::ScalarType getType();
 
 #ifdef IMAGEINFERENCE_TESTING
             friend class ImageInference::model::test::ResNet50Test;
@@ -481,40 +473,40 @@ namespace ImageInference
         };
 
         template <typename T, size_t BlockSize>
-        inline Image<T, 0, BlockSize, 256, 61, 61> ResNet50::block0(Image<T, 0, BlockSize, 64, 61, 61> &input)
+        inline ImageInference::types::Image<T, 0, BlockSize, 256, 61, 61> ResNet50::block0(ImageInference::types::Image<T, 0, BlockSize, 64, 61, 61> &input)
         {
-            auto kernel_0_0 = Kernel<T, BlockSize, BlockSize, 64, 64, 1, 1>(getWeight<T>(weightIndex::layer1_0_conv1_weight));
-            auto batchNorm_0_0 = BatchNorm<T, 64>(getWeight<T>(weightIndex::layer1_0_bn1_weight), getWeight<T>(weightIndex::layer1_0_bn1_bias));
+            auto kernel_0_0 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 64, 64, 1, 1>(getWeight<T>(weightIndex::layer1_0_conv1_weight));
+            auto batchNorm_0_0 = ImageInference::types::BatchNorm<T, 64>(getWeight<T>(weightIndex::layer1_0_bn1_weight), getWeight<T>(weightIndex::layer1_0_bn1_bias));
             auto image_0_0 = convBlock<1, 1>(input, kernel_0_0, batchNorm_0_0); // OutPadding of 1 is because a 3x3 kernel is coming next
-            auto kernel_0_1 = Kernel<T, BlockSize, BlockSize, 64, 64, 3, 3>(getWeight<T>(weightIndex::layer1_0_conv2_weight));
-            auto batchNorm_0_1 = BatchNorm<T, 64>(getWeight<T>(weightIndex::layer1_0_bn2_weight), getWeight<T>(weightIndex::layer1_0_bn2_bias));
+            auto kernel_0_1 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 64, 64, 3, 3>(getWeight<T>(weightIndex::layer1_0_conv2_weight));
+            auto batchNorm_0_1 = ImageInference::types::BatchNorm<T, 64>(getWeight<T>(weightIndex::layer1_0_bn2_weight), getWeight<T>(weightIndex::layer1_0_bn2_bias));
             auto image_0_1 = convBlock<1, 0>(image_0_0, kernel_0_1, batchNorm_0_1); // OutPadding of 0 is because a 1x1 kernel is coming next
-            auto kernel_0_2 = Kernel<T, BlockSize, BlockSize, 256, 64, 1, 1>(getWeight<T>(weightIndex::layer1_0_conv3_weight));
-            auto batchNorm_0_2 = BatchNorm<T, 256>(getWeight<T>(weightIndex::layer1_0_bn3_weight), getWeight<T>(weightIndex::layer1_0_bn3_bias));
-            auto projectionKernel = Kernel<T, BlockSize, BlockSize, 256, 64, 1, 1>(getWeight<T>(weightIndex::layer1_0_downsample_0_weight));
-            auto projectionBatchNorm = BatchNorm<T, 256>(getWeight<T>(weightIndex::layer1_0_downsample_1_weight), getWeight<T>(weightIndex::layer1_0_downsample_1_bias));
+            auto kernel_0_2 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 256, 64, 1, 1>(getWeight<T>(weightIndex::layer1_0_conv3_weight));
+            auto batchNorm_0_2 = ImageInference::types::BatchNorm<T, 256>(getWeight<T>(weightIndex::layer1_0_bn3_weight), getWeight<T>(weightIndex::layer1_0_bn3_bias));
+            auto projectionKernel = ImageInference::types::Kernel<T, BlockSize, BlockSize, 256, 64, 1, 1>(getWeight<T>(weightIndex::layer1_0_downsample_0_weight));
+            auto projectionBatchNorm = ImageInference::types::BatchNorm<T, 256>(getWeight<T>(weightIndex::layer1_0_downsample_1_weight), getWeight<T>(weightIndex::layer1_0_downsample_1_bias));
             // OutPadding of 0 is because a 1x1 kernel is coming next
             auto image_0_2 = convBlockAddProjection<1, 4, 0>(image_0_1, kernel_0_2, batchNorm_0_2, input, projectionKernel, projectionBatchNorm);
 
-            auto kernel_1_0 = Kernel<T, BlockSize, BlockSize, 64, 256, 1, 1>(getWeight<T>(weightIndex::layer1_1_conv1_weight));
-            auto batchNorm_1_0 = BatchNorm<T, 64>(getWeight<T>(weightIndex::layer1_1_bn1_weight), getWeight<T>(weightIndex::layer1_1_bn1_bias));
+            auto kernel_1_0 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 64, 256, 1, 1>(getWeight<T>(weightIndex::layer1_1_conv1_weight));
+            auto batchNorm_1_0 = ImageInference::types::BatchNorm<T, 64>(getWeight<T>(weightIndex::layer1_1_bn1_weight), getWeight<T>(weightIndex::layer1_1_bn1_bias));
             auto image_1_0 = convBlock<1, 1>(image_0_2, kernel_1_0, batchNorm_1_0); // OutPadding of 1 is because a 3x3 kernel is coming next
-            auto kernel_1_1 = Kernel<T, BlockSize, BlockSize, 64, 64, 3, 3>(getWeight<T>(weightIndex::layer1_1_conv2_weight));
-            auto batchNorm_1_1 = BatchNorm<T, 64>(getWeight<T>(weightIndex::layer1_1_bn2_weight), getWeight<T>(weightIndex::layer1_1_bn2_bias));
+            auto kernel_1_1 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 64, 64, 3, 3>(getWeight<T>(weightIndex::layer1_1_conv2_weight));
+            auto batchNorm_1_1 = ImageInference::types::BatchNorm<T, 64>(getWeight<T>(weightIndex::layer1_1_bn2_weight), getWeight<T>(weightIndex::layer1_1_bn2_bias));
             auto image_1_1 = convBlock<1, 0>(image_1_0, kernel_1_1, batchNorm_1_1); // OutPadding of 0 is because a 1x1 kernel is coming next
-            auto kernel_1_2 = Kernel<T, BlockSize, BlockSize, 256, 64, 1, 1>(getWeight<T>(weightIndex::layer1_1_conv3_weight));
-            auto batchNorm_1_2 = BatchNorm<T, 256>(getWeight<T>(weightIndex::layer1_1_bn3_weight), getWeight<T>(weightIndex::layer1_1_bn3_bias));
+            auto kernel_1_2 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 256, 64, 1, 1>(getWeight<T>(weightIndex::layer1_1_conv3_weight));
+            auto batchNorm_1_2 = ImageInference::types::BatchNorm<T, 256>(getWeight<T>(weightIndex::layer1_1_bn3_weight), getWeight<T>(weightIndex::layer1_1_bn3_bias));
             // OutPadding of 0 is because a 1x1 kernel is coming next
             auto image_1_2 = convBlockAddIdentity<0>(image_1_1, kernel_1_2, batchNorm_1_2, image_0_2);
 
-            auto kernel_2_0 = Kernel<T, BlockSize, BlockSize, 64, 256, 1, 1>(getWeight<T>(weightIndex::layer1_2_conv1_weight));
-            auto batchNorm_2_0 = BatchNorm<T, 64>(getWeight<T>(weightIndex::layer1_2_bn1_weight), getWeight<T>(weightIndex::layer1_2_bn1_bias));
+            auto kernel_2_0 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 64, 256, 1, 1>(getWeight<T>(weightIndex::layer1_2_conv1_weight));
+            auto batchNorm_2_0 = ImageInference::types::BatchNorm<T, 64>(getWeight<T>(weightIndex::layer1_2_bn1_weight), getWeight<T>(weightIndex::layer1_2_bn1_bias));
             auto image_2_0 = convBlock<1, 1>(image_1_2, kernel_2_0, batchNorm_2_0);
-            auto kernel_2_1 = Kernel<T, BlockSize, BlockSize, 64, 64, 3, 3>(getWeight<T>(weightIndex::layer1_2_conv2_weight));
-            auto batchNorm_2_1 = BatchNorm<T, 64>(getWeight<T>(weightIndex::layer1_2_bn2_weight), getWeight<T>(weightIndex::layer1_2_bn2_bias));
+            auto kernel_2_1 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 64, 64, 3, 3>(getWeight<T>(weightIndex::layer1_2_conv2_weight));
+            auto batchNorm_2_1 = ImageInference::types::BatchNorm<T, 64>(getWeight<T>(weightIndex::layer1_2_bn2_weight), getWeight<T>(weightIndex::layer1_2_bn2_bias));
             auto image_2_1 = convBlock<1, 0>(image_2_0, kernel_2_1, batchNorm_2_1);
-            auto kernel_2_2 = Kernel<T, BlockSize, BlockSize, 256, 64, 1, 1>(getWeight<T>(weightIndex::layer1_2_conv3_weight));
-            auto batchNorm_2_2 = BatchNorm<T, 256>(getWeight<T>(weightIndex::layer1_2_bn3_weight), getWeight<T>(weightIndex::layer1_2_bn3_bias));
+            auto kernel_2_2 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 256, 64, 1, 1>(getWeight<T>(weightIndex::layer1_2_conv3_weight));
+            auto batchNorm_2_2 = ImageInference::types::BatchNorm<T, 256>(getWeight<T>(weightIndex::layer1_2_bn3_weight), getWeight<T>(weightIndex::layer1_2_bn3_bias));
             // OutPadding of 0 is the next block starts with a 1x1 kernel
             auto image_2_2 = convBlockAddIdentity<0>(image_2_1, kernel_2_2, batchNorm_2_2, image_1_2);
 
@@ -522,154 +514,154 @@ namespace ImageInference
         }
 
         template <typename T, size_t BlockSize>
-        Image<T, 0, BlockSize, 512, 30, 30> ResNet50::block1(Image<T, 0, BlockSize, 256, 61, 61> &input)
+        ImageInference::types::Image<T, 0, BlockSize, 512, 30, 30> ResNet50::block1(ImageInference::types::Image<T, 0, BlockSize, 256, 61, 61> &input)
         {
-            auto kernel_0_0 = Kernel<T, BlockSize, BlockSize, 128, 256, 1, 1>(getWeight<T>(weightIndex::layer2_0_conv1_weight));
-            auto batchNorm_0_0 = BatchNorm<T, 128>(getWeight<T>(weightIndex::layer2_0_bn1_weight), getWeight<T>(weightIndex::layer2_0_bn1_bias));
+            auto kernel_0_0 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 128, 256, 1, 1>(getWeight<T>(weightIndex::layer2_0_conv1_weight));
+            auto batchNorm_0_0 = ImageInference::types::BatchNorm<T, 128>(getWeight<T>(weightIndex::layer2_0_bn1_weight), getWeight<T>(weightIndex::layer2_0_bn1_bias));
             auto image_0_0 = convBlock<1, 1>(input, kernel_0_0, batchNorm_0_0);
-            auto kernel_0_1 = Kernel<T, BlockSize, BlockSize, 128, 128, 3, 3>(getWeight<T>(weightIndex::layer2_0_conv2_weight));
-            auto batchNorm_0_1 = BatchNorm<T, 128>(getWeight<T>(weightIndex::layer2_0_bn2_weight), getWeight<T>(weightIndex::layer2_0_bn2_bias));
+            auto kernel_0_1 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 128, 128, 3, 3>(getWeight<T>(weightIndex::layer2_0_conv2_weight));
+            auto batchNorm_0_1 = ImageInference::types::BatchNorm<T, 128>(getWeight<T>(weightIndex::layer2_0_bn2_weight), getWeight<T>(weightIndex::layer2_0_bn2_bias));
             auto image_0_1 = convBlock<2, 0>(image_0_0, kernel_0_1, batchNorm_0_1);
-            auto kernel_0_2 = Kernel<T, BlockSize, BlockSize, 512, 128, 1, 1>(getWeight<T>(weightIndex::layer2_0_conv3_weight));
-            auto batchNorm_0_2 = BatchNorm<T, 512>(getWeight<T>(weightIndex::layer2_0_bn3_weight), getWeight<T>(weightIndex::layer2_0_bn3_bias));
-            auto projectionKernel = Kernel<T, BlockSize, BlockSize, 512, 256, 1, 1>(getWeight<T>(weightIndex::layer2_0_downsample_0_weight));
-            auto projectionBatchNorm = BatchNorm<T, 512>(getWeight<T>(weightIndex::layer2_0_downsample_1_weight), getWeight<T>(weightIndex::layer2_0_downsample_1_bias));
+            auto kernel_0_2 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 512, 128, 1, 1>(getWeight<T>(weightIndex::layer2_0_conv3_weight));
+            auto batchNorm_0_2 = ImageInference::types::BatchNorm<T, 512>(getWeight<T>(weightIndex::layer2_0_bn3_weight), getWeight<T>(weightIndex::layer2_0_bn3_bias));
+            auto projectionKernel = ImageInference::types::Kernel<T, BlockSize, BlockSize, 512, 256, 1, 1>(getWeight<T>(weightIndex::layer2_0_downsample_0_weight));
+            auto projectionBatchNorm = ImageInference::types::BatchNorm<T, 512>(getWeight<T>(weightIndex::layer2_0_downsample_1_weight), getWeight<T>(weightIndex::layer2_0_downsample_1_bias));
             auto image_0_2 = convBlockAddProjection<2, 2, 0>(image_0_1, kernel_0_2, batchNorm_0_2, input, projectionKernel, projectionBatchNorm);
 
-            auto kernel_1_0 = Kernel<T, BlockSize, BlockSize, 128, 512, 1, 1>(getWeight<T>(weightIndex::layer2_1_conv1_weight));
-            auto batchNorm_1_0 = BatchNorm<T, 128>(getWeight<T>(weightIndex::layer2_1_bn1_weight), getWeight<T>(weightIndex::layer2_1_bn1_bias));
+            auto kernel_1_0 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 128, 512, 1, 1>(getWeight<T>(weightIndex::layer2_1_conv1_weight));
+            auto batchNorm_1_0 = ImageInference::types::BatchNorm<T, 128>(getWeight<T>(weightIndex::layer2_1_bn1_weight), getWeight<T>(weightIndex::layer2_1_bn1_bias));
             auto image_1_0 = convBlock<1, 1>(image_0_2, kernel_1_0, batchNorm_1_0);
-            auto kernel_1_1 = Kernel<T, BlockSize, BlockSize, 128, 128, 3, 3>(getWeight<T>(weightIndex::layer2_1_conv2_weight));
-            auto batchNorm_1_1 = BatchNorm<T, 128>(getWeight<T>(weightIndex::layer2_1_bn2_weight), getWeight<T>(weightIndex::layer2_1_bn2_bias));
+            auto kernel_1_1 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 128, 128, 3, 3>(getWeight<T>(weightIndex::layer2_1_conv2_weight));
+            auto batchNorm_1_1 = ImageInference::types::BatchNorm<T, 128>(getWeight<T>(weightIndex::layer2_1_bn2_weight), getWeight<T>(weightIndex::layer2_1_bn2_bias));
             auto image_1_1 = convBlock<1, 0>(image_1_0, kernel_1_1, batchNorm_1_1);
-            auto kernel_1_2 = Kernel<T, BlockSize, BlockSize, 512, 128, 1, 1>(getWeight<T>(weightIndex::layer2_1_conv3_weight));
-            auto batchNorm_1_2 = BatchNorm<T, 512>(getWeight<T>(weightIndex::layer2_1_bn3_weight), getWeight<T>(weightIndex::layer2_1_bn3_bias));
+            auto kernel_1_2 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 512, 128, 1, 1>(getWeight<T>(weightIndex::layer2_1_conv3_weight));
+            auto batchNorm_1_2 = ImageInference::types::BatchNorm<T, 512>(getWeight<T>(weightIndex::layer2_1_bn3_weight), getWeight<T>(weightIndex::layer2_1_bn3_bias));
             auto image_1_2 = convBlockAddIdentity<0>(image_1_1, kernel_1_2, batchNorm_1_2, image_0_2);
 
-            auto kernel_2_0 = Kernel<T, BlockSize, BlockSize, 128, 512, 1, 1>(getWeight<T>(weightIndex::layer2_2_conv1_weight));
-            auto batchNorm_2_0 = BatchNorm<T, 128>(getWeight<T>(weightIndex::layer2_2_bn1_weight), getWeight<T>(weightIndex::layer2_2_bn1_bias));
+            auto kernel_2_0 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 128, 512, 1, 1>(getWeight<T>(weightIndex::layer2_2_conv1_weight));
+            auto batchNorm_2_0 = ImageInference::types::BatchNorm<T, 128>(getWeight<T>(weightIndex::layer2_2_bn1_weight), getWeight<T>(weightIndex::layer2_2_bn1_bias));
             auto image_2_0 = convBlock<1, 1>(image_1_2, kernel_2_0, batchNorm_2_0);
-            auto kernel_2_1 = Kernel<T, BlockSize, BlockSize, 128, 128, 3, 3>(getWeight<T>(weightIndex::layer2_2_conv2_weight));
-            auto batchNorm_2_1 = BatchNorm<T, 128>(getWeight<T>(weightIndex::layer2_2_bn2_weight), getWeight<T>(weightIndex::layer2_2_bn2_bias));
+            auto kernel_2_1 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 128, 128, 3, 3>(getWeight<T>(weightIndex::layer2_2_conv2_weight));
+            auto batchNorm_2_1 = ImageInference::types::BatchNorm<T, 128>(getWeight<T>(weightIndex::layer2_2_bn2_weight), getWeight<T>(weightIndex::layer2_2_bn2_bias));
             auto image_2_1 = convBlock<1, 0>(image_2_0, kernel_2_1, batchNorm_2_1);
-            auto kernel_2_2 = Kernel<T, BlockSize, BlockSize, 512, 128, 1, 1>(getWeight<T>(weightIndex::layer2_2_conv3_weight));
-            auto batchNorm_2_2 = BatchNorm<T, 512>(getWeight<T>(weightIndex::layer2_2_bn3_weight), getWeight<T>(weightIndex::layer2_2_bn3_bias));
+            auto kernel_2_2 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 512, 128, 1, 1>(getWeight<T>(weightIndex::layer2_2_conv3_weight));
+            auto batchNorm_2_2 = ImageInference::types::BatchNorm<T, 512>(getWeight<T>(weightIndex::layer2_2_bn3_weight), getWeight<T>(weightIndex::layer2_2_bn3_bias));
             auto image_2_2 = convBlockAddIdentity<0>(image_2_1, kernel_2_2, batchNorm_2_2, image_1_2);
 
-            auto kernel_3_0 = Kernel<T, BlockSize, BlockSize, 128, 512, 1, 1>(getWeight<T>(weightIndex::layer2_3_conv1_weight));
-            auto batchNorm_3_0 = BatchNorm<T, 128>(getWeight<T>(weightIndex::layer2_3_bn1_weight), getWeight<T>(weightIndex::layer2_3_bn1_bias));
+            auto kernel_3_0 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 128, 512, 1, 1>(getWeight<T>(weightIndex::layer2_3_conv1_weight));
+            auto batchNorm_3_0 = ImageInference::types::BatchNorm<T, 128>(getWeight<T>(weightIndex::layer2_3_bn1_weight), getWeight<T>(weightIndex::layer2_3_bn1_bias));
             auto image_3_0 = convBlock<1, 1>(image_2_2, kernel_3_0, batchNorm_3_0);
-            auto kernel_3_1 = Kernel<T, BlockSize, BlockSize, 128, 128, 3, 3>(getWeight<T>(weightIndex::layer2_3_conv2_weight));
-            auto batchNorm_3_1 = BatchNorm<T, 128>(getWeight<T>(weightIndex::layer2_3_bn2_weight), getWeight<T>(weightIndex::layer2_3_bn2_bias));
+            auto kernel_3_1 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 128, 128, 3, 3>(getWeight<T>(weightIndex::layer2_3_conv2_weight));
+            auto batchNorm_3_1 = ImageInference::types::BatchNorm<T, 128>(getWeight<T>(weightIndex::layer2_3_bn2_weight), getWeight<T>(weightIndex::layer2_3_bn2_bias));
             auto image_3_1 = convBlock<1, 0>(image_3_0, kernel_3_1, batchNorm_3_1);
-            auto kernel_3_2 = Kernel<T, BlockSize, BlockSize, 512, 128, 1, 1>(getWeight<T>(weightIndex::layer2_3_conv3_weight));
-            auto batchNorm_3_2 = BatchNorm<T, 512>(getWeight<T>(weightIndex::layer2_3_bn3_weight), getWeight<T>(weightIndex::layer2_3_bn3_bias));
+            auto kernel_3_2 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 512, 128, 1, 1>(getWeight<T>(weightIndex::layer2_3_conv3_weight));
+            auto batchNorm_3_2 = ImageInference::types::BatchNorm<T, 512>(getWeight<T>(weightIndex::layer2_3_bn3_weight), getWeight<T>(weightIndex::layer2_3_bn3_bias));
             auto image_3_2 = convBlockAddIdentity<0>(image_3_1, kernel_3_2, batchNorm_3_2, image_2_2);
 
             return image_3_2;
         }
 
         template <typename T, size_t BlockSize>
-        Image<T, 0, BlockSize, 1024, 15, 15> ResNet50::block2(Image<T, 0, BlockSize, 512, 30, 30> &input)
+        ImageInference::types::Image<T, 0, BlockSize, 1024, 15, 15> ResNet50::block2(ImageInference::types::Image<T, 0, BlockSize, 512, 30, 30> &input)
         {
-            auto kernel_0_0 = Kernel<T, BlockSize, BlockSize, 256, 512, 1, 1>(getWeight<T>(weightIndex::layer3_0_conv1_weight));
-            auto batchNorm_0_0 = BatchNorm<T, 256>(getWeight<T>(weightIndex::layer3_0_bn1_weight), getWeight<T>(weightIndex::layer3_0_bn1_bias));
+            auto kernel_0_0 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 256, 512, 1, 1>(getWeight<T>(weightIndex::layer3_0_conv1_weight));
+            auto batchNorm_0_0 = ImageInference::types::BatchNorm<T, 256>(getWeight<T>(weightIndex::layer3_0_bn1_weight), getWeight<T>(weightIndex::layer3_0_bn1_bias));
             auto image_0_0 = convBlock<1, 1>(input, kernel_0_0, batchNorm_0_0);
-            auto kernel_0_1 = Kernel<T, BlockSize, BlockSize, 256, 256, 3, 3>(getWeight<T>(weightIndex::layer3_0_conv2_weight));
-            auto batchNorm_0_1 = BatchNorm<T, 256>(getWeight<T>(weightIndex::layer3_0_bn2_weight), getWeight<T>(weightIndex::layer3_0_bn2_bias));
+            auto kernel_0_1 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 256, 256, 3, 3>(getWeight<T>(weightIndex::layer3_0_conv2_weight));
+            auto batchNorm_0_1 = ImageInference::types::BatchNorm<T, 256>(getWeight<T>(weightIndex::layer3_0_bn2_weight), getWeight<T>(weightIndex::layer3_0_bn2_bias));
             auto image_0_1 = convBlock<2, 0>(image_0_0, kernel_0_1, batchNorm_0_1);
-            auto kernel_0_2 = Kernel<T, BlockSize, BlockSize, 1024, 256, 1, 1>(getWeight<T>(weightIndex::layer3_0_conv3_weight));
-            auto batchNorm_0_2 = BatchNorm<T, 1024>(getWeight<T>(weightIndex::layer3_0_bn3_weight), getWeight<T>(weightIndex::layer3_0_bn3_bias));
-            auto projectionKernel = Kernel<T, BlockSize, BlockSize, 1024, 512, 1, 1>(getWeight<T>(weightIndex::layer3_0_downsample_0_weight));
-            auto projectionBatchNorm = BatchNorm<T, 1024>(getWeight<T>(weightIndex::layer3_0_downsample_1_weight), getWeight<T>(weightIndex::layer3_0_downsample_1_bias));
+            auto kernel_0_2 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 1024, 256, 1, 1>(getWeight<T>(weightIndex::layer3_0_conv3_weight));
+            auto batchNorm_0_2 = ImageInference::types::BatchNorm<T, 1024>(getWeight<T>(weightIndex::layer3_0_bn3_weight), getWeight<T>(weightIndex::layer3_0_bn3_bias));
+            auto projectionKernel = ImageInference::types::Kernel<T, BlockSize, BlockSize, 1024, 512, 1, 1>(getWeight<T>(weightIndex::layer3_0_downsample_0_weight));
+            auto projectionBatchNorm = ImageInference::types::BatchNorm<T, 1024>(getWeight<T>(weightIndex::layer3_0_downsample_1_weight), getWeight<T>(weightIndex::layer3_0_downsample_1_bias));
             auto image_0_2 = convBlockAddProjection<2, 2, 0>(image_0_1, kernel_0_2, batchNorm_0_2, input, projectionKernel, projectionBatchNorm);
 
-            auto kernel_1_0 = Kernel<T, BlockSize, BlockSize, 256, 1024, 1, 1>(getWeight<T>(weightIndex::layer3_1_conv1_weight));
-            auto batchNorm_1_0 = BatchNorm<T, 256>(getWeight<T>(weightIndex::layer3_1_bn1_weight), getWeight<T>(weightIndex::layer3_1_bn1_bias));
+            auto kernel_1_0 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 256, 1024, 1, 1>(getWeight<T>(weightIndex::layer3_1_conv1_weight));
+            auto batchNorm_1_0 = ImageInference::types::BatchNorm<T, 256>(getWeight<T>(weightIndex::layer3_1_bn1_weight), getWeight<T>(weightIndex::layer3_1_bn1_bias));
             auto image_1_0 = convBlock<1, 1>(image_0_2, kernel_1_0, batchNorm_1_0);
-            auto kernel_1_1 = Kernel<T, BlockSize, BlockSize, 256, 256, 3, 3>(getWeight<T>(weightIndex::layer3_1_conv2_weight));
-            auto batchNorm_1_1 = BatchNorm<T, 256>(getWeight<T>(weightIndex::layer3_1_bn2_weight), getWeight<T>(weightIndex::layer3_1_bn2_bias));
+            auto kernel_1_1 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 256, 256, 3, 3>(getWeight<T>(weightIndex::layer3_1_conv2_weight));
+            auto batchNorm_1_1 = ImageInference::types::BatchNorm<T, 256>(getWeight<T>(weightIndex::layer3_1_bn2_weight), getWeight<T>(weightIndex::layer3_1_bn2_bias));
             auto image_1_1 = convBlock<1, 0>(image_1_0, kernel_1_1, batchNorm_1_1);
-            auto kernel_1_2 = Kernel<T, BlockSize, BlockSize, 1024, 256, 1, 1>(getWeight<T>(weightIndex::layer3_1_conv3_weight));
-            auto batchNorm_1_2 = BatchNorm<T, 1024>(getWeight<T>(weightIndex::layer3_1_bn3_weight), getWeight<T>(weightIndex::layer3_1_bn3_bias));
+            auto kernel_1_2 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 1024, 256, 1, 1>(getWeight<T>(weightIndex::layer3_1_conv3_weight));
+            auto batchNorm_1_2 = ImageInference::types::BatchNorm<T, 1024>(getWeight<T>(weightIndex::layer3_1_bn3_weight), getWeight<T>(weightIndex::layer3_1_bn3_bias));
             auto image_1_2 = convBlockAddIdentity<0>(image_1_1, kernel_1_2, batchNorm_1_2, image_0_2);
 
-            auto kernel_2_0 = Kernel<T, BlockSize, BlockSize, 256, 1024, 1, 1>(getWeight<T>(weightIndex::layer3_2_conv1_weight));
-            auto batchNorm_2_0 = BatchNorm<T, 256>(getWeight<T>(weightIndex::layer3_2_bn1_weight), getWeight<T>(weightIndex::layer3_2_bn1_bias));
+            auto kernel_2_0 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 256, 1024, 1, 1>(getWeight<T>(weightIndex::layer3_2_conv1_weight));
+            auto batchNorm_2_0 = ImageInference::types::BatchNorm<T, 256>(getWeight<T>(weightIndex::layer3_2_bn1_weight), getWeight<T>(weightIndex::layer3_2_bn1_bias));
             auto image_2_0 = convBlock<1, 1>(image_1_2, kernel_2_0, batchNorm_2_0);
-            auto kernel_2_1 = Kernel<T, BlockSize, BlockSize, 256, 256, 3, 3>(getWeight<T>(weightIndex::layer3_2_conv2_weight));
-            auto batchNorm_2_1 = BatchNorm<T, 256>(getWeight<T>(weightIndex::layer3_2_bn2_weight), getWeight<T>(weightIndex::layer3_2_bn2_bias));
+            auto kernel_2_1 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 256, 256, 3, 3>(getWeight<T>(weightIndex::layer3_2_conv2_weight));
+            auto batchNorm_2_1 = ImageInference::types::BatchNorm<T, 256>(getWeight<T>(weightIndex::layer3_2_bn2_weight), getWeight<T>(weightIndex::layer3_2_bn2_bias));
             auto image_2_1 = convBlock<1, 0>(image_2_0, kernel_2_1, batchNorm_2_1);
-            auto kernel_2_2 = Kernel<T, BlockSize, BlockSize, 1024, 256, 1, 1>(getWeight<T>(weightIndex::layer3_2_conv3_weight));
-            auto batchNorm_2_2 = BatchNorm<T, 1024>(getWeight<T>(weightIndex::layer3_2_bn3_weight), getWeight<T>(weightIndex::layer3_2_bn3_bias));
+            auto kernel_2_2 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 1024, 256, 1, 1>(getWeight<T>(weightIndex::layer3_2_conv3_weight));
+            auto batchNorm_2_2 = ImageInference::types::BatchNorm<T, 1024>(getWeight<T>(weightIndex::layer3_2_bn3_weight), getWeight<T>(weightIndex::layer3_2_bn3_bias));
             auto image_2_2 = convBlockAddIdentity<0>(image_2_1, kernel_2_2, batchNorm_2_2, image_1_2);
 
-            auto kernel_3_0 = Kernel<T, BlockSize, BlockSize, 256, 1024, 1, 1>(getWeight<T>(weightIndex::layer3_3_conv1_weight));
-            auto batchNorm_3_0 = BatchNorm<T, 256>(getWeight<T>(weightIndex::layer3_3_bn1_weight), getWeight<T>(weightIndex::layer3_3_bn1_bias));
+            auto kernel_3_0 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 256, 1024, 1, 1>(getWeight<T>(weightIndex::layer3_3_conv1_weight));
+            auto batchNorm_3_0 = ImageInference::types::BatchNorm<T, 256>(getWeight<T>(weightIndex::layer3_3_bn1_weight), getWeight<T>(weightIndex::layer3_3_bn1_bias));
             auto image_3_0 = convBlock<1, 1>(image_2_2, kernel_3_0, batchNorm_3_0);
-            auto kernel_3_1 = Kernel<T, BlockSize, BlockSize, 256, 256, 3, 3>(getWeight<T>(weightIndex::layer3_3_conv2_weight));
-            auto batchNorm_3_1 = BatchNorm<T, 256>(getWeight<T>(weightIndex::layer3_3_bn2_weight), getWeight<T>(weightIndex::layer3_3_bn2_bias));
+            auto kernel_3_1 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 256, 256, 3, 3>(getWeight<T>(weightIndex::layer3_3_conv2_weight));
+            auto batchNorm_3_1 = ImageInference::types::BatchNorm<T, 256>(getWeight<T>(weightIndex::layer3_3_bn2_weight), getWeight<T>(weightIndex::layer3_3_bn2_bias));
             auto image_3_1 = convBlock<1, 0>(image_3_0, kernel_3_1, batchNorm_3_1);
-            auto kernel_3_2 = Kernel<T, BlockSize, BlockSize, 1024, 256, 1, 1>(getWeight<T>(weightIndex::layer3_3_conv3_weight));
-            auto batchNorm_3_2 = BatchNorm<T, 1024>(getWeight<T>(weightIndex::layer3_3_bn3_weight), getWeight<T>(weightIndex::layer3_3_bn3_bias));
+            auto kernel_3_2 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 1024, 256, 1, 1>(getWeight<T>(weightIndex::layer3_3_conv3_weight));
+            auto batchNorm_3_2 = ImageInference::types::BatchNorm<T, 1024>(getWeight<T>(weightIndex::layer3_3_bn3_weight), getWeight<T>(weightIndex::layer3_3_bn3_bias));
             auto image_3_2 = convBlockAddIdentity<0>(image_3_1, kernel_3_2, batchNorm_3_2, image_2_2);
 
-            auto kernel_4_0 = Kernel<T, BlockSize, BlockSize, 256, 1024, 1, 1>(getWeight<T>(weightIndex::layer3_4_conv1_weight));
-            auto batchNorm_4_0 = BatchNorm<T, 256>(getWeight<T>(weightIndex::layer3_4_bn1_weight), getWeight<T>(weightIndex::layer3_4_bn1_bias));
+            auto kernel_4_0 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 256, 1024, 1, 1>(getWeight<T>(weightIndex::layer3_4_conv1_weight));
+            auto batchNorm_4_0 = ImageInference::types::BatchNorm<T, 256>(getWeight<T>(weightIndex::layer3_4_bn1_weight), getWeight<T>(weightIndex::layer3_4_bn1_bias));
             auto image_4_0 = convBlock<1, 1>(image_3_2, kernel_4_0, batchNorm_4_0);
-            auto kernel_4_1 = Kernel<T, BlockSize, BlockSize, 256, 256, 3, 3>(getWeight<T>(weightIndex::layer3_4_conv2_weight));
-            auto batchNorm_4_1 = BatchNorm<T, 256>(getWeight<T>(weightIndex::layer3_4_bn2_weight), getWeight<T>(weightIndex::layer3_4_bn2_bias));
+            auto kernel_4_1 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 256, 256, 3, 3>(getWeight<T>(weightIndex::layer3_4_conv2_weight));
+            auto batchNorm_4_1 = ImageInference::types::BatchNorm<T, 256>(getWeight<T>(weightIndex::layer3_4_bn2_weight), getWeight<T>(weightIndex::layer3_4_bn2_bias));
             auto image_4_1 = convBlock<1, 0>(image_4_0, kernel_4_1, batchNorm_4_1);
-            auto kernel_4_2 = Kernel<T, BlockSize, BlockSize, 1024, 256, 1, 1>(getWeight<T>(weightIndex::layer3_4_conv3_weight));
-            auto batchNorm_4_2 = BatchNorm<T, 1024>(getWeight<T>(weightIndex::layer3_4_bn3_weight), getWeight<T>(weightIndex::layer3_4_bn3_bias));
+            auto kernel_4_2 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 1024, 256, 1, 1>(getWeight<T>(weightIndex::layer3_4_conv3_weight));
+            auto batchNorm_4_2 = ImageInference::types::BatchNorm<T, 1024>(getWeight<T>(weightIndex::layer3_4_bn3_weight), getWeight<T>(weightIndex::layer3_4_bn3_bias));
             auto image_4_2 = convBlockAddIdentity<0>(image_4_1, kernel_4_2, batchNorm_4_2, image_3_2);
 
-            auto kernel_5_0 = Kernel<T, BlockSize, BlockSize, 256, 1024, 1, 1>(getWeight<T>(weightIndex::layer3_5_conv1_weight));
-            auto batchNorm_5_0 = BatchNorm<T, 256>(getWeight<T>(weightIndex::layer3_5_bn1_weight), getWeight<T>(weightIndex::layer3_5_bn1_bias));
+            auto kernel_5_0 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 256, 1024, 1, 1>(getWeight<T>(weightIndex::layer3_5_conv1_weight));
+            auto batchNorm_5_0 = ImageInference::types::BatchNorm<T, 256>(getWeight<T>(weightIndex::layer3_5_bn1_weight), getWeight<T>(weightIndex::layer3_5_bn1_bias));
             auto image_5_0 = convBlock<1, 1>(image_4_2, kernel_5_0, batchNorm_5_0);
-            auto kernel_5_1 = Kernel<T, BlockSize, BlockSize, 256, 256, 3, 3>(getWeight<T>(weightIndex::layer3_5_conv2_weight));
-            auto batchNorm_5_1 = BatchNorm<T, 256>(getWeight<T>(weightIndex::layer3_5_bn2_weight), getWeight<T>(weightIndex::layer3_5_bn2_bias));
+            auto kernel_5_1 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 256, 256, 3, 3>(getWeight<T>(weightIndex::layer3_5_conv2_weight));
+            auto batchNorm_5_1 = ImageInference::types::BatchNorm<T, 256>(getWeight<T>(weightIndex::layer3_5_bn2_weight), getWeight<T>(weightIndex::layer3_5_bn2_bias));
             auto image_5_1 = convBlock<1, 0>(image_5_0, kernel_5_1, batchNorm_5_1);
-            auto kernel_5_2 = Kernel<T, BlockSize, BlockSize, 1024, 256, 1, 1>(getWeight<T>(weightIndex::layer3_5_conv3_weight));
-            auto batchNorm_5_2 = BatchNorm<T, 1024>(getWeight<T>(weightIndex::layer3_5_bn3_weight), getWeight<T>(weightIndex::layer3_5_bn3_bias));
+            auto kernel_5_2 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 1024, 256, 1, 1>(getWeight<T>(weightIndex::layer3_5_conv3_weight));
+            auto batchNorm_5_2 = ImageInference::types::BatchNorm<T, 1024>(getWeight<T>(weightIndex::layer3_5_bn3_weight), getWeight<T>(weightIndex::layer3_5_bn3_bias));
             auto image_5_2 = convBlockAddIdentity<0>(image_5_1, kernel_5_2, batchNorm_5_2, image_4_2);
 
             return image_5_2;
         }
 
         template <typename T, size_t BlockSize>
-        Image<T, 0, BlockSize, 2048, 7, 7> ResNet50::block3(Image<T, 0, BlockSize, 1024, 15, 15> &input)
+        ImageInference::types::Image<T, 0, BlockSize, 2048, 7, 7> ResNet50::block3(ImageInference::types::Image<T, 0, BlockSize, 1024, 15, 15> &input)
         {
-            auto kernel_0_0 = Kernel<T, BlockSize, BlockSize, 512, 1024, 1, 1>(getWeight<T>(weightIndex::layer4_0_conv1_weight));
-            auto batchNorm_0_0 = BatchNorm<T, 512>(getWeight<T>(weightIndex::layer4_0_bn1_weight), getWeight<T>(weightIndex::layer4_0_bn1_bias));
+            auto kernel_0_0 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 512, 1024, 1, 1>(getWeight<T>(weightIndex::layer4_0_conv1_weight));
+            auto batchNorm_0_0 = ImageInference::types::BatchNorm<T, 512>(getWeight<T>(weightIndex::layer4_0_bn1_weight), getWeight<T>(weightIndex::layer4_0_bn1_bias));
             auto image_0_0 = convBlock<1, 1>(input, kernel_0_0, batchNorm_0_0);
-            auto kernel_0_1 = Kernel<T, BlockSize, BlockSize, 512, 512, 3, 3>(getWeight<T>(weightIndex::layer4_0_conv2_weight));
-            auto batchNorm_0_1 = BatchNorm<T, 512>(getWeight<T>(weightIndex::layer4_0_bn2_weight), getWeight<T>(weightIndex::layer4_0_bn2_bias));
+            auto kernel_0_1 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 512, 512, 3, 3>(getWeight<T>(weightIndex::layer4_0_conv2_weight));
+            auto batchNorm_0_1 = ImageInference::types::BatchNorm<T, 512>(getWeight<T>(weightIndex::layer4_0_bn2_weight), getWeight<T>(weightIndex::layer4_0_bn2_bias));
             auto image_0_1 = convBlock<2, 0>(image_0_0, kernel_0_1, batchNorm_0_1);
-            auto kernel_0_2 = Kernel<T, BlockSize, BlockSize, 2048, 512, 1, 1>(getWeight<T>(weightIndex::layer4_0_conv3_weight));
-            auto batchNorm_0_2 = BatchNorm<T, 2048>(getWeight<T>(weightIndex::layer4_0_bn3_weight), getWeight<T>(weightIndex::layer4_0_bn3_bias));
-            auto projectionKernel = Kernel<T, BlockSize, BlockSize, 2048, 1024, 1, 1>(getWeight<T>(weightIndex::layer4_0_downsample_0_weight));
-            auto projectionBatchNorm = BatchNorm<T, 2048>(getWeight<T>(weightIndex::layer4_0_downsample_1_weight), getWeight<T>(weightIndex::layer4_0_downsample_1_bias));
+            auto kernel_0_2 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 2048, 512, 1, 1>(getWeight<T>(weightIndex::layer4_0_conv3_weight));
+            auto batchNorm_0_2 = ImageInference::types::BatchNorm<T, 2048>(getWeight<T>(weightIndex::layer4_0_bn3_weight), getWeight<T>(weightIndex::layer4_0_bn3_bias));
+            auto projectionKernel = ImageInference::types::Kernel<T, BlockSize, BlockSize, 2048, 1024, 1, 1>(getWeight<T>(weightIndex::layer4_0_downsample_0_weight));
+            auto projectionBatchNorm = ImageInference::types::BatchNorm<T, 2048>(getWeight<T>(weightIndex::layer4_0_downsample_1_weight), getWeight<T>(weightIndex::layer4_0_downsample_1_bias));
             auto image_0_2 = convBlockAddProjection<2, 2, 0>(image_0_1, kernel_0_2, batchNorm_0_2, input, projectionKernel, projectionBatchNorm);
 
-            auto kernel_1_0 = Kernel<T, BlockSize, BlockSize, 512, 2048, 1, 1>(getWeight<T>(weightIndex::layer4_1_conv1_weight));
-            auto batchNorm_1_0 = BatchNorm<T, 512>(getWeight<T>(weightIndex::layer4_1_bn1_weight), getWeight<T>(weightIndex::layer4_1_bn1_bias));
+            auto kernel_1_0 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 512, 2048, 1, 1>(getWeight<T>(weightIndex::layer4_1_conv1_weight));
+            auto batchNorm_1_0 = ImageInference::types::BatchNorm<T, 512>(getWeight<T>(weightIndex::layer4_1_bn1_weight), getWeight<T>(weightIndex::layer4_1_bn1_bias));
             auto image_1_0 = convBlock<1, 1>(image_0_2, kernel_1_0, batchNorm_1_0);
-            auto kernel_1_1 = Kernel<T, BlockSize, BlockSize, 512, 512, 3, 3>(getWeight<T>(weightIndex::layer4_1_conv2_weight));
-            auto batchNorm_1_1 = BatchNorm<T, 512>(getWeight<T>(weightIndex::layer4_1_bn2_weight), getWeight<T>(weightIndex::layer4_1_bn2_bias));
+            auto kernel_1_1 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 512, 512, 3, 3>(getWeight<T>(weightIndex::layer4_1_conv2_weight));
+            auto batchNorm_1_1 = ImageInference::types::BatchNorm<T, 512>(getWeight<T>(weightIndex::layer4_1_bn2_weight), getWeight<T>(weightIndex::layer4_1_bn2_bias));
             auto image_1_1 = convBlock<1, 0>(image_1_0, kernel_1_1, batchNorm_1_1);
-            auto kernel_1_2 = Kernel<T, BlockSize, BlockSize, 2048, 512, 1, 1>(getWeight<T>(weightIndex::layer4_1_conv3_weight));
-            auto batchNorm_1_2 = BatchNorm<T, 2048>(getWeight<T>(weightIndex::layer4_1_bn3_weight), getWeight<T>(weightIndex::layer4_1_bn3_bias));
+            auto kernel_1_2 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 2048, 512, 1, 1>(getWeight<T>(weightIndex::layer4_1_conv3_weight));
+            auto batchNorm_1_2 = ImageInference::types::BatchNorm<T, 2048>(getWeight<T>(weightIndex::layer4_1_bn3_weight), getWeight<T>(weightIndex::layer4_1_bn3_bias));
             auto image_1_2 = convBlockAddIdentity<0>(image_1_1, kernel_1_2, batchNorm_1_2, image_0_2);
 
-            auto kernel_2_0 = Kernel<T, BlockSize, BlockSize, 512, 2048, 1, 1>(getWeight<T>(weightIndex::layer4_2_conv1_weight));
-            auto batchNorm_2_0 = BatchNorm<T, 512>(getWeight<T>(weightIndex::layer4_2_bn1_weight), getWeight<T>(weightIndex::layer4_2_bn1_bias));
+            auto kernel_2_0 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 512, 2048, 1, 1>(getWeight<T>(weightIndex::layer4_2_conv1_weight));
+            auto batchNorm_2_0 = ImageInference::types::BatchNorm<T, 512>(getWeight<T>(weightIndex::layer4_2_bn1_weight), getWeight<T>(weightIndex::layer4_2_bn1_bias));
             auto image_2_0 = convBlock<1, 1>(image_1_2, kernel_2_0, batchNorm_2_0);
-            auto kernel_2_1 = Kernel<T, BlockSize, BlockSize, 512, 512, 3, 3>(getWeight<T>(weightIndex::layer4_2_conv2_weight));
-            auto batchNorm_2_1 = BatchNorm<T, 512>(getWeight<T>(weightIndex::layer4_2_bn2_weight), getWeight<T>(weightIndex::layer4_2_bn2_bias));
+            auto kernel_2_1 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 512, 512, 3, 3>(getWeight<T>(weightIndex::layer4_2_conv2_weight));
+            auto batchNorm_2_1 = ImageInference::types::BatchNorm<T, 512>(getWeight<T>(weightIndex::layer4_2_bn2_weight), getWeight<T>(weightIndex::layer4_2_bn2_bias));
             auto image_2_1 = convBlock<1, 0>(image_2_0, kernel_2_1, batchNorm_2_1);
-            auto kernel_2_2 = Kernel<T, BlockSize, BlockSize, 2048, 512, 1, 1>(getWeight<T>(weightIndex::layer4_2_conv3_weight));
-            auto batchNorm_2_2 = BatchNorm<T, 2048>(getWeight<T>(weightIndex::layer4_2_bn3_weight), getWeight<T>(weightIndex::layer4_2_bn3_bias));
+            auto kernel_2_2 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 2048, 512, 1, 1>(getWeight<T>(weightIndex::layer4_2_conv3_weight));
+            auto batchNorm_2_2 = ImageInference::types::BatchNorm<T, 2048>(getWeight<T>(weightIndex::layer4_2_bn3_weight), getWeight<T>(weightIndex::layer4_2_bn3_bias));
             auto image_2_2 = convBlockAddIdentity<0>(image_2_1, kernel_2_2, batchNorm_2_2, image_1_2);
 
             return image_2_2;
@@ -679,10 +671,10 @@ namespace ImageInference
                   typename T, size_t BlockSizeCount, size_t BlockSizeChannel,
                   size_t ImageChannels, size_t ImageHeight, size_t ImageWidth,
                   size_t KernelCount, size_t KernelHeight, size_t KernelWidth>
-        inline Image<T, OutPadding, BlockSizeCount, KernelCount, ImageHeight / Stride, ImageWidth / Stride> ResNet50::convBlock(
-            Image<T, InPadding, BlockSizeChannel, ImageChannels, ImageHeight, ImageWidth> &image,
-            Kernel<T, BlockSizeCount, BlockSizeChannel, KernelCount, ImageChannels, KernelHeight, KernelWidth> &kernel,
-            BatchNorm<T, KernelCount> &batchNorm)
+        inline ImageInference::types::Image<T, OutPadding, BlockSizeCount, KernelCount, ImageHeight / Stride, ImageWidth / Stride> ResNet50::convBlock(
+            ImageInference::types::Image<T, InPadding, BlockSizeChannel, ImageChannels, ImageHeight, ImageWidth> &image,
+            ImageInference::types::Kernel<T, BlockSizeCount, BlockSizeChannel, KernelCount, ImageChannels, KernelHeight, KernelWidth> &kernel,
+            ImageInference::types::BatchNorm<T, KernelCount> &batchNorm)
         {
             if constexpr (InPadding != KernelHeight / 2 || InPadding != KernelWidth / 2)
             {
@@ -702,7 +694,7 @@ namespace ImageInference
             constexpr size_t outputHeight = ImageHeight / Stride;
             constexpr size_t outputWidth = ImageWidth / Stride;
 
-            Image<T, OutPadding, BlockSizeCount, KernelCount, ImageHeight / Stride, ImageWidth> output;
+            ImageInference::types::Image<T, OutPadding, BlockSizeCount, KernelCount, ImageHeight / Stride, ImageWidth> output;
             auto outputPtr = output.getPointer() + output.paddingOffset; // We skip the padding as we want to start at the data section.
 
             auto imagePtr = image.getPointer();                 // ChannelBlocks x Height x Width x ChannelElements
@@ -727,25 +719,27 @@ namespace ImageInference
                         {
                             for (size_t kWidth = 0; kWidth < KernelWidth; kWidth++)
                             {
-                                size_t inputOffset =  image.getOffset(iBChannel, iHeight * Stride + kHeight, kWidth, 0);
+                                size_t inputOffset = image.getOffset(iBChannel, iHeight * Stride + kHeight, kWidth, 0);
                                 size_t kernelOffset = kernel.getOffset(iBCount, iBChannel, kHeight, kWidth, 0, 0);
                                 size_t outputOffset = output.getOffset(iBCount, iHeight, 0, 0);
 
-                                // Kernel of shape BlockSizeCount x BlockSizeChannel
-                                // Input of shape BlockSizeChannel x ImageWidth
-                                // Output of shape BlockSizeCount x ImageWidth
+                                // Kernel of shape BlockSizeChannel x BlockSizeCount
+                                // Input of shape ImageWidth x BlockSizeChannel
+                                // Output of shape ImageWidth / Stride x BlockSizeCount
 
                                 // Fastor expects RowMajor format
-                                // Fastor::blas::matmul_libxsmm<T, BlockSizeCount, BlockSizeChannel, ImageWidth>(
-                                //     kernelPtr + kernelOffset,  // a_data
-                                //     imagePtr + inputOffset,    // b_data
-                                //     outputPtr + outputOffset); // out_data
+                                Fastor::TensorMap<T, ImageWidth, BlockSizeChannel> inTensor(imagePtr + inputOffset);
+                                Fastor::TensorMap<T, BlockSizeChannel, BlockSizeCount> kernelTensor(kernelPtr + kernelOffset);
+                                Fastor::TensorMap<T, ImageWidth, BlockSizeCount> outTensor(outputPtr + outputOffset);
+
+                                // This works
+                                outTensor += Fastor::matmul(inTensor, kernelTensor);
 
                                 // If we use libxsmm directly we don't need to do the strides separately!
-                                // constexpr int MM = BlockSizeCount;
+                                // constexpr int MM = ImageWidth;
                                 // constexpr int KK = BlockSizeChannel;
-                                // constexpr int NN = ImageWidth / Stride;
-                                // constexpr int lda = ImageWidth;
+                                // constexpr int NN = BlockSizeCount;
+                                // constexpr int ldb = ImageWidth;
                                 // constexpr float alpha = 1.0;
                                 // constexpr float beta = 0.0;
 
@@ -759,10 +753,10 @@ namespace ImageInference
                                 //     &MM /*required*/,
                                 //     &KK /*required*/,
                                 //     &alpha /*alpha*/,
-                                //     imagePtr + inputOffset /*required*/,
-                                //     &lda /*lda*/,
                                 //     kernelPtr + kernelOffset /*required*/,
-                                //     &KK /*ldb*/,
+                                //     &NN /*lda*/,
+                                //     imagePtr + inputOffset /*required*/,
+                                //     &ldb /*ldb*/,
                                 //     &beta /*beta*/,
                                 //     outputPtr + outputOffset /*required*/,
                                 //     &NN /*ldc*/
@@ -781,12 +775,12 @@ namespace ImageInference
                         {
                             size_t offsetOutput = output.getOffset(iBCount, iHeight, iWidth, iCount);
                             size_t offsetCount = iBCount * BlockSizeCount + iCount;
-                            outputPtr[offsetOutput] = relu<T>(ResNet50::batchNorm<T>(
-                                outputPtr[offsetOutput],
-                                gammaPtr[offsetCount],
-                                betaPtr[offsetCount],
-                                meanPtr[offsetCount],
-                                variancePtr[offsetCount]));
+                            // outputPtr[offsetOutput] = relu<T>(ResNet50::batchNorm<T>(
+                            //     outputPtr[offsetOutput],
+                            //     gammaPtr[offsetCount],
+                            //     betaPtr[offsetCount],
+                            //     meanPtr[offsetCount],
+                            //     variancePtr[offsetCount]));
                             output.updateMeanVariance(outputPtr[offsetOutput], offsetCount, meanVarianceCount[offsetCount]);
                         }
                     }
@@ -806,7 +800,7 @@ namespace ImageInference
             // because we ignored the stride in width dimension in the calculations.
             if constexpr (Stride > 1)
             {
-                Image<T, OutPadding, BlockSizeCount, KernelCount, ImageHeight / Stride, ImageWidth / Stride> compressed;
+                ImageInference::types::Image<T, OutPadding, BlockSizeCount, KernelCount, ImageHeight / Stride, ImageWidth / Stride> compressed;
                 auto compressedPtr = compressed.getPointer() + compressed.paddingOffset;
 
                 for (size_t iBCount = 0; iBCount < countBlocks; iBCount++)
@@ -836,8 +830,8 @@ namespace ImageInference
         template <size_t Stride, size_t OutPadding, size_t InPadding,
                   typename T, size_t BlockSize,
                   size_t ImageChannels, size_t ImageHeight, size_t ImageWidth>
-        inline Image<T, OutPadding, BlockSize, ImageChannels, ImageHeight / Stride, ImageWidth / Stride> ResNet50::maxPool(
-            Image<T, InPadding, BlockSize, ImageChannels, ImageHeight, ImageWidth> &image)
+        inline ImageInference::types::Image<T, OutPadding, BlockSize, ImageChannels, ImageHeight / Stride, ImageWidth / Stride> ResNet50::maxPool(
+            ImageInference::types::Image<T, InPadding, BlockSize, ImageChannels, ImageHeight, ImageWidth> &image)
         {
             if constexpr (InPadding != 1)
             {
@@ -850,7 +844,7 @@ namespace ImageInference
             constexpr size_t outputHeight = ImageHeight / Stride;
             constexpr size_t outputWidth = ImageWidth / Stride;
 
-            Image<T, OutPadding, BlockSize, ImageChannels, ImageHeight / Stride, ImageWidth / Stride> output;
+            ImageInference::types::Image<T, OutPadding, BlockSize, ImageChannels, ImageHeight / Stride, ImageWidth / Stride> output;
 
             auto outputPtr = output.getPointer() + output.paddingOffset; // We skip the padding as we want to start at the data section.
 
@@ -867,7 +861,7 @@ namespace ImageInference
 
                         for (size_t iChannel = 0; iChannel < BlockSize; iChannel++)
                         {
-                            auto offsetOutput = output.getOffset(iBChannel, iHeight, iWidth, iChannel);
+                            auto offsetOutput = preOffsetOutput + iChannel * output.strideChannel;
                             outputPtr[offsetOutput] = std::numeric_limits<T>::lowest();
                         }
 
@@ -877,7 +871,7 @@ namespace ImageInference
                             {
                                 for (size_t iChannel = 0; iChannel < BlockSize; iChannel++)
                                 {
-                                    auto offsetOutput = output.getOffset(iBChannel, iHeight, iWidth, iChannel);
+                                    auto offsetOutput = preOffsetOutput + iChannel * output.strideChannel;
                                     auto offsetImage = image.getOffset(iBChannel, iHeight * Stride + kHeight, iWidth * Stride + kWidth, iChannel);
                                     outputPtr[offsetOutput] = std::max(outputPtr[offsetOutput], imagePtr[offsetImage]);
                                 }
@@ -892,12 +886,12 @@ namespace ImageInference
 
         template <size_t OutPadding, size_t InPadding, typename T, size_t BlockSize,
                   size_t ImageChannels, size_t ImageHeight, size_t ImageWidth>
-        inline Image<T, OutPadding, BlockSize, ImageChannels, 1, 1> ResNet50::globalAveragePool(
-            Image<T, InPadding, BlockSize, ImageChannels, ImageHeight, ImageWidth> &image)
+        inline ImageInference::types::Image<T, OutPadding, BlockSize, ImageChannels, 1, 1> ResNet50::globalAveragePool(
+            ImageInference::types::Image<T, InPadding, BlockSize, ImageChannels, ImageHeight, ImageWidth> &image)
         {
             constexpr size_t channelBlocks = ImageChannels / BlockSize;
 
-            Image<T, OutPadding, BlockSize, ImageChannels, 1, 1> output;
+            ImageInference::types::Image<T, OutPadding, BlockSize, ImageChannels, 1, 1> output;
             auto outputPtr = output.getPointer() + output.paddingOffset; // We skip the padding as we want to start at the data section.
 
             auto imagePtr = image.getPointer() + image.paddingOffset; // We skip the padding as padding should not be averaged.
@@ -930,26 +924,26 @@ namespace ImageInference
             return output;
         }
 
-        template <typename T>
-        inline Array<T, 1000> ResNet50::fullyConnectedLayer(Array<T, 2048> &input, Matrix<T, 1000, 2048> &weights, Array<T, 1000> &bias)
+        template <typename T, size_t Columns, size_t Rows>
+        void ResNet50::fullyConnectedLayer(
+            ImageInference::types::Array<T, Rows> &input,
+            ImageInference::types::Matrix<T, Columns, Rows> &weight,
+            ImageInference::types::Array<T, Columns> &biasAccumulator)
         {
             auto inputPtr = input.getPointer();
-            auto weightsPtr = weights.getPointer();
-            auto biasPtr = bias.getPointer();
+            auto weightPtr = weight.getPointer();
+            auto biasPtr = biasAccumulator.getPointer();
 
-            Fastor::Tensor<T, 2048> inputMap(inputPtr);
-            Fastor::Tensor<T, 2048, 1000> weightsMap(weightsPtr);
-            Fastor::Tensor<T, 1000> biasMap(biasPtr);
-
-            biasMap += Fastor::matmul(inputMap, weightsMap);
-
-            return bias;
+            Fastor::TensorMap<T, Rows> inputMap(inputPtr);
+            Fastor::TensorMap<T, Columns, Rows> weightMap(weightPtr);
+            Fastor::TensorMap<T, Columns> biasMap(biasPtr);
+            biasMap += Fastor::matmul(weightMap, inputMap);
         }
 
         template <typename T>
         inline T *ResNet50::getWeight(size_t index)
         {
-            return static_cast<T *>(weights[index]);
+            return static_cast<T *>(modelWeights[index]);
         }
 
         template <typename T>

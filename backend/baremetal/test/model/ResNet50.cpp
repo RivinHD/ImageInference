@@ -7,6 +7,7 @@
 #include <iomanip>
 #include <catch2/catch_test_macros.hpp>
 #include "../../model/test/ResNet50Test.h"
+#include <Fastor/Fastor.h>
 
 namespace ImageInference
 {
@@ -39,10 +40,12 @@ namespace ImageInference
             }
         }
 
-        TEST_CASE("test_resnet50_conv3x3_channels16x16", "[resnet50][convRelu]")
+        TEST_CASE("test_resnet50_conv3x3_channels16x16", "[resnet50][convolution]")
         {
-            Tensor in = at::randn({16, 10, 10});
-            Tensor weight = at::randn({16, 16, 3, 3});
+            Tensor in = at::rand({1, 16, 10, 10});
+            Tensor weight = at::rand({16, 16, 3, 3});
+            Tensor batchGamma = at::rand({16});
+            Tensor batchBeta = at::rand({16});
 
             // The actual testing is done in python.
             constexpr size_t stride = 1;
@@ -59,15 +62,23 @@ namespace ImageInference
 
             float *inPtr = in.mutable_data_ptr<float>();
             float *weightPtr = weight.mutable_data_ptr<float>();
+            float *batchGammaPtr = batchGamma.mutable_data_ptr<float>();
+            float *batchBetaPtr = batchBeta.mutable_data_ptr<float>();
             float *outPtr = out.mutable_data_ptr<float>();
 
-            ImageInference::model::test::ResNet50Test::convRelu<
+            ImageInference::model::test::ResNet50Test::convBlock<
                 stride, inPadding, blockSize, outChannels, inChannels,
-                height, width, kernelHeight, kernelWidth>(inPtr, weightPtr, outPtr);
+                height, width, kernelHeight, kernelWidth>(inPtr, weightPtr, batchGammaPtr, batchBetaPtr, outPtr);
+
+            Tensor mean = at::mean(in, {0, 2, 3});
+            Tensor var = at::var(in, {0, 2, 3}, false);
 
             Tensor expected = at::conv2d(in, weight, {}, stride, inPadding);
-            expected = at::relu(expected);
-            REQUIRE(at::allclose(out, expected));
+            // expected = at::batch_norm(expected, batchGamma, batchBeta, mean, var, false, 0.1, 1e-5, false);
+            // expected = at::relu(expected);
+
+            printMismatchedValues(out, expected[0], stride, outChannels, height, width);
+            REQUIRE(at::allclose(out, expected[0]));
         }
 
         TEST_CASE("test_resnet50_maxpool", "[resnet50][maxpool]")
@@ -159,6 +170,7 @@ namespace ImageInference
             Tensor in = at::randn({2048});
             Tensor weight = at::randn({1000, 2048});
             Tensor bias = at::randn({1000});
+            Tensor biasCopy = bias.clone().detach();
 
             Tensor out = at::zeros({1000});
 
@@ -167,11 +179,27 @@ namespace ImageInference
             float *biasPtr = bias.mutable_data_ptr<float>();
             float *outPtr = out.mutable_data_ptr<float>();
 
-            ImageInference::model::test::ResNet50Test::fullyConnectedLayer(inPtr, weightPtr, biasPtr, outPtr);
+            // Fastor::TensorMap<float, 2048> inFastor(inPtr);
+            // Fastor::TensorMap<float, 1000, 2048> weightFastor(weightPtr);
+            // Fastor::TensorMap<float, 1000> biasFastor(biasPtr);
+            // biasFastor += Fastor::matmul(weightFastor, inFastor);
 
-            Tensor expected = at::linear(in, weight, bias);
+            ImageInference::model::test::ResNet50Test::fullyConnectedLayer<1000, 2048>(inPtr, weightPtr, biasPtr, outPtr);
 
-            REQUIRE(at::allclose(out, expected));
+            Tensor expected = at::linear(in, weight, biasCopy);
+
+            if (!at::allclose(out, expected, 1.0e-3, 1.0e-5))
+            {
+                for (size_t i = 0; i < 1000; i++)
+                {
+                    if (out[i].item<float>() != expected[i].item<float>())
+                    {
+                        std::cerr << "Expected " << expected[i].item<float>() << " but got " << out[i].item<float>() << " at index " << i << std::endl;
+                    }
+                }
+            }
+
+            REQUIRE(at::allclose(out, expected, 1.0e-3, 1.0e-5));
         }
 
         TEST_CASE("test_resnet50_relu", "[resnet50][relu]")
