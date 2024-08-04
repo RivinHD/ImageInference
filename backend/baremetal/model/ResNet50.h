@@ -688,9 +688,6 @@ namespace ImageInference
             constexpr size_t channelBlocks = ImageChannels / BlockSizeChannel;
             constexpr size_t outputHeight = ImageHeight / Stride;
             constexpr size_t outputWidth = ImageWidth / Stride;
-            
-            // This image definition is only needed when we do the matmul with fastor as we cannot set a leading dimension.
-            //ImageInference::types::Image<T, OutPadding, BlockSizeCount, KernelCount, ImageHeight / Stride, ImageWidth> output;
 
             ImageInference::types::Image<T, OutPadding, BlockSizeCount, KernelCount, ImageHeight / Stride, ImageWidth / Stride> output;
             auto outputPtr = output.getPointer() + output.paddingOffset; // We skip the padding as we want to start at the data section.
@@ -704,8 +701,6 @@ namespace ImageInference
 
             size_t meanVarianceCount[KernelCount]{0};
 
-            // Issue the wide wise stride is not supported with a matmul
-            // Since stride are only rarely done we later on compress the output to the strided size
             for (size_t iBCount = 0; iBCount < countBlocks; iBCount++)
             {
                 for (size_t iHeight = 0; iHeight < outputHeight; iHeight++)
@@ -724,41 +719,6 @@ namespace ImageInference
                                 // Kernel of shape BlockSizeChannel x BlockSizeCount
                                 // Input of shape ImageWidth x BlockSizeChannel
                                 // Output of shape outputWidth x BlockSizeCount === ImageWidth / Stride x BlockSizeCount
-
-                                // Fastor expects RowMajor format
-                                // This works
-                                // Fastor::TensorMap<T, ImageWidth, BlockSizeChannel> inTensor(imagePtr + inputOffset);
-                                // Fastor::TensorMap<T, BlockSizeChannel, BlockSizeCount> kernelTensor(kernelPtr + kernelOffset);
-                                // Fastor::TensorMap<T, ImageWidth, BlockSizeCount> outTensor(outputPtr + outputOffset);
-                                // outTensor += Fastor::matmul(inTensor, kernelTensor);
-
-                                // If we use libxsmm directly we don't need to do add separately!
-                                // This works too!
-                                // constexpr int MM = outputWidth;
-                                // constexpr int KK = BlockSizeChannel;
-                                // constexpr int NN = BlockSizeCount;
-                                // constexpr int ldb = ImageWidth;
-                                // constexpr float alpha = 1.0;
-                                // constexpr float beta = 1.0;
-
-                                // constexpr char transa = 'N';
-                                // constexpr char transb = 'N';
-
-                                // libxsmm_sgemm(
-                                //     &transa /*transa*/,
-                                //     &transb /*transb*/,
-                                //     &NN /*required*/,
-                                //     &MM /*required*/,
-                                //     &KK /*required*/,
-                                //     &alpha /*alpha*/,
-                                //     kernelPtr + kernelOffset /*required*/,
-                                //     &NN /*lda*/,
-                                //     imagePtr + inputOffset /*required*/,
-                                //     &KK /*ldb*/,
-                                //     &beta /*beta*/,
-                                //     outputPtr + outputOffset /*required*/,
-                                //     &NN /*ldc*/
-                                // );
 
                                 // If we use libxsmm directly we don't need to do add separately!
                                 // If we use the leading dimension on the image we can use it as stride.
@@ -794,8 +754,6 @@ namespace ImageInference
 
                     // At this point we completed a complete row of the output.
                     // We will also update the mean and variance as we already loaded the data.
-                    // We will only process the elements with an strided offset as other values are compressed later on.
-                    // for (size_t iWidth = 0; iWidth < ImageWidth; iWidth += Stride) // This for loop is need when we do the matmul with fastor as we cannot set a leading dimension.
                     for(size_t iWidth = 0; iWidth < outputWidth; iWidth++)
                     {
                         for (size_t iCount = 0; iCount < BlockSizeCount; iCount++)
@@ -819,7 +777,6 @@ namespace ImageInference
                 // Now we apply the batch norm and relu.
                 for (size_t iHeight = 0; iHeight < outputHeight; iHeight++)
                 {
-                    // for (size_t iWidth = 0; iWidth < ImageWidth; iWidth += Stride) // This for loop is need when we do the matmul with fastor as we cannot set a leading dimension.
                     for(size_t iWidth = 0; iWidth < outputWidth; iWidth++)
                     {
                         for (size_t iCount = 0; iCount < BlockSizeCount; iCount++)
@@ -836,37 +793,6 @@ namespace ImageInference
                     }
                 }
             }
-
-            // If the Stride is larger than 1 we need to compress our output to the correct size,
-            // because we ignored the stride in width dimension in the calculations.
-            // This is only need when we do the matmul with fastor as we cannot set a leading dimension.
-            // if constexpr (Stride > 1)
-            // {
-            //     ImageInference::types::Image<T, OutPadding, BlockSizeCount, KernelCount, ImageHeight / Stride, ImageWidth / Stride> compressed;
-            //     auto compressedPtr = compressed.getPointer() + compressed.paddingOffset;
-
-            //     for (size_t iBCount = 0; iBCount < countBlocks; iBCount++)
-            //     {
-            //         for (size_t iHeight = 0; iHeight < outputHeight; iHeight++)
-            //         {
-            //             for (size_t iWidth = 0; iWidth < outputWidth; iWidth++)
-            //             {
-            //                 for (size_t iCount = 0; iCount < BlockSizeCount; iCount++)
-            //                 {
-            //                     size_t offsetOutput = output.getOffset(iBCount, iHeight, iWidth, iCount);
-            //                     size_t offsetCompressed = compressed.getOffset(iBCount, iHeight, iWidth, iCount);
-            //                     compressedPtr[offsetCompressed] = outputPtr[offsetOutput];
-            //                 }
-            //             }
-            //         }
-            //     }
-
-            //     return compressed;
-            // }
-            // else
-            // {
-            //     return output;
-            // }
 
             return output;
         }
