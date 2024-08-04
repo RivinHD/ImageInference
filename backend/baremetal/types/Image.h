@@ -167,7 +167,6 @@ namespace ImageInference
             constexpr size_t strideInputWidth = 1;
 
             auto dataPtr = data + paddingOffset;
-            size_t count[TChannels]{0};
 #ifdef USE_OMP
 #pragma omp parallel for collapse(2)
 #endif // USE_OMP
@@ -182,22 +181,8 @@ namespace ImageInference
                             T in = input[iChannel * strideInputChannel + iHeight * strideInputHeight + iWidth * strideInputWidth];
                             size_t offset = getOffset(iBChannel, iHeight, iWidth, iChannel);
                             dataPtr[offset] = in;
-
-                            updateMeanVariance(in,
-                                               iBChannel * TBlockSize + iChannel,
-                                               ++count[iBChannel * TBlockSize + iChannel]);
                         }
                     }
-                }
-            }
-#ifdef USE_OMP
-#pragma omp parallel for
-#endif // USE_OMP
-            for (size_t iBChannel = 0; iBChannel < channelBlocks; iBChannel++)
-            {
-                for (size_t iChannel = 0; iChannel < TBlockSize; iChannel++)
-                {
-                    finalizeMeanVariance(iBChannel * TBlockSize + iChannel, count[iBChannel * TBlockSize + iChannel]);
                 }
             }
         }

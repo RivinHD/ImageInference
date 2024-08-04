@@ -25,7 +25,7 @@ namespace ImageInference
                           size_t TOutChannels, size_t TInChannels,
                           size_t THeight, size_t TWidth,
                           size_t TKernelHeight, size_t TKernelWidth>
-                static void convBlock(const float *input, const float *kernel, const float* batchGamma, const float* batchBeta, float *output)
+                static void convBlock(const float *input, const float *kernel, const float *batchGamma, const float *batchBeta, float *output, float *outputMean, float *outputVariance)
                 {
                     ImageInference::types::Image<float, TInPadding, TBlockSize, TInChannels, THeight, TWidth> inputImage(input);
                     ImageInference::types::Kernel<float, TBlockSize, TBlockSize, TOutChannels, TInChannels, TKernelHeight, TKernelWidth> inputKernel(kernel);
@@ -34,6 +34,8 @@ namespace ImageInference
                     auto outputImage = ImageInference::model::ResNet50::convBlock<TStride, 0>(inputImage, inputKernel, batchNorm);
                     auto flatten = outputImage.flatten(); // Get the data order of Channel x Height x Width
                     std::copy(flatten.getPointer(), flatten.getPointer() + flatten.size, output);
+                    std::copy(outputImage.getMeanPointer(), outputImage.getMeanPointer() + TOutChannels, outputMean);
+                    std::copy(outputImage.getBatchVariancePointer(), outputImage.getBatchVariancePointer() + TOutChannels, outputVariance);
                 }
 
                 template <size_t TStride, size_t TInPadding, size_t TBlockSize,
@@ -56,7 +58,7 @@ namespace ImageInference
                     std::copy(flatten.getPointer(), flatten.getPointer() + flatten.size, output);
                 }
 
-                template< size_t TColumns, size_t TRows>
+                template <size_t TColumns, size_t TRows>
                 static void fullyConnectedLayer(const float *input, const float *weight, const float *bias, float *output)
                 {
                     ImageInference::types::Array<float, TRows> inputVector(input);

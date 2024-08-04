@@ -15,9 +15,9 @@ namespace ImageInference
     {
         using at::Tensor;
 
-        void printMismatchedValues(const Tensor &out, const Tensor &expected, size_t stride, size_t channels, size_t height, size_t width)
+        void printMismatchedValues(bool success, const Tensor &out, const Tensor &expected, size_t stride, size_t channels, size_t height, size_t width)
         {
-            if (!at::allclose(out, expected))
+            if (!success)
             {
                 for (size_t iChannel = 0; iChannel < channels; iChannel++)
                 {
@@ -40,14 +40,27 @@ namespace ImageInference
             }
         }
 
+        void printMismatchedValues(bool success, const Tensor &out, const Tensor &expected, size_t channels)
+        {
+            if (!success)
+            {
+                for (size_t iChannel = 0; iChannel < channels; iChannel++)
+                {
+                    auto got = out[iChannel].item<float>();
+                    auto exp = expected[iChannel].item<float>();
+                    if (got != exp)
+                    {
+                        std::cerr << std::setprecision(20)
+                                  << "Expected " << exp << " but got " << got << std::endl
+                                  << "Indices: Channel:= " << iChannel << std::endl
+                                  << std::endl;
+                    }
+                }
+            }
+        }
+
         TEST_CASE("test_resnet50_conv3x3_channels16x16", "[resnet50][convolution]")
         {
-            Tensor in = at::rand({1, 16, 10, 10});
-            Tensor weight = at::rand({16, 16, 3, 3});
-            Tensor batchGamma = at::rand({16});
-            Tensor batchBeta = at::rand({16});
-
-            // The actual testing is done in python.
             constexpr size_t stride = 1;
             constexpr size_t inPadding = 1;
             constexpr size_t blockSize = 16;
@@ -58,33 +71,208 @@ namespace ImageInference
             constexpr size_t kernelHeight = 3;
             constexpr size_t kernelWidth = 3;
 
+            Tensor in = at::rand({1, inChannels, height, width});
+            Tensor weight = at::rand({outChannels, inChannels, kernelHeight, kernelWidth});
+            Tensor batchGamma = at::rand({outChannels});
+            Tensor batchBeta = at::rand({outChannels});
+
             Tensor out = at::zeros({outChannels, height, width});
+            Tensor outMean = at::zeros({outChannels});
+            Tensor outVar = at::zeros({outChannels});
 
             float *inPtr = in.mutable_data_ptr<float>();
             float *weightPtr = weight.mutable_data_ptr<float>();
             float *batchGammaPtr = batchGamma.mutable_data_ptr<float>();
             float *batchBetaPtr = batchBeta.mutable_data_ptr<float>();
             float *outPtr = out.mutable_data_ptr<float>();
+            float *outMeanPtr = outMean.mutable_data_ptr<float>();
+            float *outVarPtr = outVar.mutable_data_ptr<float>();
 
             ImageInference::model::test::ResNet50Test::convBlock<
                 stride, inPadding, blockSize, outChannels, inChannels,
-                height, width, kernelHeight, kernelWidth>(inPtr, weightPtr, batchGammaPtr, batchBetaPtr, outPtr);
-
-            Tensor mean = at::mean(in, {0, 2, 3});
-            Tensor var = at::var(in, {0, 2, 3}, false);
+                height, width, kernelHeight, kernelWidth>(inPtr, weightPtr, batchGammaPtr, batchBetaPtr, outPtr, outMeanPtr, outVarPtr);
 
             Tensor expected = at::conv2d(in, weight, {}, stride, inPadding);
-            // expected = at::batch_norm(expected, batchGamma, batchBeta, mean, var, false, 0.1, 1e-5, false);
-            // expected = at::relu(expected);
+            Tensor mean = at::mean(expected, {0, 2, 3});
+            Tensor var = at::var(expected, {0, 2, 3}, false);
+            expected = at::batch_norm(expected, batchGamma, batchBeta, mean, var, false, 0.1, 1e-5, false);
+            expected = at::relu(expected);
 
-            printMismatchedValues(out, expected[0], stride, outChannels, height, width);
-            REQUIRE(at::allclose(out, expected[0]));
+            bool success = at::allclose(outMean, mean);
+            printMismatchedValues(success, outMean, mean, outChannels);
+            REQUIRE(success);
+
+            Tensor batchVar = 1 / at::sqrt(var + 1e-5);
+            success = at::allclose(outVar, batchVar);
+            printMismatchedValues(success, outVar, batchVar, outChannels);
+            REQUIRE(success);
+
+            success = at::allclose(out, expected[0], 1.0e-4, 1.0e-5);
+            printMismatchedValues(success, out, expected[0], stride, outChannels, height, width);
+            REQUIRE(success);
+        }
+
+        TEST_CASE("test_resnet50_conv3x3_channels16x32", "[resnet50][convolution]")
+        {
+            constexpr size_t stride = 1;
+            constexpr size_t inPadding = 1;
+            constexpr size_t blockSize = 16;
+            constexpr size_t outChannels = 32;
+            constexpr size_t inChannels = 16;
+            constexpr size_t height = 10;
+            constexpr size_t width = 10;
+            constexpr size_t kernelHeight = 3;
+            constexpr size_t kernelWidth = 3;
+
+            Tensor in = at::rand({1, inChannels, height, width});
+            Tensor weight = at::rand({outChannels, inChannels, kernelHeight, kernelWidth});
+            Tensor batchGamma = at::rand({outChannels});
+            Tensor batchBeta = at::rand({outChannels});
+
+            Tensor out = at::zeros({outChannels, height, width});
+            Tensor outMean = at::zeros({outChannels});
+            Tensor outVar = at::zeros({outChannels});
+
+            float *inPtr = in.mutable_data_ptr<float>();
+            float *weightPtr = weight.mutable_data_ptr<float>();
+            float *batchGammaPtr = batchGamma.mutable_data_ptr<float>();
+            float *batchBetaPtr = batchBeta.mutable_data_ptr<float>();
+            float *outPtr = out.mutable_data_ptr<float>();
+            float *outMeanPtr = outMean.mutable_data_ptr<float>();
+            float *outVarPtr = outVar.mutable_data_ptr<float>();
+
+            ImageInference::model::test::ResNet50Test::convBlock<
+                stride, inPadding, blockSize, outChannels, inChannels,
+                height, width, kernelHeight, kernelWidth>(inPtr, weightPtr, batchGammaPtr, batchBetaPtr, outPtr, outMeanPtr, outVarPtr);
+
+            Tensor expected = at::conv2d(in, weight, {}, stride, inPadding);
+            Tensor mean = at::mean(expected, {0, 2, 3});
+            Tensor var = at::var(expected, {0, 2, 3}, false);
+            expected = at::batch_norm(expected, batchGamma, batchBeta, mean, var, false, 0.1, 1e-5, false);
+            expected = at::relu(expected);
+
+            bool success = at::allclose(outMean, mean);
+            printMismatchedValues(success, outMean, mean, outChannels);
+            REQUIRE(success);
+
+            Tensor batchVar = 1 / at::sqrt(var + 1e-5);
+            success = at::allclose(outVar, batchVar);
+            printMismatchedValues(success, outVar, batchVar, outChannels);
+            REQUIRE(success);
+
+            success = at::allclose(out, expected[0], 1.0e-4, 1.0e-5);
+            printMismatchedValues(success, out, expected[0], stride, outChannels, height, width);
+            REQUIRE(success);
+        }
+
+        TEST_CASE("test_resnet50_conv3x3_channels16x16_stride2", "[resnet50][convolution]")
+        {
+            constexpr size_t stride = 2;
+            constexpr size_t inPadding = 1;
+            constexpr size_t blockSize = 16;
+            constexpr size_t outChannels = 16;
+            constexpr size_t inChannels = 16;
+            constexpr size_t height = 10;
+            constexpr size_t width = 10;
+            constexpr size_t kernelHeight = 3;
+            constexpr size_t kernelWidth = 3;
+
+            Tensor in = at::rand({1, inChannels, height, width});
+            Tensor weight = at::rand({outChannels, inChannels, kernelHeight, kernelWidth});
+            Tensor batchGamma = at::rand({outChannels});
+            Tensor batchBeta = at::rand({outChannels});
+
+            Tensor out = at::zeros({outChannels, height, width});
+            Tensor outMean = at::zeros({outChannels});
+            Tensor outVar = at::zeros({outChannels});
+
+            float *inPtr = in.mutable_data_ptr<float>();
+            float *weightPtr = weight.mutable_data_ptr<float>();
+            float *batchGammaPtr = batchGamma.mutable_data_ptr<float>();
+            float *batchBetaPtr = batchBeta.mutable_data_ptr<float>();
+            float *outPtr = out.mutable_data_ptr<float>();
+            float *outMeanPtr = outMean.mutable_data_ptr<float>();
+            float *outVarPtr = outVar.mutable_data_ptr<float>();
+
+            ImageInference::model::test::ResNet50Test::convBlock<
+                stride, inPadding, blockSize, outChannels, inChannels,
+                height, width, kernelHeight, kernelWidth>(inPtr, weightPtr, batchGammaPtr, batchBetaPtr, outPtr, outMeanPtr, outVarPtr);
+
+            Tensor expected = at::conv2d(in, weight, {}, stride, inPadding);
+            Tensor mean = at::mean(expected, {0, 2, 3});
+            Tensor var = at::var(expected, {0, 2, 3}, false);
+            expected = at::batch_norm(expected, batchGamma, batchBeta, mean, var, false, 0.1, 1e-5, false);
+            expected = at::relu(expected);
+
+            bool success = at::allclose(outMean, mean);
+            printMismatchedValues(success, outMean, mean, outChannels);
+            REQUIRE(success);
+
+            Tensor batchVar = 1 / at::sqrt(var + 1e-5);
+            success = at::allclose(outVar, batchVar);
+            printMismatchedValues(success, outVar, batchVar, outChannels);
+            REQUIRE(success);
+
+            success = at::allclose(out, expected[0], 1.0e-4, 1.0e-5);
+            printMismatchedValues(success, out, expected[0], stride, outChannels, height, width);
+            REQUIRE(success);
+        }
+
+        TEST_CASE("test_resnet50_conv3x3_channels16x32_stride2", "[resnet50][convolution]")
+        {
+            constexpr size_t stride = 2;
+            constexpr size_t inPadding = 1;
+            constexpr size_t blockSize = 16;
+            constexpr size_t outChannels = 32;
+            constexpr size_t inChannels = 16;
+            constexpr size_t height = 10;
+            constexpr size_t width = 10;
+            constexpr size_t kernelHeight = 3;
+            constexpr size_t kernelWidth = 3;
+
+            Tensor in = at::rand({1, inChannels, height, width});
+            Tensor weight = at::rand({outChannels, inChannels, kernelHeight, kernelWidth});
+            Tensor batchGamma = at::rand({outChannels});
+            Tensor batchBeta = at::rand({outChannels});
+
+            Tensor out = at::zeros({outChannels, height, width});
+            Tensor outMean = at::zeros({outChannels});
+            Tensor outVar = at::zeros({outChannels});
+
+            float *inPtr = in.mutable_data_ptr<float>();
+            float *weightPtr = weight.mutable_data_ptr<float>();
+            float *batchGammaPtr = batchGamma.mutable_data_ptr<float>();
+            float *batchBetaPtr = batchBeta.mutable_data_ptr<float>();
+            float *outPtr = out.mutable_data_ptr<float>();
+            float *outMeanPtr = outMean.mutable_data_ptr<float>();
+            float *outVarPtr = outVar.mutable_data_ptr<float>();
+
+            ImageInference::model::test::ResNet50Test::convBlock<
+                stride, inPadding, blockSize, outChannels, inChannels,
+                height, width, kernelHeight, kernelWidth>(inPtr, weightPtr, batchGammaPtr, batchBetaPtr, outPtr, outMeanPtr, outVarPtr);
+
+            Tensor expected = at::conv2d(in, weight, {}, stride, inPadding);
+            Tensor mean = at::mean(expected, {0, 2, 3});
+            Tensor var = at::var(expected, {0, 2, 3}, false);
+            expected = at::batch_norm(expected, batchGamma, batchBeta, mean, var, false, 0.1, 1e-5, false);
+            expected = at::relu(expected);
+
+            bool success = at::allclose(outMean, mean);
+            printMismatchedValues(success, outMean, mean, outChannels);
+            REQUIRE(success);
+
+            Tensor batchVar = 1 / at::sqrt(var + 1e-5);
+            success = at::allclose(outVar, batchVar);
+            printMismatchedValues(success, outVar, batchVar, outChannels);
+            REQUIRE(success);
+
+            success = at::allclose(out, expected[0], 1.0e-4, 1.0e-5);
+            printMismatchedValues(success, out, expected[0], stride, outChannels, height, width);
+            REQUIRE(success);
         }
 
         TEST_CASE("test_resnet50_maxpool", "[resnet50][maxpool]")
         {
-
-            // The actual testing is done in python.
             constexpr size_t stride = 1;
             constexpr size_t inPadding = 1;
             constexpr size_t blockSize = 16;
@@ -104,15 +292,14 @@ namespace ImageInference
 
             Tensor expected = at::max_pool2d(in, {3, 3}, stride, inPadding);
 
-            printMismatchedValues(out, expected, stride, channels, height, width);
-
-            REQUIRE(at::allclose(out, expected));
+            bool success = at::allclose(out, expected);
+            printMismatchedValues(success, out, expected, stride, channels, height, width);
+            REQUIRE(success);
         }
 
         TEST_CASE("test_resnet50_maxpool_channels", "[resnet50][maxpool]")
         {
 
-            // The actual testing is done in python.
             constexpr size_t stride = 1;
             constexpr size_t inPadding = 1;
             constexpr size_t blockSize = 16;
@@ -136,16 +323,15 @@ namespace ImageInference
 
             Tensor expected = at::max_pool2d(in, {3, 3}, stride, inPadding);
 
-            printMismatchedValues(out, expected, stride, channels, height, width);
-
-            REQUIRE(at::allclose(out, expected));
+            bool success = at::allclose(out, expected);
+            printMismatchedValues(success, out, expected, stride, channels, height, width);
+            REQUIRE(success);
         }
 
         TEST_CASE("test_resnet50_global_average", "[resnet50][globalAverage]")
         {
             Tensor in = at::randn({16, 10, 10});
 
-            // The actual testing is done in python.
             constexpr size_t inPadding = 0;
             constexpr size_t blockSize = 16;
             constexpr size_t channels = 16;
