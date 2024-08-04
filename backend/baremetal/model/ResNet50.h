@@ -819,7 +819,8 @@ namespace ImageInference
                 // Now we apply the batch norm and relu.
                 for (size_t iHeight = 0; iHeight < outputHeight; iHeight++)
                 {
-                    for (size_t iWidth = 0; iWidth < ImageWidth; iWidth += Stride)
+                    // for (size_t iWidth = 0; iWidth < ImageWidth; iWidth += Stride) // This for loop is need when we do the matmul with fastor as we cannot set a leading dimension.
+                    for(size_t iWidth = 0; iWidth < outputWidth; iWidth++)
                     {
                         for (size_t iCount = 0; iCount < BlockSizeCount; iCount++)
                         {

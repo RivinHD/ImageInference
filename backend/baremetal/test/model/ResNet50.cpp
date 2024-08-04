@@ -182,7 +182,7 @@ namespace ImageInference
             Tensor batchGamma = at::rand({outChannels});
             Tensor batchBeta = at::rand({outChannels});
 
-            Tensor out = at::zeros({outChannels, height, width});
+            Tensor out = at::zeros({outChannels, height / stride, width / stride});
             Tensor outMean = at::zeros({outChannels});
             Tensor outVar = at::zeros({outChannels});
 
@@ -235,7 +235,7 @@ namespace ImageInference
             Tensor batchGamma = at::rand({outChannels});
             Tensor batchBeta = at::rand({outChannels});
 
-            Tensor out = at::zeros({outChannels, height, width});
+            Tensor out = at::zeros({outChannels, height / stride, width / stride});
             Tensor outMean = at::zeros({outChannels});
             Tensor outVar = at::zeros({outChannels});
 
