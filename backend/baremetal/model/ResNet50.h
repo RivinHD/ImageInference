@@ -1054,7 +1054,7 @@ namespace ImageInference
                     // Do the projection
                     for (size_t iBChannel = 0; iBChannel < shortcutChannelBlock; iBChannel++)
                     {
-                        size_t offsetShortcut = shortcut.getOffset(iBCount, iHeight * Stride, 0, 0);
+                        size_t offsetShortcut = shortcut.getOffset(iBChannel, iHeight * Stride, 0, 0);
                         size_t offsetProjectionKernel = projectionKernel.getOffset(iBCount, iBChannel, 0, 0, 0, 0);
                         size_t offsetProjection = projection.getOffset(iBCount, iHeight, 0, 0);
 

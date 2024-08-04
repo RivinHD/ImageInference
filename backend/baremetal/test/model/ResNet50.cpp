@@ -399,7 +399,7 @@ namespace ImageInference
             Tensor weight = at::rand({outChannels, inChannels, kernelHeight, kernelWidth});
             Tensor batchGamma = at::rand({outChannels});
             Tensor batchBeta = at::rand({outChannels});
-            Tensor shortcut = at::rand({shortcutChannels, height, width});
+            Tensor shortcut = at::rand({1, shortcutChannels, height, width});
             Tensor projectionWeight = at::rand({outChannels, shortcutChannels, 1, 1});
             Tensor projectionBatchGamma = at::rand({outChannels});
             Tensor projectionBatchBeta = at::rand({outChannels});
@@ -430,12 +430,15 @@ namespace ImageInference
             Tensor mean = at::mean(expected, {0, 2, 3});
             Tensor var = at::var(expected, {0, 2, 3}, false);
             expected = at::batch_norm(expected, batchGamma, batchBeta, mean, var, false, 0.1, 1e-5, false);
-            Tensor projection = at::conv2d(in, projectionWeight, {}, stride, inPadding);
+            Tensor projection = at::conv2d(shortcut, projectionWeight, {}, stride);
             Tensor projectionMean = at::mean(projection, {0, 2, 3});
             Tensor projectionVar = at::var(projection, {0, 2, 3}, false);
             projection = at::batch_norm(projection, projectionBatchGamma, projectionBatchBeta, projectionMean, projectionVar, false, 0.1, 1e-5, false);
+            std::cerr << "Expected:" << expected.sizes() << " Projection: " << projection.sizes() << std::endl;
             expected += projection;
             expected = at::relu(expected);
+
+            std::cerr << "HERE 2" << std::endl;
 
             bool success = at::allclose(outMean, mean);
             printMismatchedValues(success, outMean, mean, outChannels);
@@ -468,7 +471,7 @@ namespace ImageInference
             Tensor weight = at::rand({outChannels, inChannels, kernelHeight, kernelWidth});
             Tensor batchGamma = at::rand({outChannels});
             Tensor batchBeta = at::rand({outChannels});
-            Tensor shortcut = at::rand({shortcutChannels, height, width});
+            Tensor shortcut = at::rand({1, shortcutChannels, height, width});
             Tensor projectionWeight = at::rand({outChannels, shortcutChannels, 1, 1});
             Tensor projectionBatchGamma = at::rand({outChannels});
             Tensor projectionBatchBeta = at::rand({outChannels});
@@ -499,7 +502,7 @@ namespace ImageInference
             Tensor mean = at::mean(expected, {0, 2, 3});
             Tensor var = at::var(expected, {0, 2, 3}, false);
             expected = at::batch_norm(expected, batchGamma, batchBeta, mean, var, false, 0.1, 1e-5, false);
-            Tensor projection = at::conv2d(in, projectionWeight, {}, stride, inPadding);
+            Tensor projection = at::conv2d(shortcut, projectionWeight, {}, stride);
             Tensor projectionMean = at::mean(projection, {0, 2, 3});
             Tensor projectionVar = at::var(projection, {0, 2, 3}, false);
             projection = at::batch_norm(projection, projectionBatchGamma, projectionBatchBeta, projectionMean, projectionVar, false, 0.1, 1e-5, false);
@@ -537,7 +540,7 @@ namespace ImageInference
             Tensor weight = at::rand({outChannels, inChannels, kernelHeight, kernelWidth});
             Tensor batchGamma = at::rand({outChannels});
             Tensor batchBeta = at::rand({outChannels});
-            Tensor shortcut = at::rand({shortcutChannels, height, width});
+            Tensor shortcut = at::rand({1, shortcutChannels, height, width});
             Tensor projectionWeight = at::rand({outChannels, shortcutChannels, 1, 1});
             Tensor projectionBatchGamma = at::rand({outChannels});
             Tensor projectionBatchBeta = at::rand({outChannels});
@@ -568,7 +571,7 @@ namespace ImageInference
             Tensor mean = at::mean(expected, {0, 2, 3});
             Tensor var = at::var(expected, {0, 2, 3}, false);
             expected = at::batch_norm(expected, batchGamma, batchBeta, mean, var, false, 0.1, 1e-5, false);
-            Tensor projection = at::conv2d(in, projectionWeight, {}, stride, inPadding);
+            Tensor projection = at::conv2d(shortcut, projectionWeight, {}, stride);
             Tensor projectionMean = at::mean(projection, {0, 2, 3});
             Tensor projectionVar = at::var(projection, {0, 2, 3}, false);
             projection = at::batch_norm(projection, projectionBatchGamma, projectionBatchBeta, projectionMean, projectionVar, false, 0.1, 1e-5, false);
@@ -606,7 +609,7 @@ namespace ImageInference
             Tensor weight = at::rand({outChannels, inChannels, kernelHeight, kernelWidth});
             Tensor batchGamma = at::rand({outChannels});
             Tensor batchBeta = at::rand({outChannels});
-            Tensor shortcut = at::rand({shortcutChannels, height, width});
+            Tensor shortcut = at::rand({1, shortcutChannels, height, width});
             Tensor projectionWeight = at::rand({outChannels, shortcutChannels, 1, 1});
             Tensor projectionBatchGamma = at::rand({outChannels});
             Tensor projectionBatchBeta = at::rand({outChannels});
@@ -637,7 +640,7 @@ namespace ImageInference
             Tensor mean = at::mean(expected, {0, 2, 3});
             Tensor var = at::var(expected, {0, 2, 3}, false);
             expected = at::batch_norm(expected, batchGamma, batchBeta, mean, var, false, 0.1, 1e-5, false);
-            Tensor projection = at::conv2d(in, projectionWeight, {}, stride, inPadding);
+            Tensor projection = at::conv2d(shortcut, projectionWeight, {}, stride);
             Tensor projectionMean = at::mean(projection, {0, 2, 3});
             Tensor projectionVar = at::var(projection, {0, 2, 3}, false);
             projection = at::batch_norm(projection, projectionBatchGamma, projectionBatchBeta, projectionMean, projectionVar, false, 0.1, 1e-5, false);
@@ -869,15 +872,15 @@ namespace ImageInference
             REQUIRE((outExpected.size(0) == 1));
             REQUIRE((outExpected.size(1) == 1000));
 
-            std::cerr << std::endl
-                      << "Tested File: " << compareFilepath << std::endl
-                      << "Input [" << inPtr << ", " << inPtr + in.numel() << ") size: " << in.sizes() << " with " << in.numel() << " elements." << std::endl
-                      << "Expected size: " << outExpected.sizes() << std::endl;
+            // std::cerr << std::endl
+            //           << "Tested File: " << compareFilepath << std::endl
+            //           << "Input [" << inPtr << ", " << inPtr + in.numel() << ") size: " << in.sizes() << " with " << in.numel() << " elements." << std::endl
+            //           << "Expected size: " << outExpected.sizes() << std::endl;
 
             resnet50.inference(inPtr, outPtr);
 
             bool success = at::allclose(out, outExpected, 1.0e-4, 1.0e-5);
-            printMismatchedValues(success, out, outExpected, 1000);
+            printMismatchedValues(success, out, outExpected[0], 1000);
             REQUIRE(success);
         }
 
@@ -902,11 +905,11 @@ namespace ImageInference
                 weightPtrs.push_back(tensor.mutable_data_ptr<float>());
             }
 
-            std::cerr << "Weights size: " << weights.size() << std::endl;
-            for (size_t i = 0; i < weights.size(); i++)
-            {
-                std::cerr << "Weight at Index " << i << " with size " << weights[i].sizes() << std::endl;
-            }
+            // std::cerr << "Weights size: " << weights.size() << std::endl;
+            // for (size_t i = 0; i < weights.size(); i++)
+            // {
+            //     std::cerr << "Weight at Index " << i << " with size " << weights[i].sizes() << std::endl;
+            // }
 
             ImageInference::model::ResNet50 resnet50(weightPtrs, ImageInference::types::ScalarType::Float);
 
