@@ -880,7 +880,7 @@ namespace ImageInference
             resnet50.inference(inPtr, outPtr);
 
             bool success = at::allclose(out, outExpected, 1.0e-4, 1.0e-5);
-            printMismatchedValues(success, out, outExpected[0], 1000);
+            printMismatchedValues(success, out[0], outExpected[0], 1000);
             REQUIRE(success);
         }
 
