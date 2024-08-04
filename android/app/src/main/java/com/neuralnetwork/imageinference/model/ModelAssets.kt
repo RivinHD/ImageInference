@@ -51,6 +51,14 @@ class ModelAssets(assets: AssetManager, applicationInfo: ApplicationInfo) {
                 applicationInfo.nativeLibraryDir,
                 true
             )
+
+            if ("arm64-v8a" in Build.SUPPORTED_ABIS) {
+                Os.setenv(
+                    "LIBXSMM_TARGET",
+                    "aarch64",
+                    true
+                )
+            }
         } catch (e: ErrnoException) {
             Log.e(
                 "Snapdragon Neural Processing Engine SDK",
