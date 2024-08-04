@@ -84,7 +84,7 @@
     <string name="no">No</string>
     <string name="are_you_sure_you_want_to_remove_the_collection">Are you sure you want to remove the collection: \'%1$s\'?</string>
     <string name="ok">OK</string>
-    <string name="benchmark_help_text">This screen allows you to benchmark the model with the selected image collection.\nThe benchmark will run the model on each image in the collection.\nThe benchmark results will be stored depending on the collection. Therefore benchmark results of different models are stored in the same collection.</string>
+    <string name="benchmark_help_text">This screen allows you to benchmark the model with the selected image collection.\nThe benchmark will run the model on each image in the collection.\nThe benchmark results will be stored depending on the collection. Therefore benchmark results of different models are stored with the same collection.</string>
     <string name="cancel_benchmark">Cancel Benchmark</string>
     <string name="inference_was_cancelled">Inference was cancelled!</string>
     <string name="average_time">Average Time</string>

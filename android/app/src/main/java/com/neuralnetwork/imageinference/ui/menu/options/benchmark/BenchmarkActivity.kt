@@ -6,12 +6,9 @@ import android.os.Bundle
 import android.util.Log
 import android.view.View
 import android.widget.AdapterView
-import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.ActivityResult
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -119,14 +116,8 @@ class BenchmarkActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
         binding = ActivityBenchmarkBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
-        }
 
         _modelAssets = ModelAssets(assets, applicationInfo)
         _benchmarkAssets = BenchmarkCollectionAssets(this)
@@ -212,6 +203,8 @@ class BenchmarkActivity : AppCompatActivity() {
     private fun setupBenchmarkDetails() {
         val details = binding.benchmarkDetails
         _benchmarks.observe(this) {
+            checkRunBenchmark()
+
             if (it == null) {
                 return@observe
             }

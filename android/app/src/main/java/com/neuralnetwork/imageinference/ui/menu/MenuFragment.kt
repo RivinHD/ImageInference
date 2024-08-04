@@ -27,6 +27,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import com.neuralnetwork.imageinference.databinding.FragmentMenuBinding
+import com.neuralnetwork.imageinference.ui.menu.options.SettingsActivity
 import com.neuralnetwork.imageinference.ui.menu.options.benchmark.BenchmarkActivity
 
 class MenuFragment : Fragment() {
@@ -62,6 +63,7 @@ class MenuFragment : Fragment() {
         val root: View = binding.root
 
         setupBenchmark()
+        setupSettings()
 
         return root
     }
@@ -73,6 +75,13 @@ class MenuFragment : Fragment() {
         val benchmark = binding.menuBenchmark
         benchmark.setOnClickListener {
             startActivity(Intent(_context, BenchmarkActivity::class.java))
+        }
+    }
+
+    private fun setupSettings() {
+        val settings = binding.menuSettings
+        settings.setOnClickListener {
+            startActivity(Intent(_context, SettingsActivity::class.java))
         }
     }
 }
