@@ -29,6 +29,7 @@
 #include <stdint.h>
 #include <omp.h>
 #include <iostream>
+#include <stdexcept>
 #ifndef FASTOR_USE_LIBXSMM
 #define FASTOR_USE_LIBXSMM
 #endif // !FASTOR_USE_LIBXSMM
@@ -55,20 +56,20 @@ namespace ImageInference
         private:
             std::vector<void *> modelWeights;
             ImageInference::types::ScalarType type;
-
+            // TODO Libxsmm kernels with code dispatch see https://github.com/libxsmm/libxsmm/blob/main/documentation/libxsmm_mm.md#manual-code-dispatch
             // All the blocks start with a 1x1 kernel. Therefore no padding is required.
 
             template <typename T, size_t BlockSize>
-            ImageInference::types::Image<T, 0, BlockSize, 256, 61, 61> block0(ImageInference::types::Image<T, 0, BlockSize, 64, 61, 61> &input);
+            ImageInference::types::Image<T, 0, BlockSize, 256, 56, 56> block0(ImageInference::types::Image<T, 0, BlockSize, 64, 56, 56> &input);
 
             template <typename T, size_t BlockSize>
-            ImageInference::types::Image<T, 0, BlockSize, 512, 30, 30> block1(ImageInference::types::Image<T, 0, BlockSize, 256, 61, 61> &input);
+            ImageInference::types::Image<T, 0, BlockSize, 512, 28, 28> block1(ImageInference::types::Image<T, 0, BlockSize, 256, 56, 56> &input);
 
             template <typename T, size_t BlockSize>
-            ImageInference::types::Image<T, 0, BlockSize, 1024, 15, 15> block2(ImageInference::types::Image<T, 0, BlockSize, 512, 30, 30> &input);
+            ImageInference::types::Image<T, 0, BlockSize, 1024, 14, 14> block2(ImageInference::types::Image<T, 0, BlockSize, 512, 28, 28> &input);
 
             template <typename T, size_t BlockSize>
-            ImageInference::types::Image<T, 0, BlockSize, 2048, 7, 7> block3(ImageInference::types::Image<T, 0, BlockSize, 1024, 15, 15> &input);
+            ImageInference::types::Image<T, 0, BlockSize, 2048, 7, 7> block3(ImageInference::types::Image<T, 0, BlockSize, 1024, 14, 14> &input);
 
             template <size_t Stride, size_t OutPadding, size_t InPadding,
                       typename T, size_t BlockSizeCount, size_t BlockSizeChannel,
@@ -473,7 +474,7 @@ namespace ImageInference
         };
 
         template <typename T, size_t BlockSize>
-        inline ImageInference::types::Image<T, 0, BlockSize, 256, 61, 61> ResNet50::block0(ImageInference::types::Image<T, 0, BlockSize, 64, 61, 61> &input)
+        inline ImageInference::types::Image<T, 0, BlockSize, 256, 56, 56> ResNet50::block0(ImageInference::types::Image<T, 0, BlockSize, 64, 56, 56> &input)
         {
             auto kernel_0_0 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 64, 64, 1, 1>(getWeight<T>(weightIndex::layer1_0_conv1_weight));
             auto batchNorm_0_0 = ImageInference::types::BatchNorm<T, 64>(getWeight<T>(weightIndex::layer1_0_bn1_weight), getWeight<T>(weightIndex::layer1_0_bn1_bias));
@@ -514,7 +515,7 @@ namespace ImageInference
         }
 
         template <typename T, size_t BlockSize>
-        ImageInference::types::Image<T, 0, BlockSize, 512, 30, 30> ResNet50::block1(ImageInference::types::Image<T, 0, BlockSize, 256, 61, 61> &input)
+        ImageInference::types::Image<T, 0, BlockSize, 512, 28, 28> ResNet50::block1(ImageInference::types::Image<T, 0, BlockSize, 256, 56, 56> &input)
         {
             auto kernel_0_0 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 128, 256, 1, 1>(getWeight<T>(weightIndex::layer2_0_conv1_weight));
             auto batchNorm_0_0 = ImageInference::types::BatchNorm<T, 128>(getWeight<T>(weightIndex::layer2_0_bn1_weight), getWeight<T>(weightIndex::layer2_0_bn1_bias));
@@ -562,7 +563,7 @@ namespace ImageInference
         }
 
         template <typename T, size_t BlockSize>
-        ImageInference::types::Image<T, 0, BlockSize, 1024, 15, 15> ResNet50::block2(ImageInference::types::Image<T, 0, BlockSize, 512, 30, 30> &input)
+        ImageInference::types::Image<T, 0, BlockSize, 1024, 14, 14> ResNet50::block2(ImageInference::types::Image<T, 0, BlockSize, 512, 28, 28> &input)
         {
             auto kernel_0_0 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 256, 512, 1, 1>(getWeight<T>(weightIndex::layer3_0_conv1_weight));
             auto batchNorm_0_0 = ImageInference::types::BatchNorm<T, 256>(getWeight<T>(weightIndex::layer3_0_bn1_weight), getWeight<T>(weightIndex::layer3_0_bn1_bias));
@@ -630,7 +631,7 @@ namespace ImageInference
         }
 
         template <typename T, size_t BlockSize>
-        ImageInference::types::Image<T, 0, BlockSize, 2048, 7, 7> ResNet50::block3(ImageInference::types::Image<T, 0, BlockSize, 1024, 15, 15> &input)
+        ImageInference::types::Image<T, 0, BlockSize, 2048, 7, 7> ResNet50::block3(ImageInference::types::Image<T, 0, BlockSize, 1024, 14, 14> &input)
         {
             auto kernel_0_0 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 512, 1024, 1, 1>(getWeight<T>(weightIndex::layer4_0_conv1_weight));
             auto batchNorm_0_0 = ImageInference::types::BatchNorm<T, 512>(getWeight<T>(weightIndex::layer4_0_bn1_weight), getWeight<T>(weightIndex::layer4_0_bn1_bias));
@@ -678,10 +679,10 @@ namespace ImageInference
         {
             if constexpr (InPadding != KernelHeight / 2 || InPadding != KernelWidth / 2)
             {
-                std::cerr << "Padding is too small or to large for the kernel size. Padding: " << InPadding
+                std::cerr << "ResNet50::convBlock: Padding is too small or to large for the kernel size. Padding: " << InPadding
                           << " KernelHeight: " << KernelHeight << " KernelWidth: " << KernelWidth << std::endl
                           << "Should be KernelHeight / 2 or KernelWidth / 2 = Padding." << std::endl;
-                throw std::runtime_error("Padding is too small or to large for the kernel size!");
+                throw std::runtime_error("ResNet50::convBlock: Padding is too small or to large for the kernel size!");
             }
 
             constexpr size_t countBlocks = KernelCount / BlockSizeCount;
@@ -754,7 +755,7 @@ namespace ImageInference
 
                     // At this point we completed a complete row of the output.
                     // We will also update the mean and variance as we already loaded the data.
-                    for(size_t iWidth = 0; iWidth < outputWidth; iWidth++)
+                    for (size_t iWidth = 0; iWidth < outputWidth; iWidth++)
                     {
                         for (size_t iCount = 0; iCount < BlockSizeCount; iCount++)
                         {
@@ -777,7 +778,7 @@ namespace ImageInference
                 // Now we apply the batch norm and relu.
                 for (size_t iHeight = 0; iHeight < outputHeight; iHeight++)
                 {
-                    for(size_t iWidth = 0; iWidth < outputWidth; iWidth++)
+                    for (size_t iWidth = 0; iWidth < outputWidth; iWidth++)
                     {
                         for (size_t iCount = 0; iCount < BlockSizeCount; iCount++)
                         {
@@ -797,6 +798,378 @@ namespace ImageInference
             return output;
         }
 
+        template <size_t OutPadding, size_t InPadding, size_t ShortcutPadding,
+                  typename T, size_t BlockSizeCount, size_t BlockSizeChannel,
+                  size_t ImageChannels, size_t ImageHeight, size_t ImageWidth,
+                  size_t KernelCount, size_t KernelHeight, size_t KernelWidth>
+        inline ImageInference::types::Image<T, OutPadding, BlockSizeCount, KernelCount, ImageHeight, ImageWidth> ResNet50::convBlockAddIdentity(
+            ImageInference::types::Image<T, InPadding, BlockSizeChannel, ImageChannels, ImageHeight, ImageWidth> &image,
+            ImageInference::types::Kernel<T, BlockSizeCount, BlockSizeChannel, KernelCount, ImageChannels, KernelHeight, KernelWidth> &kernel,
+            ImageInference::types::BatchNorm<T, KernelCount> &batchNorm,
+            ImageInference::types::Image<T, ShortcutPadding, BlockSizeCount, KernelCount, ImageHeight, ImageWidth> &shortcut)
+        {
+            if constexpr (InPadding != KernelHeight / 2 || InPadding != KernelWidth / 2)
+            {
+                std::cerr << "ResNet50::convBlockAddIdentity: Padding is too small or to large for the kernel size. Padding: " << InPadding
+                          << " KernelHeight: " << KernelHeight << " KernelWidth: " << KernelWidth << std::endl
+                          << "Should be KernelHeight / 2 or KernelWidth / 2 = Padding." << std::endl;
+                throw std::runtime_error("ResNet50::convBlockAddIdentity: Padding is too small or to large for the kernel size!");
+            }
+
+            constexpr size_t countBlocks = KernelCount / BlockSizeCount;
+            constexpr size_t channelBlocks = ImageChannels / BlockSizeChannel;
+            constexpr size_t outputHeight = ImageHeight;
+            constexpr size_t outputWidth = ImageWidth;
+
+            ImageInference::types::Image<T, OutPadding, BlockSizeCount, KernelCount, ImageHeight, ImageWidth> output;
+            auto outputPtr = output.getPointer() + output.paddingOffset; // We skip the padding as we want to start at the data section.
+            auto meanPtr = output.getMeanPointer();                      // Count = CountBlocks x CountElements
+            auto variancePtr = output.getBatchVariancePointer();         // Count = CountBlocks x CountElements
+
+            auto imagePtr = image.getPointer();          // ChannelBlocks x Height x Width x ChannelElements
+            auto kernelPtr = kernel.getPointer();        // CountBlocks x ChannelBlocks x Height x Width x ChannelElements x CountElements
+            auto gammaPtr = batchNorm.getGammaPointer(); // Count = CountBlocks x CountElements
+            auto betaPtr = batchNorm.getBetaPointer();   // Count = CountBlocks x CountElements
+            auto shortcutPtr = shortcut.getPointer();    // ChannelBlocks x Height x Width x ChannelElements
+
+            size_t meanVarianceCount[KernelCount]{0};
+
+            for (size_t iBCount = 0; iBCount < countBlocks; iBCount++)
+            {
+                for (size_t iHeight = 0; iHeight < outputHeight; iHeight++)
+                {
+                    // Do convolution calculation
+                    for (size_t iBChannel = 0; iBChannel < channelBlocks; iBChannel++)
+                    {
+                        for (size_t kHeight = 0; kHeight < KernelHeight; kHeight++)
+                        {
+                            for (size_t kWidth = 0; kWidth < KernelWidth; kWidth++)
+                            {
+                                size_t inputOffset = image.getOffset(iBChannel, iHeight + kHeight, kWidth, 0);
+                                size_t kernelOffset = kernel.getOffset(iBCount, iBChannel, kHeight, kWidth, 0, 0);
+                                size_t outputOffset = output.getOffset(iBCount, iHeight, 0, 0);
+
+                                // Kernel of shape BlockSizeChannel x BlockSizeCount
+                                // Input of shape ImageWidth x BlockSizeChannel
+                                // Output of shape outputWidth x BlockSizeCount === ImageWidth x BlockSizeCount
+
+                                // If we use libxsmm directly we don't need to do add separately!
+                                constexpr int MM = outputWidth;
+                                constexpr int KK = BlockSizeChannel;
+                                constexpr int NN = BlockSizeCount;
+                                constexpr int ldImage = NN;
+                                constexpr float alpha = 1.0;
+                                constexpr float beta = 1.0;
+
+                                constexpr char transa = 'N';
+                                constexpr char transb = 'N';
+
+                                libxsmm_sgemm(
+                                    &transa /*transa*/,
+                                    &transb /*transb*/,
+                                    &NN /*required*/,
+                                    &MM /*required*/,
+                                    &KK /*required*/,
+                                    &alpha /*alpha*/,
+                                    kernelPtr + kernelOffset /*required*/,
+                                    &NN /*lda*/,
+                                    imagePtr + inputOffset /*required*/,
+                                    &ldImage /*ldb*/,
+                                    &beta /*beta*/,
+                                    outputPtr + outputOffset /*required*/,
+                                    &NN /*ldc*/
+                                );
+                            }
+                        }
+                    }
+
+                    // At this point we completed a complete row of the output.
+                    // We will also update the mean and variance as we already loaded the data.
+                    for (size_t iWidth = 0; iWidth < outputWidth; iWidth++)
+                    {
+                        for (size_t iCount = 0; iCount < BlockSizeCount; iCount++)
+                        {
+                            size_t offsetOutput = output.getOffset(iBCount, iHeight, iWidth, iCount);
+                            size_t offsetCount = iBCount * BlockSizeCount + iCount;
+                            output.updateMeanVariance(outputPtr[offsetOutput], offsetCount, ++meanVarianceCount[offsetCount]);
+                        }
+                    }
+                }
+            }
+
+            for (size_t iBCount = 0; iBCount < countBlocks; iBCount++)
+            {
+                for (size_t iCount = 0; iCount < BlockSizeCount; iCount++)
+                {
+                    size_t offsetCount = iBCount * BlockSizeCount + iCount;
+                    output.finalizeMeanVariance(offsetCount, meanVarianceCount[offsetCount]);
+                }
+
+                // Now we apply the batch norm and relu.
+                for (size_t iHeight = 0; iHeight < outputHeight; iHeight++)
+                {
+                    for (size_t iWidth = 0; iWidth < outputWidth; iWidth++)
+                    {
+                        for (size_t iCount = 0; iCount < BlockSizeCount; iCount++)
+                        {
+                            size_t offsetOutput = output.getOffset(iBCount, iHeight, iWidth, iCount);
+                            size_t offsetShortcut = shortcut.getOffset(iBCount, iHeight, iWidth, iCount);
+                            size_t offsetCount = iBCount * BlockSizeCount + iCount;
+                            T batchNormValue = ResNet50::batchNorm<T>(
+                                outputPtr[offsetOutput],
+                                gammaPtr[offsetCount],
+                                betaPtr[offsetCount],
+                                meanPtr[offsetCount],
+                                variancePtr[offsetCount]);
+                            outputPtr[offsetOutput] = relu<T>(batchNormValue + shortcutPtr[offsetShortcut]);
+                        }
+                    }
+                }
+            }
+
+            return output;
+        }
+
+        template <size_t Stride, size_t ShortcutDimExpand, size_t OutPadding, size_t InPadding, size_t ShortcutPadding,
+                  typename T, size_t BlockSizeCount, size_t BlockSizeChannel,
+                  size_t ImageChannels, size_t ImageHeight, size_t ImageWidth,
+                  size_t KernelCount, size_t KernelHeight, size_t KernelWidth>
+        inline ImageInference::types::Image<T, OutPadding, BlockSizeCount, KernelCount, ImageHeight / Stride, ImageWidth / Stride> ResNet50::convBlockAddProjection(
+            ImageInference::types::Image<T, InPadding, BlockSizeChannel, ImageChannels, ImageHeight / Stride, ImageWidth / Stride> &image,
+            ImageInference::types::Kernel<T, BlockSizeCount, BlockSizeChannel, KernelCount, ImageChannels, KernelHeight, KernelWidth> &kernel,
+            ImageInference::types::BatchNorm<T, KernelCount> &batchNorm,
+            ImageInference::types::Image<T, ShortcutPadding, BlockSizeCount, KernelCount / ShortcutDimExpand, ImageHeight, ImageWidth> &shortcut,
+            ImageInference::types::Kernel<T, BlockSizeCount, BlockSizeCount, KernelCount, KernelCount / ShortcutDimExpand, 1, 1> &projectionKernel,
+            ImageInference::types::BatchNorm<T, KernelCount> &projectionBatchNorm)
+        {
+            if constexpr (InPadding != KernelHeight / 2 || InPadding != KernelWidth / 2)
+            {
+                std::cerr << "ResNet50::convBlockAddProjection: Padding is too small or to large for the kernel size. Padding: " << InPadding
+                          << " KernelHeight: " << KernelHeight << " KernelWidth: " << KernelWidth << std::endl
+                          << "Should be KernelHeight / 2 or KernelWidth / 2 = Padding." << std::endl;
+                throw std::runtime_error("ResNet50::convBlockAddProjection: Padding is too small or to large for the kernel size!");
+            }
+
+            constexpr size_t countBlocks = KernelCount / BlockSizeCount;
+            constexpr size_t channelBlocks = ImageChannels / BlockSizeChannel;
+            constexpr size_t outputHeight = ImageHeight / Stride;
+            constexpr size_t outputWidth = ImageWidth / Stride;
+
+            ImageInference::types::Image<T, OutPadding, BlockSizeCount, KernelCount, ImageHeight / Stride, ImageWidth / Stride> output;
+            auto outputPtr = output.getPointer() + output.paddingOffset; // We skip the padding as we want to start at the data section.
+            auto meanPtr = output.getMeanPointer();                      // Count = CountBlocks x CountElements
+            auto variancePtr = output.getBatchVariancePointer();         // Count = CountBlocks x CountElements
+
+            auto imagePtr = image.getPointer();                              // ChannelBlocks x Height x Width x ChannelElements
+            auto kernelPtr = kernel.getPointer();                            // CountBlocks x ChannelBlocks x Height x Width x ChannelElements x CountElements
+            auto gammaPtr = batchNorm.getGammaPointer();                     // Count = CountBlocks x CountElements
+            auto betaPtr = batchNorm.getBetaPointer();                       // Count = CountBlocks x CountElements
+            auto shortcutPtr = shortcut.getPointer();                        // ChannelBlocks x Height x Width x ChannelElements
+            auto projectionKernelPtr = projectionKernel.getPointer();        // CountBlocks x CountBlocks x 1 x 1 x CountElements x CountElements
+            auto projectionGammaPtr = projectionBatchNorm.getGammaPointer(); // Count = CountBlocks x CountElements
+            auto projectionBetaPtr = projectionBatchNorm.getBetaPointer();   // Count = CountBlocks x CountElements
+
+            size_t meanVarianceCount[KernelCount]{0};
+
+            for (size_t iBCount = 0; iBCount < countBlocks; iBCount++)
+            {
+                for (size_t iHeight = 0; iHeight < outputHeight; iHeight++)
+                {
+                    // Do convolution calculation
+                    for (size_t iBChannel = 0; iBChannel < channelBlocks; iBChannel++)
+                    {
+                        for (size_t kHeight = 0; kHeight < KernelHeight; kHeight++)
+                        {
+                            for (size_t kWidth = 0; kWidth < KernelWidth; kWidth++)
+                            {
+                                size_t inputOffset = image.getOffset(iBChannel, iHeight + kHeight, kWidth, 0);
+                                size_t kernelOffset = kernel.getOffset(iBCount, iBChannel, kHeight, kWidth, 0, 0);
+                                size_t outputOffset = output.getOffset(iBCount, iHeight, 0, 0);
+
+                                // Kernel of shape BlockSizeChannel x BlockSizeCount
+                                // Input of shape ImageWidth x BlockSizeChannel
+                                // Output of shape outputWidth x BlockSizeCount === ImageWidth / Stride x BlockSizeCount
+
+                                // If we use libxsmm directly we don't need to do add separately!
+                                // Both input and output have the same stride therefore we can do a norma matrix multiplication.
+                                constexpr int MM = outputWidth;
+                                constexpr int KK = BlockSizeChannel;
+                                constexpr int NN = BlockSizeCount;
+                                constexpr int ldImage = NN;
+                                constexpr float alpha = 1.0;
+                                constexpr float beta = 1.0;
+
+                                constexpr char transa = 'N';
+                                constexpr char transb = 'N';
+
+                                libxsmm_sgemm(
+                                    &transa /*transa*/,
+                                    &transb /*transb*/,
+                                    &NN /*required*/,
+                                    &MM /*required*/,
+                                    &KK /*required*/,
+                                    &alpha /*alpha*/,
+                                    kernelPtr + kernelOffset /*required*/,
+                                    &NN /*lda*/,
+                                    imagePtr + inputOffset /*required*/,
+                                    &ldImage /*ldb*/,
+                                    &beta /*beta*/,
+                                    outputPtr + outputOffset /*required*/,
+                                    &NN /*ldc*/
+                                );
+                            }
+                        }
+                    }
+
+                    // At this point we completed a complete row of the output.
+                    // We will also update the mean and variance as we already loaded the data.
+                    for (size_t iWidth = 0; iWidth < outputWidth; iWidth++)
+                    {
+                        for (size_t iCount = 0; iCount < BlockSizeCount; iCount++)
+                        {
+                            size_t offsetOutput = output.getOffset(iBCount, iHeight, iWidth, iCount);
+                            size_t offsetCount = iBCount * BlockSizeCount + iCount;
+                            output.updateMeanVariance(outputPtr[offsetOutput], offsetCount, ++meanVarianceCount[offsetCount]);
+                        }
+                    }
+                }
+            }
+
+            // Calculate the shortcut projection
+            constexpr size_t shortcutChannelBlock = KernelCount / ShortcutDimExpand / BlockSizeCount;
+
+            constexpr size_t projectionHeight = ImageHeight / Stride;
+            constexpr size_t projectionWidth = ImageWidth / Stride;
+
+            ImageInference::types::Image<T, 0, BlockSizeCount, KernelCount, ImageHeight / Stride, ImageWidth / Stride> projection;
+            auto projectionPtr = projection.getPointer() + projection.paddingOffset; // We skip the padding as we want to start at the data section.
+            auto projectionMeanPtr = projection.getMeanPointer();                    // Count = CountBlocks x CountElements
+            auto projectionVariancePtr = projection.getBatchVariancePointer();       // Count = CountBlocks x CountElements
+
+            size_t meanVarianceCountProjection[KernelCount]{0};
+            for (size_t iBCount = 0; iBCount < countBlocks; iBCount++)
+            {
+                for (size_t iHeight = 0; iHeight < projectionHeight; iHeight++)
+                {
+                    // Do the projection
+                    for (size_t iBChannel = 0; iBChannel < shortcutChannelBlock; iBChannel++)
+                    {
+                        size_t offsetShortcut = shortcut.getOffset(iBCount, iHeight * Stride, 0, 0);
+                        size_t offsetProjectionKernel = projectionKernel.getOffset(iBCount, iBChannel, 0, 0, 0, 0);
+                        size_t offsetProjection = projection.getOffset(iBCount, iHeight, 0, 0);
+
+                        // Kernel of shape BlockSizeChannel x BlockSizeCount
+                        // Input of shape ImageWidth x BlockSizeChannel
+                        // Output of shape projectionWidth x BlockSizeCount === ImageWidth / Stride x BlockSizeCount
+
+                        // If we use libxsmm directly we don't need to do add separately!
+                        // If we use the leading dimension on the image we can use it as stride.
+                        // With the leading dimension we skip the next blocks as they should be skipped by the stride.
+                        constexpr int MM = projectionWidth;
+                        constexpr int KK = BlockSizeChannel;
+                        constexpr int NN = BlockSizeCount;
+                        constexpr int ldImage = NN * Stride;
+                        constexpr float alpha = 1.0;
+                        constexpr float beta = 0.0;
+
+                        constexpr char transa = 'N';
+                        constexpr char transb = 'N';
+
+                        libxsmm_sgemm(
+                            &transa /*transa*/,
+                            &transb /*transb*/,
+                            &NN /*required*/,
+                            &MM /*required*/,
+                            &KK /*required*/,
+                            &alpha /*alpha*/,
+                            projectionKernelPtr + offsetProjectionKernel /*required*/,
+                            &NN /*lda*/,
+                            shortcutPtr + offsetShortcut /*required*/,
+                            &ldImage /*ldb*/,
+                            &beta /*beta*/,
+                            projectionPtr + offsetProjection /*required*/,
+                            &NN /*ldc*/
+                        );
+                    }
+
+                    // At this point we completed a complete row of the output.
+                    // We will also update the mean and variance as we already loaded the data.
+                    for (size_t iWidth = 0; iWidth < projectionWidth; iWidth++)
+                    {
+                        for (size_t iCount = 0; iCount < BlockSizeCount; iCount++)
+                        {
+                            size_t offsetProjection = projection.getOffset(iBCount, iHeight, iWidth, iCount);
+                            size_t offsetCount = iBCount * BlockSizeCount + iCount;
+                            projection.updateMeanVariance(projectionPtr[offsetProjection], offsetCount, ++meanVarianceCountProjection[offsetCount]);
+                        }
+                    }
+                }
+            }
+
+            for (size_t iBCount = 0; iBCount < countBlocks; iBCount++)
+            {
+                for (size_t iCount = 0; iCount < BlockSizeCount; iCount++)
+                {
+                    size_t offsetCount = iBCount * BlockSizeCount + iCount;
+                    projection.finalizeMeanVariance(offsetCount, meanVarianceCountProjection[offsetCount]);
+                }
+
+                // Now we apply the batch norm to the projection.
+                for (size_t iHeight = 0; iHeight < projectionHeight; iHeight++)
+                {
+                    for (size_t iWidth = 0; iWidth < projectionWidth; iWidth++)
+                    {
+                        for (size_t iCount = 0; iCount < BlockSizeCount; iCount++)
+                        {
+                            size_t offsetProject = projection.getOffset(iBCount, iHeight, iWidth, iCount);
+                            size_t offsetCount = iBCount * BlockSizeCount + iCount;
+                            projectionPtr[offsetProject] = ResNet50::batchNorm<T>(
+                                projectionPtr[offsetProject],
+                                projectionGammaPtr[offsetCount],
+                                projectionBetaPtr[offsetCount],
+                                projectionMeanPtr[offsetCount],
+                                projectionVariancePtr[offsetCount]);
+                        }
+                    }
+                }
+            }
+
+            // Continue with processing the actual input.
+            for (size_t iBCount = 0; iBCount < countBlocks; iBCount++)
+            {
+                for (size_t iCount = 0; iCount < BlockSizeCount; iCount++)
+                {
+                    size_t offsetCount = iBCount * BlockSizeCount + iCount;
+                    output.finalizeMeanVariance(offsetCount, meanVarianceCount[offsetCount]);
+                }
+
+                // Now we apply the batch norm and relu.
+                for (size_t iHeight = 0; iHeight < outputHeight; iHeight++)
+                {
+                    for (size_t iWidth = 0; iWidth < outputWidth; iWidth++)
+                    {
+                        for (size_t iCount = 0; iCount < BlockSizeCount; iCount++)
+                        {
+                            size_t offsetOutput = output.getOffset(iBCount, iHeight, iWidth, iCount);
+                            size_t offsetCount = iBCount * BlockSizeCount + iCount;
+                            T batchNormValue = ResNet50::batchNorm<T>(
+                                outputPtr[offsetOutput],
+                                gammaPtr[offsetCount],
+                                betaPtr[offsetCount],
+                                meanPtr[offsetCount],
+                                variancePtr[offsetCount]);
+
+                            size_t projectionOffset = projection.getOffset(iBCount, iHeight, iWidth, iCount);
+                            T projectedValue = projectionPtr[projectionOffset];
+                            outputPtr[offsetOutput] = relu<T>(batchNormValue + projectedValue);
+                        }
+                    }
+                }
+            }
+
+            return output;
+        }
+
         template <size_t Stride, size_t OutPadding, size_t InPadding,
                   typename T, size_t BlockSize,
                   size_t ImageChannels, size_t ImageHeight, size_t ImageWidth>
@@ -805,9 +1178,9 @@ namespace ImageInference
         {
             if constexpr (InPadding != 1)
             {
-                std::cerr << "Padding is too small or to large for the kernel size. Padding is " << InPadding
+                std::cerr << "ResNet50::maxPool: Padding is too small or to large for 3x3 Max Pooling. Padding is " << InPadding
                           << " but should be 1." << std::endl;
-                throw std::runtime_error("Padding is too small or to large for 3x3 Max Pooling!");
+                throw std::runtime_error("ResNet50::maxPool: Padding is too small or to large for 3x3 Max Pooling!");
             }
 
             constexpr size_t channelBlocks = ImageChannels / BlockSize;

@@ -156,7 +156,7 @@ CMAKE_INSTALL_PATH="${BasePath}/ImageInference/submodules/executorch/cmake-andro
 CMAKE_PREFIX_PATH="${CMAKE_INSTALL_PATH}/lib/cmake/ExecuTorch;${SITE_PACKAGES}/torch/share/cmake/Torch;"
 BUILD_DIR="cmake-android-out/portable/custom_ops"
 
-cd submodules/executorch
+cd "${BasePath}/ImageInference/submodules/executorch"
 
 rm -rf "$BUILD_DIR"
 cmake \
@@ -250,6 +250,10 @@ cmake "${BasePath}/ImageInference/backend/baremetal"\
 
 cmake --build "$BUILD_DIR" -j "${CMAKE_JOBS}" --target install
 
+cd "${BasePath}/ImageInference"
+python "${BasePath}/ImageInference/scripts/export_resnet50_for_test.py"
+
+cd "${BasePath}/ImageInference/submodules/executorch"
 cd "$BUILD_DIR"
 ctest -j "${CMAKE_JOBS}" --output-on-failure -C Release
 

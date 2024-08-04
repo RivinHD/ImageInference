@@ -184,6 +184,7 @@ if(NOT ANDROID)
 
     file(GLOB shared_test_source
         ${CMAKE_CURRENT_LIST_DIR}/model/test/*.cpp
+        ${CURRENT_TEST_DIR}/utils/*.cpp
     )
 
     file(GLOB TEST_FILES
@@ -194,6 +195,8 @@ if(NOT ANDROID)
     list(APPEND TEST_FILES ${shared_source} ${shared_test_source})
 
     add_executable(tests ${TEST_FILES})
+    target_compile_options(tests PRIVATE -g -fsanitize=address -fsanitize=leak -fsanitize=undefined -fno-omit-frame-pointer)
+    target_link_options(tests PRIVATE -g -fsanitize=address -fsanitize=leak -fsanitize=undefined -fno-omit-frame-pointer)
     target_link_libraries(tests PUBLIC torch)
     target_link_libraries(tests PUBLIC OpenMP::OpenMP_CXX)
     target_link_libraries(tests PUBLIC Fastor_HEADER_ONLY)
@@ -201,8 +204,6 @@ if(NOT ANDROID)
     target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
     target_compile_definitions(tests PRIVATE IMAGEINFERENCE_TESTING)
     target_compile_options(tests PUBLIC ${_common_compile_options})
-    target_compile_options(tests PRIVATE -g )#-fsanitize=address -fsanitize=leak -fsanitize=undefined -fno-omit-frame-pointer)
-    target_link_options(tests PRIVATE -g )#-fsanitize=address -fsanitize=leak -fsanitize=undefined -fno-omit-frame-pointer)
     include(CTest)
     include(Catch)
 

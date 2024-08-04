@@ -57,6 +57,48 @@ namespace ImageInference
                 REQUIRE(at::allclose(out, expected));
             }
 
+            TEST_CASE("test_types_image_initialization_padded_unique", "[types][image][init][padding]")
+            {
+                constexpr size_t padding = 3;
+                constexpr size_t blockSize = 3;
+                constexpr size_t channels = 3;
+                constexpr size_t height = 244;
+                constexpr size_t width = 244;
+
+                Tensor input = at::randn({channels, height, width});
+                Image<float, padding, blockSize, channels, height, width> image(input.const_data_ptr<float>());
+                Tensor out = at::from_blob(image.getPointer(), {channels / blockSize, height + 2 * padding, width + 2 * padding, blockSize});
+
+                Tensor padded = at::pad(input, {padding, padding, padding, padding}, "constant", 0);
+                Tensor expected = padded.view({channels / blockSize, blockSize, height + 2 * padding, width + 2 * padding}).permute({0, 2, 3, 1}).contiguous();
+
+                // Evaluating with values that of constexpr require additional brackets
+                REQUIRE((image.size == (channels * (height + 2 * padding) * (width + 2 * padding))));
+
+                REQUIRE(at::allclose(out, expected));
+            }
+
+            TEST_CASE("test_types_image_initialization_padded_multiple_blocks", "[types][image][init][padding]")
+            {
+                constexpr size_t padding = 3;
+                constexpr size_t blockSize = 16;
+                constexpr size_t channels = 64;
+                constexpr size_t height = 244;
+                constexpr size_t width = 244;
+
+                Tensor input = at::randn({channels, height, width});
+                Image<float, padding, blockSize, channels, height, width> image(input.const_data_ptr<float>());
+                Tensor out = at::from_blob(image.getPointer(), {channels / blockSize, height + 2 * padding, width + 2 * padding, blockSize});
+
+                Tensor padded = at::pad(input, {padding, padding, padding, padding}, "constant", 0);
+                Tensor expected = padded.view({channels / blockSize, blockSize, height + 2 * padding, width + 2 * padding}).permute({0, 2, 3, 1}).contiguous();
+
+                // Evaluating with values that of constexpr require additional brackets
+                REQUIRE((image.size == (channels * (height + 2 * padding) * (width + 2 * padding))));
+
+                REQUIRE(at::allclose(out, expected));
+            }
+
             TEST_CASE("test_types_image_initialization_batch_norm", "[types][image][batchNorm]")
             {
                 constexpr size_t padding = 3;

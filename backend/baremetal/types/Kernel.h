@@ -24,6 +24,7 @@
 
 #include "Macros.h"
 #include <stddef.h>
+#include <stdexcept>
 
 namespace ImageInference
 {
@@ -127,7 +128,7 @@ namespace ImageInference
         template <typename T, size_t TBlockSizeCount, size_t TBlockSizeChannel, size_t TCount, size_t TChannels, size_t THeight, size_t TWidth>
         inline Kernel<T, TBlockSizeCount, TBlockSizeChannel, TCount, TChannels, THeight, TWidth>::~Kernel()
         {
-            delete[] data;
+            operator delete[](data, std::align_val_t(PAGE_CACHE_ALIGN(T, size)));
         }
 
         /// Get the pointer of the data.
@@ -171,6 +172,8 @@ namespace ImageInference
                           << " Height:= " << THeight << " Width:= " << TWidth
                           << " Channel:= " << TBlockSizeChannel << " Count:= " << TBlockSizeCount << std::endl
                           << std::endl;
+                
+                throw std::runtime_error("Kernel: Offset is out of bounds!");
             }
 #endif // IMAGEINFERENCE_TESTING
 

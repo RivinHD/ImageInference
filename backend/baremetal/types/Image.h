@@ -27,6 +27,7 @@
 #include <cmath>
 #include "Array.h"
 #include <new>
+#include <stdexcept>
 
 namespace ImageInference
 {
@@ -36,11 +37,11 @@ namespace ImageInference
         class Image
         {
         private:
-            T* data;
+            T *data;
 
-            T* mean;
+            T *mean;
 
-            T* batch_variance;
+            T *batch_variance;
 
             bool isMeanVarianceCalculated = false;
 
@@ -178,7 +179,8 @@ namespace ImageInference
                     {
                         for (size_t iWidth = 0; iWidth < TWidth; iWidth++)
                         {
-                            T in = input[iChannel * strideInputChannel + iHeight * strideInputHeight + iWidth * strideInputWidth];
+                            T in = input[(iBChannel * TBlockSize + iChannel) * strideInputChannel + iHeight * strideInputHeight + iWidth * strideInputWidth];
+
                             size_t offset = getOffset(iBChannel, iHeight, iWidth, iChannel);
                             dataPtr[offset] = in;
                         }
@@ -261,6 +263,8 @@ namespace ImageInference
                           << "Sizes: ChannelBlock:= " << TChannels / TBlockSize << " Height:= " << THeight
                           << " Width:= " << TWidth << " Channel:= " << TBlockSize << std::endl
                           << std::endl;
+
+                throw std::runtime_error("Image: Offset is out of bounds!");
             }
 #endif // IMAGEINFERENCE_TESTING
 
@@ -349,9 +353,9 @@ namespace ImageInference
         template <typename T, size_t TPadding, size_t TBlockSize, size_t TChannels, size_t THeight, size_t TWidth>
         inline Image<T, TPadding, TBlockSize, TChannels, THeight, TWidth>::~Image()
         {
-            delete[] data;
-            delete[] mean;
-            delete[] batch_variance;
+            operator delete[](data, std::align_val_t(PAGE_CACHE_ALIGN(T, size)));
+            operator delete[](mean, std::align_val_t(PAGE_CACHE_ALIGN(T, TChannels)));
+            operator delete[](batch_variance, std::align_val_t(PAGE_CACHE_ALIGN(T, TChannels)));
         }
     } // namespace types
 } // namespace ImageInference

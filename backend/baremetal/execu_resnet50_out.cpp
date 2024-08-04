@@ -905,9 +905,6 @@ namespace custom
             case exec_aten::ScalarType::Float:
                 type = ImageInference::types::ScalarType::Float;
                 break;
-            case exec_aten::ScalarType::Char:
-                type = ImageInference::types::ScalarType::Int8;
-                break;
             default:
                 ET_CHECK_MSG(false, "Unsupported scalar type");
                 break;

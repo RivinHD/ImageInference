@@ -59,7 +59,7 @@ namespace ImageInference
         template <typename T, size_t TSize>
         inline Array<T, TSize>::~Array()
         {
-            delete[] data;
+            operator delete[](data, std::align_val_t(PAGE_CACHE_ALIGN(T, TSize)));
         }
 
         template <typename T, size_t TSize>

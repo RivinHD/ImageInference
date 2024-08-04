@@ -8,6 +8,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include "../../model/test/ResNet50Test.h"
 #include <Fastor/Fastor.h>
+#include "../utils/Reader.h"
 
 namespace ImageInference
 {
@@ -271,6 +272,392 @@ namespace ImageInference
             REQUIRE(success);
         }
 
+        TEST_CASE("test_resnet50_conv3x3_shortcut_channels16x16", "[resnet50][convolution][shortcut]")
+        {
+            constexpr size_t inPadding = 1;
+            constexpr size_t blockSize = 16;
+            constexpr size_t outChannels = 16;
+            constexpr size_t inChannels = 16;
+            constexpr size_t height = 10;
+            constexpr size_t width = 10;
+            constexpr size_t kernelHeight = 3;
+            constexpr size_t kernelWidth = 3;
+
+            Tensor in = at::rand({1, inChannels, height, width});
+            Tensor weight = at::rand({outChannels, inChannels, kernelHeight, kernelWidth});
+            Tensor batchGamma = at::rand({outChannels});
+            Tensor batchBeta = at::rand({outChannels});
+            Tensor shortcut = at::rand({outChannels, height, width});
+
+            Tensor out = at::zeros({outChannels, height, width});
+            Tensor outMean = at::zeros({outChannels});
+            Tensor outVar = at::zeros({outChannels});
+
+            float *inPtr = in.mutable_data_ptr<float>();
+            float *weightPtr = weight.mutable_data_ptr<float>();
+            float *batchGammaPtr = batchGamma.mutable_data_ptr<float>();
+            float *batchBetaPtr = batchBeta.mutable_data_ptr<float>();
+            float *shortcutPtr = shortcut.mutable_data_ptr<float>();
+            float *outPtr = out.mutable_data_ptr<float>();
+            float *outMeanPtr = outMean.mutable_data_ptr<float>();
+            float *outVarPtr = outVar.mutable_data_ptr<float>();
+
+            ImageInference::model::test::ResNet50Test::convBlockShortcut<
+                inPadding, blockSize, outChannels, inChannels,
+                height, width, kernelHeight, kernelWidth>(inPtr, weightPtr, batchGammaPtr, batchBetaPtr, shortcutPtr, outPtr, outMeanPtr, outVarPtr);
+
+            Tensor expected = at::conv2d(in, weight, {}, 1, inPadding);
+            Tensor mean = at::mean(expected, {0, 2, 3});
+            Tensor var = at::var(expected, {0, 2, 3}, false);
+            expected = at::batch_norm(expected, batchGamma, batchBeta, mean, var, false, 0.1, 1e-5, false);
+            expected += shortcut;
+            expected = at::relu(expected);
+
+            bool success = at::allclose(outMean, mean);
+            printMismatchedValues(success, outMean, mean, outChannels);
+            REQUIRE(success);
+
+            Tensor batchVar = 1 / at::sqrt(var + 1e-5);
+            success = at::allclose(outVar, batchVar);
+            printMismatchedValues(success, outVar, batchVar, outChannels);
+            REQUIRE(success);
+
+            success = at::allclose(out, expected[0], 1.0e-4, 1.0e-5);
+            printMismatchedValues(success, out, expected[0], 1, outChannels, height, width);
+            REQUIRE(success);
+        }
+
+        TEST_CASE("test_resnet50_conv3x3_shortcut_channels16x32", "[resnet50][convolution][shortcut]")
+        {
+            constexpr size_t inPadding = 1;
+            constexpr size_t blockSize = 16;
+            constexpr size_t outChannels = 32;
+            constexpr size_t inChannels = 16;
+            constexpr size_t height = 10;
+            constexpr size_t width = 10;
+            constexpr size_t kernelHeight = 3;
+            constexpr size_t kernelWidth = 3;
+
+            Tensor in = at::rand({1, inChannels, height, width});
+            Tensor weight = at::rand({outChannels, inChannels, kernelHeight, kernelWidth});
+            Tensor batchGamma = at::rand({outChannels});
+            Tensor batchBeta = at::rand({outChannels});
+            Tensor shortcut = at::rand({outChannels, height, width});
+
+            Tensor out = at::zeros({outChannels, height, width});
+            Tensor outMean = at::zeros({outChannels});
+            Tensor outVar = at::zeros({outChannels});
+
+            float *inPtr = in.mutable_data_ptr<float>();
+            float *weightPtr = weight.mutable_data_ptr<float>();
+            float *batchGammaPtr = batchGamma.mutable_data_ptr<float>();
+            float *batchBetaPtr = batchBeta.mutable_data_ptr<float>();
+            float *shortcutPtr = shortcut.mutable_data_ptr<float>();
+            float *outPtr = out.mutable_data_ptr<float>();
+            float *outMeanPtr = outMean.mutable_data_ptr<float>();
+            float *outVarPtr = outVar.mutable_data_ptr<float>();
+
+            ImageInference::model::test::ResNet50Test::convBlockShortcut<
+                inPadding, blockSize, outChannels, inChannels,
+                height, width, kernelHeight, kernelWidth>(inPtr, weightPtr, batchGammaPtr, batchBetaPtr, shortcutPtr, outPtr, outMeanPtr, outVarPtr);
+
+            Tensor expected = at::conv2d(in, weight, {}, 1, inPadding);
+            Tensor mean = at::mean(expected, {0, 2, 3});
+            Tensor var = at::var(expected, {0, 2, 3}, false);
+            expected = at::batch_norm(expected, batchGamma, batchBeta, mean, var, false, 0.1, 1e-5, false);
+            expected += shortcut;
+            expected = at::relu(expected);
+
+            bool success = at::allclose(outMean, mean);
+            printMismatchedValues(success, outMean, mean, outChannels);
+            REQUIRE(success);
+
+            Tensor batchVar = 1 / at::sqrt(var + 1e-5);
+            success = at::allclose(outVar, batchVar);
+            printMismatchedValues(success, outVar, batchVar, outChannels);
+            REQUIRE(success);
+
+            success = at::allclose(out, expected[0], 1.0e-4, 1.0e-5);
+            printMismatchedValues(success, out, expected[0], 1, outChannels, height, width);
+            REQUIRE(success);
+        }
+
+        TEST_CASE("test_resnet50_conv3x3_projection_channels32x32", "[resnet50][convolution][projection]")
+        {
+            constexpr size_t stride = 1;
+            constexpr size_t inPadding = 1;
+            constexpr size_t blockSize = 16;
+            constexpr size_t outChannels = 32;
+            constexpr size_t inChannels = 32;
+            constexpr size_t shortcutChannels = 16;
+            constexpr size_t height = 10;
+            constexpr size_t width = 10;
+            constexpr size_t kernelHeight = 3;
+            constexpr size_t kernelWidth = 3;
+
+            Tensor in = at::rand({1, inChannels, height / stride, width / stride});
+            Tensor weight = at::rand({outChannels, inChannels, kernelHeight, kernelWidth});
+            Tensor batchGamma = at::rand({outChannels});
+            Tensor batchBeta = at::rand({outChannels});
+            Tensor shortcut = at::rand({shortcutChannels, height, width});
+            Tensor projectionWeight = at::rand({outChannels, shortcutChannels, 1, 1});
+            Tensor projectionBatchGamma = at::rand({outChannels});
+            Tensor projectionBatchBeta = at::rand({outChannels});
+
+            Tensor out = at::zeros({outChannels, height / stride, width / stride});
+            Tensor outMean = at::zeros({outChannels});
+            Tensor outVar = at::zeros({outChannels});
+
+            float *inPtr = in.mutable_data_ptr<float>();
+            float *weightPtr = weight.mutable_data_ptr<float>();
+            float *batchGammaPtr = batchGamma.mutable_data_ptr<float>();
+            float *batchBetaPtr = batchBeta.mutable_data_ptr<float>();
+            float *shortcutPtr = shortcut.mutable_data_ptr<float>();
+            float *projectionWeightPtr = projectionWeight.mutable_data_ptr<float>();
+            float *projectionBatchGammaPtr = projectionBatchGamma.mutable_data_ptr<float>();
+            float *projectionBatchBetaPtr = projectionBatchBeta.mutable_data_ptr<float>();
+            float *outPtr = out.mutable_data_ptr<float>();
+            float *outMeanPtr = outMean.mutable_data_ptr<float>();
+            float *outVarPtr = outVar.mutable_data_ptr<float>();
+
+            ImageInference::model::test::ResNet50Test::convBlockProjection<
+                stride, outChannels / shortcutChannels, inPadding, blockSize, outChannels, inChannels,
+                height, width, kernelHeight, kernelWidth>(inPtr, weightPtr, batchGammaPtr, batchBetaPtr,
+                                                          shortcutPtr, projectionWeightPtr, projectionBatchGammaPtr, projectionBatchBetaPtr,
+                                                          outPtr, outMeanPtr, outVarPtr);
+
+            Tensor expected = at::conv2d(in, weight, {}, 1, inPadding);
+            Tensor mean = at::mean(expected, {0, 2, 3});
+            Tensor var = at::var(expected, {0, 2, 3}, false);
+            expected = at::batch_norm(expected, batchGamma, batchBeta, mean, var, false, 0.1, 1e-5, false);
+            Tensor projection = at::conv2d(in, projectionWeight, {}, stride, inPadding);
+            Tensor projectionMean = at::mean(projection, {0, 2, 3});
+            Tensor projectionVar = at::var(projection, {0, 2, 3}, false);
+            projection = at::batch_norm(projection, projectionBatchGamma, projectionBatchBeta, projectionMean, projectionVar, false, 0.1, 1e-5, false);
+            expected += projection;
+            expected = at::relu(expected);
+
+            bool success = at::allclose(outMean, mean);
+            printMismatchedValues(success, outMean, mean, outChannels);
+            REQUIRE(success);
+
+            Tensor batchVar = 1 / at::sqrt(var + 1e-5);
+            success = at::allclose(outVar, batchVar);
+            printMismatchedValues(success, outVar, batchVar, outChannels);
+            REQUIRE(success);
+
+            success = at::allclose(out, expected[0], 1.0e-4, 1.0e-5);
+            printMismatchedValues(success, out, expected[0], 1, outChannels, height, width);
+            REQUIRE(success);
+        }
+
+        TEST_CASE("test_resnet50_conv3x3_projection_channels32x64", "[resnet50][convolution][projection]")
+        {
+            constexpr size_t stride = 1;
+            constexpr size_t inPadding = 1;
+            constexpr size_t blockSize = 16;
+            constexpr size_t outChannels = 64;
+            constexpr size_t inChannels = 32;
+            constexpr size_t shortcutChannels = 16;
+            constexpr size_t height = 10;
+            constexpr size_t width = 10;
+            constexpr size_t kernelHeight = 3;
+            constexpr size_t kernelWidth = 3;
+
+            Tensor in = at::rand({1, inChannels, height / stride, width / stride});
+            Tensor weight = at::rand({outChannels, inChannels, kernelHeight, kernelWidth});
+            Tensor batchGamma = at::rand({outChannels});
+            Tensor batchBeta = at::rand({outChannels});
+            Tensor shortcut = at::rand({shortcutChannels, height, width});
+            Tensor projectionWeight = at::rand({outChannels, shortcutChannels, 1, 1});
+            Tensor projectionBatchGamma = at::rand({outChannels});
+            Tensor projectionBatchBeta = at::rand({outChannels});
+
+            Tensor out = at::zeros({outChannels, height / stride, width / stride});
+            Tensor outMean = at::zeros({outChannels});
+            Tensor outVar = at::zeros({outChannels});
+
+            float *inPtr = in.mutable_data_ptr<float>();
+            float *weightPtr = weight.mutable_data_ptr<float>();
+            float *batchGammaPtr = batchGamma.mutable_data_ptr<float>();
+            float *batchBetaPtr = batchBeta.mutable_data_ptr<float>();
+            float *shortcutPtr = shortcut.mutable_data_ptr<float>();
+            float *projectionWeightPtr = projectionWeight.mutable_data_ptr<float>();
+            float *projectionBatchGammaPtr = projectionBatchGamma.mutable_data_ptr<float>();
+            float *projectionBatchBetaPtr = projectionBatchBeta.mutable_data_ptr<float>();
+            float *outPtr = out.mutable_data_ptr<float>();
+            float *outMeanPtr = outMean.mutable_data_ptr<float>();
+            float *outVarPtr = outVar.mutable_data_ptr<float>();
+
+            ImageInference::model::test::ResNet50Test::convBlockProjection<
+                stride, outChannels / shortcutChannels, inPadding, blockSize, outChannels, inChannels,
+                height, width, kernelHeight, kernelWidth>(inPtr, weightPtr, batchGammaPtr, batchBetaPtr,
+                                                          shortcutPtr, projectionWeightPtr, projectionBatchGammaPtr, projectionBatchBetaPtr,
+                                                          outPtr, outMeanPtr, outVarPtr);
+
+            Tensor expected = at::conv2d(in, weight, {}, 1, inPadding);
+            Tensor mean = at::mean(expected, {0, 2, 3});
+            Tensor var = at::var(expected, {0, 2, 3}, false);
+            expected = at::batch_norm(expected, batchGamma, batchBeta, mean, var, false, 0.1, 1e-5, false);
+            Tensor projection = at::conv2d(in, projectionWeight, {}, stride, inPadding);
+            Tensor projectionMean = at::mean(projection, {0, 2, 3});
+            Tensor projectionVar = at::var(projection, {0, 2, 3}, false);
+            projection = at::batch_norm(projection, projectionBatchGamma, projectionBatchBeta, projectionMean, projectionVar, false, 0.1, 1e-5, false);
+            expected += projection;
+            expected = at::relu(expected);
+
+            bool success = at::allclose(outMean, mean);
+            printMismatchedValues(success, outMean, mean, outChannels);
+            REQUIRE(success);
+
+            Tensor batchVar = 1 / at::sqrt(var + 1e-5);
+            success = at::allclose(outVar, batchVar);
+            printMismatchedValues(success, outVar, batchVar, outChannels);
+            REQUIRE(success);
+
+            success = at::allclose(out, expected[0], 1.0e-4, 1.0e-5);
+            printMismatchedValues(success, out, expected[0], 1, outChannels, height, width);
+            REQUIRE(success);
+        }
+
+        TEST_CASE("test_resnet50_conv3x3_projection_channels32x32_stride2", "[resnet50][convolution][projection]")
+        {
+            constexpr size_t stride = 2;
+            constexpr size_t inPadding = 1;
+            constexpr size_t blockSize = 16;
+            constexpr size_t outChannels = 32;
+            constexpr size_t inChannels = 32;
+            constexpr size_t shortcutChannels = 16;
+            constexpr size_t height = 10;
+            constexpr size_t width = 10;
+            constexpr size_t kernelHeight = 3;
+            constexpr size_t kernelWidth = 3;
+
+            Tensor in = at::rand({1, inChannels, height / stride, width / stride});
+            Tensor weight = at::rand({outChannels, inChannels, kernelHeight, kernelWidth});
+            Tensor batchGamma = at::rand({outChannels});
+            Tensor batchBeta = at::rand({outChannels});
+            Tensor shortcut = at::rand({shortcutChannels, height, width});
+            Tensor projectionWeight = at::rand({outChannels, shortcutChannels, 1, 1});
+            Tensor projectionBatchGamma = at::rand({outChannels});
+            Tensor projectionBatchBeta = at::rand({outChannels});
+
+            Tensor out = at::zeros({outChannels, height / stride, width / stride});
+            Tensor outMean = at::zeros({outChannels});
+            Tensor outVar = at::zeros({outChannels});
+
+            float *inPtr = in.mutable_data_ptr<float>();
+            float *weightPtr = weight.mutable_data_ptr<float>();
+            float *batchGammaPtr = batchGamma.mutable_data_ptr<float>();
+            float *batchBetaPtr = batchBeta.mutable_data_ptr<float>();
+            float *shortcutPtr = shortcut.mutable_data_ptr<float>();
+            float *projectionWeightPtr = projectionWeight.mutable_data_ptr<float>();
+            float *projectionBatchGammaPtr = projectionBatchGamma.mutable_data_ptr<float>();
+            float *projectionBatchBetaPtr = projectionBatchBeta.mutable_data_ptr<float>();
+            float *outPtr = out.mutable_data_ptr<float>();
+            float *outMeanPtr = outMean.mutable_data_ptr<float>();
+            float *outVarPtr = outVar.mutable_data_ptr<float>();
+
+            ImageInference::model::test::ResNet50Test::convBlockProjection<
+                stride, outChannels / shortcutChannels, inPadding, blockSize, outChannels, inChannels,
+                height, width, kernelHeight, kernelWidth>(inPtr, weightPtr, batchGammaPtr, batchBetaPtr,
+                                                          shortcutPtr, projectionWeightPtr, projectionBatchGammaPtr, projectionBatchBetaPtr,
+                                                          outPtr, outMeanPtr, outVarPtr);
+
+            Tensor expected = at::conv2d(in, weight, {}, 1, inPadding);
+            Tensor mean = at::mean(expected, {0, 2, 3});
+            Tensor var = at::var(expected, {0, 2, 3}, false);
+            expected = at::batch_norm(expected, batchGamma, batchBeta, mean, var, false, 0.1, 1e-5, false);
+            Tensor projection = at::conv2d(in, projectionWeight, {}, stride, inPadding);
+            Tensor projectionMean = at::mean(projection, {0, 2, 3});
+            Tensor projectionVar = at::var(projection, {0, 2, 3}, false);
+            projection = at::batch_norm(projection, projectionBatchGamma, projectionBatchBeta, projectionMean, projectionVar, false, 0.1, 1e-5, false);
+            expected += projection;
+            expected = at::relu(expected);
+
+            bool success = at::allclose(outMean, mean);
+            printMismatchedValues(success, outMean, mean, outChannels);
+            REQUIRE(success);
+
+            Tensor batchVar = 1 / at::sqrt(var + 1e-5);
+            success = at::allclose(outVar, batchVar);
+            printMismatchedValues(success, outVar, batchVar, outChannels);
+            REQUIRE(success);
+
+            success = at::allclose(out, expected[0], 1.0e-4, 1.0e-5);
+            printMismatchedValues(success, out, expected[0], 1, outChannels, height, width);
+            REQUIRE(success);
+        }
+
+        TEST_CASE("test_resnet50_conv3x3_projection_channels32x64_stride2", "[resnet50][convolution][projection]")
+        {
+            constexpr size_t stride = 2;
+            constexpr size_t inPadding = 1;
+            constexpr size_t blockSize = 16;
+            constexpr size_t outChannels = 64;
+            constexpr size_t inChannels = 32;
+            constexpr size_t shortcutChannels = 16;
+            constexpr size_t height = 10;
+            constexpr size_t width = 10;
+            constexpr size_t kernelHeight = 3;
+            constexpr size_t kernelWidth = 3;
+
+            Tensor in = at::rand({1, inChannels, height / stride, width / stride});
+            Tensor weight = at::rand({outChannels, inChannels, kernelHeight, kernelWidth});
+            Tensor batchGamma = at::rand({outChannels});
+            Tensor batchBeta = at::rand({outChannels});
+            Tensor shortcut = at::rand({shortcutChannels, height, width});
+            Tensor projectionWeight = at::rand({outChannels, shortcutChannels, 1, 1});
+            Tensor projectionBatchGamma = at::rand({outChannels});
+            Tensor projectionBatchBeta = at::rand({outChannels});
+
+            Tensor out = at::zeros({outChannels, height / stride, width / stride});
+            Tensor outMean = at::zeros({outChannels});
+            Tensor outVar = at::zeros({outChannels});
+
+            float *inPtr = in.mutable_data_ptr<float>();
+            float *weightPtr = weight.mutable_data_ptr<float>();
+            float *batchGammaPtr = batchGamma.mutable_data_ptr<float>();
+            float *batchBetaPtr = batchBeta.mutable_data_ptr<float>();
+            float *shortcutPtr = shortcut.mutable_data_ptr<float>();
+            float *projectionWeightPtr = projectionWeight.mutable_data_ptr<float>();
+            float *projectionBatchGammaPtr = projectionBatchGamma.mutable_data_ptr<float>();
+            float *projectionBatchBetaPtr = projectionBatchBeta.mutable_data_ptr<float>();
+            float *outPtr = out.mutable_data_ptr<float>();
+            float *outMeanPtr = outMean.mutable_data_ptr<float>();
+            float *outVarPtr = outVar.mutable_data_ptr<float>();
+
+            ImageInference::model::test::ResNet50Test::convBlockProjection<
+                stride, outChannels / shortcutChannels, inPadding, blockSize, outChannels, inChannels,
+                height, width, kernelHeight, kernelWidth>(inPtr, weightPtr, batchGammaPtr, batchBetaPtr,
+                                                          shortcutPtr, projectionWeightPtr, projectionBatchGammaPtr, projectionBatchBetaPtr,
+                                                          outPtr, outMeanPtr, outVarPtr);
+
+            Tensor expected = at::conv2d(in, weight, {}, 1, inPadding);
+            Tensor mean = at::mean(expected, {0, 2, 3});
+            Tensor var = at::var(expected, {0, 2, 3}, false);
+            expected = at::batch_norm(expected, batchGamma, batchBeta, mean, var, false, 0.1, 1e-5, false);
+            Tensor projection = at::conv2d(in, projectionWeight, {}, stride, inPadding);
+            Tensor projectionMean = at::mean(projection, {0, 2, 3});
+            Tensor projectionVar = at::var(projection, {0, 2, 3}, false);
+            projection = at::batch_norm(projection, projectionBatchGamma, projectionBatchBeta, projectionMean, projectionVar, false, 0.1, 1e-5, false);
+            expected += projection;
+            expected = at::relu(expected);
+
+            bool success = at::allclose(outMean, mean);
+            printMismatchedValues(success, outMean, mean, outChannels);
+            REQUIRE(success);
+
+            Tensor batchVar = 1 / at::sqrt(var + 1e-5);
+            success = at::allclose(outVar, batchVar);
+            printMismatchedValues(success, outVar, batchVar, outChannels);
+            REQUIRE(success);
+
+            success = at::allclose(out, expected[0], 1.0e-4, 1.0e-5);
+            printMismatchedValues(success, out, expected[0], 1, outChannels, height, width);
+            REQUIRE(success);
+        }
+
         TEST_CASE("test_resnet50_maxpool", "[resnet50][maxpool]")
         {
             constexpr size_t stride = 1;
@@ -453,6 +840,86 @@ namespace ImageInference
             }
 
             REQUIRE(at::allclose(out, expected, 1.0e-4, 1.0e-6));
+        }
+
+        void testWholeResnet50(ImageInference::model::ResNet50 &resnet50, const std::string &compareFilepath)
+        {
+            // Read the input and comparison output
+            const char *projectDirectory = std::getenv("PROJECT_ROOT");
+            if (projectDirectory == nullptr)
+            {
+                throw std::runtime_error("PROJECT_ROOT environment variable is not set");
+            }
+
+            std::string inputPath = std::string(projectDirectory) + "/test_data/" + compareFilepath;
+            ImageInference::test::utils::Reader reader(inputPath);
+
+            Tensor in = reader.getNextTensor();
+            Tensor outExpected = reader.getNextTensor();
+            Tensor out = at::zeros({1, 1000});
+
+            float *inPtr = in.mutable_data_ptr<float>();
+            float *outPtr = out.mutable_data_ptr<float>();
+
+            REQUIRE((in.size(0) == 1));
+            REQUIRE((in.size(1) == 3));
+            REQUIRE((in.size(2) == 224));
+            REQUIRE((in.size(3) == 224));
+
+            REQUIRE((outExpected.size(0) == 1));
+            REQUIRE((outExpected.size(1) == 1000));
+
+            std::cerr << std::endl
+                      << "Tested File: " << compareFilepath << std::endl
+                      << "Input [" << inPtr << ", " << inPtr + in.numel() << ") size: " << in.sizes() << " with " << in.numel() << " elements." << std::endl
+                      << "Expected size: " << outExpected.sizes() << std::endl;
+
+            resnet50.inference(inPtr, outPtr);
+
+            bool success = at::allclose(out, outExpected, 1.0e-4, 1.0e-5);
+            printMismatchedValues(success, out, outExpected, 1000);
+            REQUIRE(success);
+        }
+
+        TEST_CASE("test_resnet50_whole_model", "[resnet50]")
+        {
+
+            // Read the weights from the file
+            const char *projectDirectory = std::getenv("PROJECT_ROOT");
+            if (projectDirectory == nullptr)
+            {
+                throw std::runtime_error("PROJECT_ROOT environment variable is not set");
+            }
+
+            std::string weightsPath = std::string(projectDirectory) + "/test_data/resnet50_weights_v2.bin";
+            ImageInference::test::utils::Reader reader(weightsPath);
+            std::vector<at::Tensor> weights;
+            std::vector<void *> weightPtrs;
+            while (reader.hasNext())
+            {
+                auto tensor = reader.getNextTensor();
+                weights.push_back(tensor);
+                weightPtrs.push_back(tensor.mutable_data_ptr<float>());
+            }
+
+            std::cerr << "Weights size: " << weights.size() << std::endl;
+            for (size_t i = 0; i < weights.size(); i++)
+            {
+                std::cerr << "Weight at Index " << i << " with size " << weights[i].sizes() << std::endl;
+            }
+
+            ImageInference::model::ResNet50 resnet50(weightPtrs, ImageInference::types::ScalarType::Float);
+
+            testWholeResnet50(resnet50, "resnet50_test0.bin");
+            testWholeResnet50(resnet50, "resnet50_test1.bin");
+            testWholeResnet50(resnet50, "resnet50_test2.bin");
+            testWholeResnet50(resnet50, "resnet50_test3.bin");
+            testWholeResnet50(resnet50, "resnet50_test4.bin");
+            testWholeResnet50(resnet50, "resnet50_test5.bin");
+            testWholeResnet50(resnet50, "resnet50_test6.bin");
+            testWholeResnet50(resnet50, "resnet50_test7.bin");
+            testWholeResnet50(resnet50, "resnet50_test8.bin");
+            testWholeResnet50(resnet50, "resnet50_test9.bin");
         }
     }
 }

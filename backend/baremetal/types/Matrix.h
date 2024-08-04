@@ -25,6 +25,7 @@
 #include "Macros.h"
 #include <stddef.h>
 #include <algorithm>
+#include <stdexcept>
 
 namespace ImageInference
 {
@@ -69,7 +70,7 @@ namespace ImageInference
         template <typename T, size_t TColumns, size_t TRows>
         inline Matrix<T, TColumns, TRows>::~Matrix()
         {
-            delete[] data;
+            operator delete[](data, std::align_val_t(PAGE_CACHE_ALIGN(T, size)));
         }
 
         template <typename T, size_t TColumns, size_t TRows>
@@ -90,6 +91,8 @@ namespace ImageInference
                           << "Indices:= Column" << iColumn << " Row:= " << iRow << std::endl
                           << "Stride:= Column" << strideColumn << " Row:= " << strideRow << std::endl
                           << std::endl;
+                
+                throw std::runtime_error("Matrix: Offset is out of bounds.");
             }
 #endif // IMAGEINFERENCE_TESTING
 

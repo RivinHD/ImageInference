@@ -34,12 +34,12 @@ ImageInference::model::ResNet50::~ResNet50()
 void ImageInference::model::ResNet50::inference(const float *input, float* output)
 {
     // For a 7x7 kernel we need to add padding of 3.
-    auto image = ImageInference::types::Image<float, 3, 3, 3, 244, 244>(input);
+    auto image = ImageInference::types::Image<float, 3, 3, 3, 224, 224>(input);
 
     auto kernel0 = ImageInference::types::Kernel<float, RESNET50_BLOCK_SIZE, 3, 64, 3, 7, 7>(getWeight<float>(weightIndex::conv1_weight));
     auto batchNorm0 = ImageInference::types::BatchNorm<float, 64>(getWeight<float>(weightIndex::bn1_weight), getWeight<float>(weightIndex::bn1_bias));
-    // For Max Pooling we don't need padding.
-    auto imagePreConv = convBlock<2, 0>(image, kernel0, batchNorm0);
+    // For Max Pooling we need padding of 1 as it applies a 3x3 kernel.
+    auto imagePreConv = convBlock<2, 1>(image, kernel0, batchNorm0);
     
     // Next is a 1x1 Kernel. Therefore no padding required.
     auto imageMax0 = maxPool<2, 0>(imagePreConv);

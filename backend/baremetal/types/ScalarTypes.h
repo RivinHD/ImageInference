@@ -26,8 +26,7 @@ namespace ImageInference
         enum class ScalarType
         {
             Undefined,
-            Float,
-            Int8
+            Float
         };
     }
 }

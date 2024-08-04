@@ -56,8 +56,6 @@ namespace ImageInference
                 // Evaluating with values that of constexpr require additional brackets
 
                 REQUIRE((kernel.size == (inChannels * outChannels * height * width)));
-                auto outSizes = out.sizes();
-                auto expectedSizes = expected.sizes();
 
                 REQUIRE(at::allclose(out, expected));
             }
