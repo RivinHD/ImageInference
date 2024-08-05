@@ -175,7 +175,7 @@ namespace ImageInference
 
             auto dataPtr = data + paddingOffset;
 #ifdef USE_OMP
-#pragma omp parallel for collapse(2)
+#pragma omp parallel for collapse(2) private(iBChannel, iHeight)
 #endif // USE_OMP
             for (size_t iBChannel = 0; iBChannel < channelBlocks; iBChannel++)
             {
@@ -291,7 +291,7 @@ namespace ImageInference
 
             auto dataPtr = data + paddingOffset;
 #ifdef USE_OMP
-#pragma omp parallel for collapse(2)
+#pragma omp parallel for collapse(2) private(iBChannel, iHeight)
 #endif // USE_OMP
             for (size_t iBChannel = 0; iBChannel < channelBlocks; iBChannel++)
             {
@@ -330,7 +330,7 @@ namespace ImageInference
             size_t count[TChannels]{0};
 
 #ifdef USE_OMP
-#pragma omp parallel for collapse(3)
+#pragma omp parallel for collapse(3) private(iBChannel, iHeight, iWidth) reduction(+ : count[:TChannels], mean[:TChannels], batch_variance[:TChannels])
 #endif // USE_OMP
             for (size_t iBChannel = 0; iBChannel < channelBlocks; iBChannel++)
             {
@@ -353,8 +353,8 @@ namespace ImageInference
                 }
             }
 
-#ifdef USE_OMP
-#pragma omp parallel for
+#ifdef USE_OMP // The mean is not update during finalization.
+#pragma omp parallel for reduction(+ : batch_variance[:TChannels])
 #endif // USE_OMP
             for (size_t iBChannel = 0; iBChannel < channelBlocks; iBChannel++)
             {

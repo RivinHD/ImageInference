@@ -703,7 +703,7 @@ namespace ImageInference
             size_t meanVarianceCount[KernelCount]{0};
 
 #ifdef USE_OMP
-#pragma omp parallel for collapse(2)
+#pragma omp parallel for collapse(2) private(iBCount, iHeight) reduction(+ : meanVarianceCount[:KernelCount], meanPtr[:KernelCount], variancePtr[:KernelCount])
 #endif // USE_OMP
             for (size_t iBCount = 0; iBCount < countBlocks; iBCount++)
             {
@@ -773,8 +773,8 @@ namespace ImageInference
                 }
             }
 
-#ifdef USE_OMP
-#pragma omp parallel for
+#ifdef USE_OMP // The mean is not update during finalization.
+#pragma omp parallel for private(iBCount) reduction(+ : variancePtr[:KernelCount])
 #endif // USE_OMP
             for (size_t iBCount = 0; iBCount < countBlocks; iBCount++)
             {
@@ -849,7 +849,7 @@ namespace ImageInference
 
             size_t meanVarianceCount[KernelCount]{0};
 #ifdef USE_OMP
-#pragma omp parallel for collapse(2)
+#pragma omp parallel for collapse(2) private(iBCount, iHeight) reduction(+ : meanVarianceCount[:KernelCount], meanPtr[:KernelCount], variancePtr[:KernelCount])
 #endif // USE_OMP
             for (size_t iBCount = 0; iBCount < countBlocks; iBCount++)
             {
@@ -918,7 +918,7 @@ namespace ImageInference
             }
 
 #ifdef USE_OMP
-#pragma omp parallel for
+#pragma omp parallel for private(iBCount) reduction(+ : variancePtr[:KernelCount])
 #endif // USE_OMP
             for (size_t iBCount = 0; iBCount < countBlocks; iBCount++)
             {
@@ -1001,7 +1001,7 @@ namespace ImageInference
             size_t meanVarianceCount[KernelCount]{0};
 
 #ifdef USE_OMP
-#pragma omp parallel for collapse(2)
+#pragma omp parallel for collapse(2) private(iBCount, iHeight) reduction(+ : meanVarianceCount[:KernelCount], meanPtr[:KernelCount], variancePtr[:KernelCount])
 #endif // USE_OMP
             for (size_t iBCount = 0; iBCount < countBlocks; iBCount++)
             {
@@ -1084,7 +1084,7 @@ namespace ImageInference
             size_t meanVarianceCountProjection[KernelCount]{0};
 
 #ifdef USE_OMP
-#pragma omp parallel for collapse(2)
+#pragma omp parallel for collapse(2) private(iBCount, iHeight) reduction(+ : meanVarianceCountProjection[:KernelCount], projectionMeanPtr[:KernelCount], projectionVariancePtr[:KernelCount])
 #endif // USE_OMP
             for (size_t iBCount = 0; iBCount < countBlocks; iBCount++)
             {
@@ -1149,7 +1149,7 @@ namespace ImageInference
             }
 
 #ifdef USE_OMP
-#pragma omp parallel for
+#pragma omp parallel for private(iBCount) reduction(+ : projectionVariancePtr[:KernelCount])
 #endif // USE_OMP
             for (size_t iBCount = 0; iBCount < countBlocks; iBCount++)
             {
@@ -1187,7 +1187,7 @@ namespace ImageInference
 
 // Continue with processing the actual input.
 #ifdef USE_OMP
-#pragma omp parallel for
+#pragma omp parallel for private(iBCount) reduction(+ : variancePtr[:KernelCount])
 #endif // USE_OMP
             for (size_t iBCount = 0; iBCount < countBlocks; iBCount++)
             {
@@ -1254,8 +1254,8 @@ namespace ImageInference
             const auto imagePtr = image.getPointer();
 
 // 3x3 Stencil that gets the max value
-#ifdef USE_OMP
-#pragma omp parallel for collapse(2)
+#ifdef USE_OMP // We can parallelize the channel blocks as they are independent of each other for this max operation.
+#pragma omp parallel for private(iBChannel)
 #endif // USE_OMP
             for (size_t iBChannel = 0; iBChannel < channelBlocks; iBChannel++)
             {
@@ -1308,8 +1308,9 @@ namespace ImageInference
 
             auto imagePtr = image.getPointer() + image.paddingOffset; // We skip the padding as padding should not be averaged.
             constexpr const float scale = 1.0f / (ImageHeight * ImageWidth);
-#ifdef USE_OMP
-#pragma omp parallel for
+
+#ifdef USE_OMP  // We can do this reduction because the ouput has only one element per channel.
+#pragma omp parallel for collapse(2) private(iBChannel, iHeight) reduction(+ : outputPtr[:ImageChannels])
 #endif // USE_OMP
             for (size_t iBChannel = 0; iBChannel < channelBlocks; iBChannel++)
             {
