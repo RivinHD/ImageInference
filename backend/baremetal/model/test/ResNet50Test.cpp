@@ -49,3 +49,8 @@ float ImageInference::model::test::ResNet50Test::batchNorm(float input, float ga
 {
     return ImageInference::model::ResNet50::batchNorm<float>(input, gamma, beta, mean, variance);
 }
+
+float *ImageInference::model::test::ResNet50Test::getWeight(ImageInference::model::ResNet50 resnet50, size_t index)
+{
+    return resnet50.getWeight<float>(index);
+}

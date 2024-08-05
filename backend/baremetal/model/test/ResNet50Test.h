@@ -134,6 +134,8 @@ namespace ImageInference
                 static float relu(float input);
 
                 static float batchNorm(float input, float gamma, float beta, float mean, float variance);
+
+                static float* getWeight(ImageInference::model::ResNet50 resnet50, size_t index);
             };
         }
     }

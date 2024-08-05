@@ -730,7 +730,7 @@ namespace ImageInference
                                 constexpr int MM = outputWidth;
                                 constexpr int KK = BlockSizeChannel;
                                 constexpr int NN = BlockSizeCount;
-                                constexpr int ldImage = NN * Stride;
+                                constexpr int ldImage = KK * Stride;
                                 constexpr float alpha = 1.0;
                                 constexpr float beta = 1.0;
 
@@ -874,7 +874,7 @@ namespace ImageInference
                                 constexpr const int MM = outputWidth;
                                 constexpr const int KK = BlockSizeChannel;
                                 constexpr const int NN = BlockSizeCount;
-                                constexpr const int ldImage = NN;
+                                constexpr const int ldImage = KK;
                                 constexpr const float alpha = 1.0;
                                 constexpr const float beta = 1.0;
 
@@ -1027,7 +1027,7 @@ namespace ImageInference
                                 constexpr const int MM = outputWidth;
                                 constexpr const int KK = BlockSizeChannel;
                                 constexpr const int NN = BlockSizeCount;
-                                constexpr const int ldImage = NN;
+                                constexpr const int ldImage = KK;
                                 constexpr const float alpha = 1.0;
                                 constexpr const float beta = 1.0;
 
@@ -1107,7 +1107,7 @@ namespace ImageInference
                         constexpr const int MM = projectionWidth;
                         constexpr const int KK = BlockSizeChannel;
                         constexpr const int NN = BlockSizeCount;
-                        constexpr const int ldImage = NN * Stride;
+                        constexpr const int ldImage = KK * Stride;
                         constexpr const float alpha = 1.0;
                         constexpr const float beta = 0.0;
 

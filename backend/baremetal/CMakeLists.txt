@@ -204,6 +204,18 @@ if(NOT ANDROID)
     target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
     target_compile_definitions(tests PRIVATE IMAGEINFERENCE_TESTING)
     target_compile_options(tests PUBLIC ${_common_compile_options})
+
+    add_executable(tests_valgrind ${TEST_FILES}) # Tests without asan for valgrind usage
+    target_compile_options(tests_valgrind PRIVATE -g)
+    target_link_options(tests_valgrind PRIVATE -g)
+    target_link_libraries(tests_valgrind PUBLIC torch)
+    target_link_libraries(tests_valgrind PUBLIC OpenMP::OpenMP_CXX)
+    target_link_libraries(tests_valgrind PUBLIC Fastor_HEADER_ONLY)
+    target_link_libraries(tests_valgrind PUBLIC libxsmm)
+    target_link_libraries(tests_valgrind PRIVATE Catch2::Catch2WithMain)
+    target_compile_definitions(tests_valgrind PRIVATE IMAGEINFERENCE_TESTING)
+    target_compile_options(tests_valgrind PUBLIC ${_common_compile_options})
+
     include(CTest)
     include(Catch)
 

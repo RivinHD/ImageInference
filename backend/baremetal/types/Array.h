@@ -56,11 +56,12 @@ namespace ImageInference
             data = new (std::align_val_t(PAGE_CACHE_ALIGN(T, TSize))) T[TSize];
             constexpr const size_t iterBlockSize = 64;
             constexpr const size_t iterBlocks = TSize / iterBlockSize;
+            constexpr const size_t processableBlocks = iterBlockSize * iterBlocks;
 
 #ifdef USE_OMP
 #pragma omp parallel for private(i)
 #endif // USE_OMP
-            for (size_t i = 0; i < TSize; i += iterBlockSize)
+            for (size_t i = 0; i < processableBlocks; i += iterBlockSize)
             {
 #ifdef USE_OMP
 #pragma omp simd
@@ -71,12 +72,10 @@ namespace ImageInference
                 }
             }
 
-            constexpr const size_t processedBlocks = iterBlockSize * iterBlocks;
-
 #ifdef USE_OMP
 #pragma omp simd
 #endif // USE_OMP
-            for (size_t i = processedBlocks; i < TSize; i++)
+            for (size_t i = processableBlocks; i < TSize; i++)
             {
                 data[i] = input[i];
             }
