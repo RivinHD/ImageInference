@@ -49,3 +49,66 @@ if __name__ == "__main__":
         with open(filePath, "wb") as f:
             writeTensor(f, testImage)
             writeTensor(f, output)
+
+        testBlock0 = torch.rand(1, 64, 56, 56)
+        output: torch.Tensor = resnet50.layer1(testBlock0)
+        filePath = os.path.join(base_directory, directory, f"resnet50_block0_test{i}.bin")
+        with open(filePath, "wb") as f:
+            writeTensor(f, testBlock0)
+            writeTensor(f, output)
+
+        testBlock1 = torch.rand(1, 256, 56, 56)
+        output: torch.Tensor = resnet50.layer2(testBlock1)
+        filePath = os.path.join(base_directory, directory, f"resnet50_block1_test{i}.bin")
+        with open(filePath, "wb") as f:
+            writeTensor(f, testBlock1)
+            writeTensor(f, output)
+
+        testBlock2 = torch.rand(1, 512, 28, 28)
+        output: torch.Tensor = resnet50.layer3(testBlock2)
+        filePath = os.path.join(base_directory, directory, f"resnet50_block2_test{i}.bin")
+        with open(filePath, "wb") as f:
+            writeTensor(f, testBlock2)
+            writeTensor(f, output)
+
+        testBlock3 = torch.rand(1, 1024, 14, 14)
+        output: torch.Tensor = resnet50.layer4(testBlock3)
+        filePath = os.path.join(base_directory, directory, f"resnet50_block3_test{i}.bin")
+        with open(filePath, "wb") as f:
+            writeTensor(f, testBlock3)
+            writeTensor(f, output)
+
+    testImage = torch.ones(1, 3, 224, 224)
+    output: torch.Tensor = resnet50(testImage)
+    filePath = os.path.join(base_directory, directory, "resnet50_test_ones.bin")
+    with open(filePath, "wb") as f:
+        writeTensor(f, testImage)
+        writeTensor(f, output)
+
+    testBlock0 = torch.ones(1, 64, 56, 56)
+    output: torch.Tensor = resnet50.layer1(testBlock0)
+    filePath = os.path.join(base_directory, directory, "resnet50_block0_test_ones.bin")
+    with open(filePath, "wb") as f:
+        writeTensor(f, testBlock0)
+        writeTensor(f, output)
+
+    testBlock1 = torch.ones(1, 256, 56, 56)
+    output: torch.Tensor = resnet50.layer2(testBlock1)
+    filePath = os.path.join(base_directory, directory, "resnet50_block1_test_ones.bin")
+    with open(filePath, "wb") as f:
+        writeTensor(f, testBlock1)
+        writeTensor(f, output)
+
+    testBlock2 = torch.ones(1, 512, 28, 28)
+    output: torch.Tensor = resnet50.layer3(testBlock2)
+    filePath = os.path.join(base_directory, directory, "resnet50_block2_test_ones.bin")
+    with open(filePath, "wb") as f:
+        writeTensor(f, testBlock2)
+        writeTensor(f, output)
+
+    testBlock3 = torch.ones(1, 1024, 14, 14)
+    output: torch.Tensor = resnet50.layer4(testBlock3)
+    filePath = os.path.join(base_directory, directory, "resnet50_block3_test_ones.bin")
+    with open(filePath, "wb") as f:
+        writeTensor(f, testBlock3)
+        writeTensor(f, output)

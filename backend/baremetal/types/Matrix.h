@@ -39,7 +39,7 @@ namespace ImageInference
         class Matrix
         {
         private:
-            T* data;
+            T *data;
 
         public:
             static constexpr const size_t strideColumn = TRows;
@@ -64,7 +64,32 @@ namespace ImageInference
         inline Matrix<T, TColumns, TRows>::Matrix(const T *input)
         {
             data = new (std::align_val_t(PAGE_CACHE_ALIGN(T, size))) T[size]{0};
-            std::copy(input, input + TColumns * TRows, data);
+            constexpr const size_t iterBlockSize = 64;
+            constexpr const size_t iterBlocks = size / iterBlockSize;
+
+#ifdef USE_OMP
+#pragma omp parallel for
+#endif // USE_OMP
+            for (size_t i = 0; i < size; i += iterBlockSize)
+            {
+#ifdef USE_OMP
+#pragma omp simd
+#endif // USE_OMP
+                for (size_t j = 0; j < iterBlockSize; j++)
+                {
+                    data[i + j] = input[i + j];
+                }
+            }
+
+            constexpr const size_t processedBlocks = iterBlockSize * iterBlocks;
+
+#ifdef USE_OMP
+#pragma omp simd
+#endif // USE_OMP
+            for (size_t i = processedBlocks; i < size; i++)
+            {
+                data[i] = input[i];
+            }
         }
 
         template <typename T, size_t TColumns, size_t TRows>
@@ -91,7 +116,7 @@ namespace ImageInference
                           << "Indices:= Column" << iColumn << " Row:= " << iRow << std::endl
                           << "Stride:= Column" << strideColumn << " Row:= " << strideRow << std::endl
                           << std::endl;
-                
+
                 throw std::runtime_error("Matrix: Offset is out of bounds.");
             }
 #endif // IMAGEINFERENCE_TESTING

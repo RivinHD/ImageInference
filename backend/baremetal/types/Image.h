@@ -79,6 +79,9 @@ namespace ImageInference
             void calculateMeanVariance();
         };
 
+#ifdef USE_OMP
+#pragma omp declare simd
+#endif // USE_OMP
         template <typename T, size_t TPadding, size_t TBlockSize, size_t TChannels, size_t THeight, size_t TWidth>
         inline void Image<T, TPadding, TBlockSize, TChannels, THeight, TWidth>::updateMeanVariance(T value, size_t iChannel, size_t count)
         {
@@ -94,7 +97,10 @@ namespace ImageInference
             mean[iChannel] += delta / count;
             batch_variance[iChannel] += delta * (value - mean[iChannel]);
         }
-
+        
+#ifdef USE_OMP
+#pragma omp declare simd
+#endif // USE_OMP
         template <typename T, size_t TPadding, size_t TBlockSize, size_t TChannels, size_t THeight, size_t TWidth>
         inline void Image<T, TPadding, TBlockSize, TChannels, THeight, TWidth>::finalizeMeanVariance(size_t iChannel, size_t count)
         {
@@ -323,12 +329,18 @@ namespace ImageInference
             T *dataPtr = data + paddingOffset;
             size_t count[TChannels]{0};
 
+#ifdef USE_OMP
+#pragma omp parallel for collapse(3)
+#endif // USE_OMP
             for (size_t iBChannel = 0; iBChannel < channelBlocks; iBChannel++)
             {
                 for (size_t iHeight = 0; iHeight < THeight; iHeight++)
                 {
                     for (size_t iWidth = 0; iWidth < TWidth; iWidth++)
                     {
+#ifdef USE_OMP
+#pragma omp simd
+#endif // USE_OMP
                         for (size_t iChannel = 0; iChannel < TBlockSize; iChannel++)
                         {
                             size_t offset = getOffset(iBChannel, iHeight, iWidth, iChannel);
@@ -341,8 +353,14 @@ namespace ImageInference
                 }
             }
 
+#ifdef USE_OMP
+#pragma omp parallel for
+#endif // USE_OMP
             for (size_t iBChannel = 0; iBChannel < channelBlocks; iBChannel++)
             {
+#ifdef USE_OMP
+#pragma omp simd
+#endif // USE_OMP
                 for (size_t iChannel = 0; iChannel < TBlockSize; iChannel++)
                 {
                     finalizeMeanVariance(iBChannel * TBlockSize + iChannel, count[iBChannel * TBlockSize + iChannel]);

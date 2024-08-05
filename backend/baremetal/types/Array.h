@@ -22,6 +22,7 @@
 #include <stddef.h>
 #include <algorithm>
 #include <new>
+#include <execution>
 
 namespace ImageInference
 {
@@ -31,16 +32,16 @@ namespace ImageInference
         class Array
         {
         private:
-            T* data;
+            T *data;
 
         public:
             static constexpr const size_t size = TSize;
 
             Array();
-            Array(const T* input);
+            Array(const T *input);
             ~Array();
 
-            T* getPointer();
+            T *getPointer();
         };
 
         template <typename T, size_t TSize>
@@ -53,7 +54,32 @@ namespace ImageInference
         inline Array<T, TSize>::Array(const T *input)
         {
             data = new (std::align_val_t(PAGE_CACHE_ALIGN(T, TSize))) T[TSize];
-            std::copy(input, input + TSize, data);
+            constexpr const size_t iterBlockSize = 64;
+            constexpr const size_t iterBlocks = TSize / iterBlockSize;
+
+#ifdef USE_OMP
+#pragma omp parallel for
+#endif // USE_OMP
+            for (size_t i = 0; i < TSize; i += iterBlockSize)
+            {
+#ifdef USE_OMP
+#pragma omp simd
+#endif // USE_OMP
+                for (size_t j = 0; j < iterBlockSize; j++)
+                {
+                    data[i + j] = input[i + j];
+                }
+            }
+
+            constexpr const size_t processedBlocks = iterBlockSize * iterBlocks;
+
+#ifdef USE_OMP
+#pragma omp simd
+#endif // USE_OMP
+            for (size_t i = processedBlocks; i < TSize; i++)
+            {
+                data[i] = input[i];
+            }
         }
 
         template <typename T, size_t TSize>

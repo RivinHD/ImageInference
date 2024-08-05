@@ -21,6 +21,11 @@ namespace ImageInference
                 ResNet50Test();
                 ~ResNet50Test();
 
+                static void block0(ImageInference::model::ResNet50 &resnet50, const float* input, float* output);
+                static void block1(ImageInference::model::ResNet50 &resnet50, const float* input, float* output);
+                static void block2(ImageInference::model::ResNet50 &resnet50, const float* input, float* output);
+                static void block3(ImageInference::model::ResNet50 &resnet50, const float* input, float* output);
+
                 template <size_t TStride, size_t TInPadding, size_t TBlockSize,
                           size_t TOutChannels, size_t TInChannels,
                           size_t THeight, size_t TWidth,

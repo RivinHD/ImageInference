@@ -685,23 +685,26 @@ namespace ImageInference
                 throw std::runtime_error("ResNet50::convBlock: Padding is too small or to large for the kernel size!");
             }
 
-            constexpr size_t countBlocks = KernelCount / BlockSizeCount;
-            constexpr size_t channelBlocks = ImageChannels / BlockSizeChannel;
-            constexpr size_t outputHeight = ImageHeight / Stride;
-            constexpr size_t outputWidth = ImageWidth / Stride;
+            constexpr const size_t countBlocks = KernelCount / BlockSizeCount;
+            constexpr const size_t channelBlocks = ImageChannels / BlockSizeChannel;
+            constexpr const size_t outputHeight = ImageHeight / Stride;
+            constexpr const size_t outputWidth = ImageWidth / Stride;
 
             ImageInference::types::Image<T, OutPadding, BlockSizeCount, KernelCount, ImageHeight / Stride, ImageWidth / Stride> output;
-            auto outputPtr = output.getPointer() + output.paddingOffset; // We skip the padding as we want to start at the data section.
-            auto meanPtr = output.getMeanPointer();                      // Count = CountBlocks x CountElements
-            auto variancePtr = output.getBatchVariancePointer();         // Count = CountBlocks x CountElements
+            const auto outputPtr = output.getPointer() + output.paddingOffset; // We skip the padding as we want to start at the data section.
+            const auto meanPtr = output.getMeanPointer();                      // Count = CountBlocks x CountElements
+            const auto variancePtr = output.getBatchVariancePointer();         // Count = CountBlocks x CountElements
 
-            auto imagePtr = image.getPointer();          // ChannelBlocks x Height x Width x ChannelElements
-            auto kernelPtr = kernel.getPointer();        // CountBlocks x ChannelBlocks x Height x Width x ChannelElements x CountElements
-            auto gammaPtr = batchNorm.getGammaPointer(); // Count = CountBlocks x CountElements
-            auto betaPtr = batchNorm.getBetaPointer();   // Count = CountBlocks x CountElements
+            const auto imagePtr = image.getPointer();          // ChannelBlocks x Height x Width x ChannelElements
+            const auto kernelPtr = kernel.getPointer();        // CountBlocks x ChannelBlocks x Height x Width x ChannelElements x CountElements
+            const auto gammaPtr = batchNorm.getGammaPointer(); // Count = CountBlocks x CountElements
+            const auto betaPtr = batchNorm.getBetaPointer();   // Count = CountBlocks x CountElements
 
             size_t meanVarianceCount[KernelCount]{0};
 
+#ifdef USE_OMP
+#pragma omp parallel for collapse(2)
+#endif // USE_OMP
             for (size_t iBCount = 0; iBCount < countBlocks; iBCount++)
             {
                 for (size_t iHeight = 0; iHeight < outputHeight; iHeight++)
@@ -713,9 +716,9 @@ namespace ImageInference
                         {
                             for (size_t kWidth = 0; kWidth < KernelWidth; kWidth++)
                             {
-                                size_t inputOffset = image.getOffset(iBChannel, iHeight * Stride + kHeight, kWidth, 0);
-                                size_t kernelOffset = kernel.getOffset(iBCount, iBChannel, kHeight, kWidth, 0, 0);
-                                size_t outputOffset = output.getOffset(iBCount, iHeight, 0, 0);
+                                const size_t inputOffset = image.getOffset(iBChannel, iHeight * Stride + kHeight, kWidth, 0);
+                                const size_t kernelOffset = kernel.getOffset(iBCount, iBChannel, kHeight, kWidth, 0, 0);
+                                const size_t outputOffset = output.getOffset(iBCount, iHeight, 0, 0);
 
                                 // Kernel of shape BlockSizeChannel x BlockSizeCount
                                 // Input of shape ImageWidth x BlockSizeChannel
@@ -757,21 +760,30 @@ namespace ImageInference
                     // We will also update the mean and variance as we already loaded the data.
                     for (size_t iWidth = 0; iWidth < outputWidth; iWidth++)
                     {
+#ifdef USE_OMP
+#pragma omp simd
+#endif // USE_OMP
                         for (size_t iCount = 0; iCount < BlockSizeCount; iCount++)
                         {
-                            size_t offsetOutput = output.getOffset(iBCount, iHeight, iWidth, iCount);
-                            size_t offsetCount = iBCount * BlockSizeCount + iCount;
+                            const size_t offsetOutput = output.getOffset(iBCount, iHeight, iWidth, iCount);
+                            const size_t offsetCount = iBCount * BlockSizeCount + iCount;
                             output.updateMeanVariance(outputPtr[offsetOutput], offsetCount, ++meanVarianceCount[offsetCount]);
                         }
                     }
                 }
             }
 
+#ifdef USE_OMP
+#pragma omp parallel for
+#endif // USE_OMP
             for (size_t iBCount = 0; iBCount < countBlocks; iBCount++)
             {
+#ifdef USE_OMP
+#pragma omp simd
+#endif // USE_OMP
                 for (size_t iCount = 0; iCount < BlockSizeCount; iCount++)
                 {
-                    size_t offsetCount = iBCount * BlockSizeCount + iCount;
+                    const size_t offsetCount = iBCount * BlockSizeCount + iCount;
                     output.finalizeMeanVariance(offsetCount, meanVarianceCount[offsetCount]);
                 }
 
@@ -780,10 +792,13 @@ namespace ImageInference
                 {
                     for (size_t iWidth = 0; iWidth < outputWidth; iWidth++)
                     {
+#ifdef USE_OMP
+#pragma omp simd
+#endif // USE_OMP
                         for (size_t iCount = 0; iCount < BlockSizeCount; iCount++)
                         {
-                            size_t offsetOutput = output.getOffset(iBCount, iHeight, iWidth, iCount);
-                            size_t offsetCount = iBCount * BlockSizeCount + iCount;
+                            const size_t offsetOutput = output.getOffset(iBCount, iHeight, iWidth, iCount);
+                            const size_t offsetCount = iBCount * BlockSizeCount + iCount;
                             outputPtr[offsetOutput] = relu<T>(ResNet50::batchNorm<T>(
                                 outputPtr[offsetOutput],
                                 gammaPtr[offsetCount],
@@ -816,24 +831,26 @@ namespace ImageInference
                 throw std::runtime_error("ResNet50::convBlockAddIdentity: Padding is too small or to large for the kernel size!");
             }
 
-            constexpr size_t countBlocks = KernelCount / BlockSizeCount;
-            constexpr size_t channelBlocks = ImageChannels / BlockSizeChannel;
-            constexpr size_t outputHeight = ImageHeight;
-            constexpr size_t outputWidth = ImageWidth;
+            constexpr const size_t countBlocks = KernelCount / BlockSizeCount;
+            constexpr const size_t channelBlocks = ImageChannels / BlockSizeChannel;
+            constexpr const size_t outputHeight = ImageHeight;
+            constexpr const size_t outputWidth = ImageWidth;
 
             ImageInference::types::Image<T, OutPadding, BlockSizeCount, KernelCount, ImageHeight, ImageWidth> output;
             auto outputPtr = output.getPointer() + output.paddingOffset; // We skip the padding as we want to start at the data section.
             auto meanPtr = output.getMeanPointer();                      // Count = CountBlocks x CountElements
             auto variancePtr = output.getBatchVariancePointer();         // Count = CountBlocks x CountElements
 
-            auto imagePtr = image.getPointer();          // ChannelBlocks x Height x Width x ChannelElements
-            auto kernelPtr = kernel.getPointer();        // CountBlocks x ChannelBlocks x Height x Width x ChannelElements x CountElements
-            auto gammaPtr = batchNorm.getGammaPointer(); // Count = CountBlocks x CountElements
-            auto betaPtr = batchNorm.getBetaPointer();   // Count = CountBlocks x CountElements
-            auto shortcutPtr = shortcut.getPointer();    // ChannelBlocks x Height x Width x ChannelElements
+            const auto imagePtr = image.getPointer();          // ChannelBlocks x Height x Width x ChannelElements
+            const auto kernelPtr = kernel.getPointer();        // CountBlocks x ChannelBlocks x Height x Width x ChannelElements x CountElements
+            const auto gammaPtr = batchNorm.getGammaPointer(); // Count = CountBlocks x CountElements
+            const auto betaPtr = batchNorm.getBetaPointer();   // Count = CountBlocks x CountElements
+            const auto shortcutPtr = shortcut.getPointer();    // ChannelBlocks x Height x Width x ChannelElements
 
             size_t meanVarianceCount[KernelCount]{0};
-
+#ifdef USE_OMP
+#pragma omp parallel for collapse(2)
+#endif // USE_OMP
             for (size_t iBCount = 0; iBCount < countBlocks; iBCount++)
             {
                 for (size_t iHeight = 0; iHeight < outputHeight; iHeight++)
@@ -845,24 +862,24 @@ namespace ImageInference
                         {
                             for (size_t kWidth = 0; kWidth < KernelWidth; kWidth++)
                             {
-                                size_t inputOffset = image.getOffset(iBChannel, iHeight + kHeight, kWidth, 0);
-                                size_t kernelOffset = kernel.getOffset(iBCount, iBChannel, kHeight, kWidth, 0, 0);
-                                size_t outputOffset = output.getOffset(iBCount, iHeight, 0, 0);
+                                const size_t inputOffset = image.getOffset(iBChannel, iHeight + kHeight, kWidth, 0);
+                                const size_t kernelOffset = kernel.getOffset(iBCount, iBChannel, kHeight, kWidth, 0, 0);
+                                const size_t outputOffset = output.getOffset(iBCount, iHeight, 0, 0);
 
                                 // Kernel of shape BlockSizeChannel x BlockSizeCount
                                 // Input of shape ImageWidth x BlockSizeChannel
                                 // Output of shape outputWidth x BlockSizeCount === ImageWidth x BlockSizeCount
 
                                 // If we use libxsmm directly we don't need to do add separately!
-                                constexpr int MM = outputWidth;
-                                constexpr int KK = BlockSizeChannel;
-                                constexpr int NN = BlockSizeCount;
-                                constexpr int ldImage = NN;
-                                constexpr float alpha = 1.0;
-                                constexpr float beta = 1.0;
+                                constexpr const int MM = outputWidth;
+                                constexpr const int KK = BlockSizeChannel;
+                                constexpr const int NN = BlockSizeCount;
+                                constexpr const int ldImage = NN;
+                                constexpr const float alpha = 1.0;
+                                constexpr const float beta = 1.0;
 
-                                constexpr char transa = 'N';
-                                constexpr char transb = 'N';
+                                constexpr const char transa = 'N';
+                                constexpr const char transb = 'N';
 
                                 libxsmm_sgemm(
                                     &transa /*transa*/,
@@ -887,21 +904,30 @@ namespace ImageInference
                     // We will also update the mean and variance as we already loaded the data.
                     for (size_t iWidth = 0; iWidth < outputWidth; iWidth++)
                     {
+#ifdef USE_OMP
+#pragma omp simd
+#endif // USE_OMP
                         for (size_t iCount = 0; iCount < BlockSizeCount; iCount++)
                         {
-                            size_t offsetOutput = output.getOffset(iBCount, iHeight, iWidth, iCount);
-                            size_t offsetCount = iBCount * BlockSizeCount + iCount;
+                            const size_t offsetOutput = output.getOffset(iBCount, iHeight, iWidth, iCount);
+                            const size_t offsetCount = iBCount * BlockSizeCount + iCount;
                             output.updateMeanVariance(outputPtr[offsetOutput], offsetCount, ++meanVarianceCount[offsetCount]);
                         }
                     }
                 }
             }
 
+#ifdef USE_OMP
+#pragma omp parallel for
+#endif // USE_OMP
             for (size_t iBCount = 0; iBCount < countBlocks; iBCount++)
             {
+#ifdef USE_OMP
+#pragma omp simd
+#endif // USE_OMP
                 for (size_t iCount = 0; iCount < BlockSizeCount; iCount++)
                 {
-                    size_t offsetCount = iBCount * BlockSizeCount + iCount;
+                    const size_t offsetCount = iBCount * BlockSizeCount + iCount;
                     output.finalizeMeanVariance(offsetCount, meanVarianceCount[offsetCount]);
                 }
 
@@ -910,11 +936,14 @@ namespace ImageInference
                 {
                     for (size_t iWidth = 0; iWidth < outputWidth; iWidth++)
                     {
+#ifdef USE_OMP
+#pragma omp simd
+#endif // USE_OMP
                         for (size_t iCount = 0; iCount < BlockSizeCount; iCount++)
                         {
-                            size_t offsetOutput = output.getOffset(iBCount, iHeight, iWidth, iCount);
-                            size_t offsetShortcut = shortcut.getOffset(iBCount, iHeight, iWidth, iCount);
-                            size_t offsetCount = iBCount * BlockSizeCount + iCount;
+                            const size_t offsetOutput = output.getOffset(iBCount, iHeight, iWidth, iCount);
+                            const size_t offsetShortcut = shortcut.getOffset(iBCount, iHeight, iWidth, iCount);
+                            const size_t offsetCount = iBCount * BlockSizeCount + iCount;
                             T batchNormValue = ResNet50::batchNorm<T>(
                                 outputPtr[offsetOutput],
                                 gammaPtr[offsetCount],
@@ -950,27 +979,30 @@ namespace ImageInference
                 throw std::runtime_error("ResNet50::convBlockAddProjection: Padding is too small or to large for the kernel size!");
             }
 
-            constexpr size_t countBlocks = KernelCount / BlockSizeCount;
-            constexpr size_t channelBlocks = ImageChannels / BlockSizeChannel;
-            constexpr size_t outputHeight = ImageHeight / Stride;
-            constexpr size_t outputWidth = ImageWidth / Stride;
+            constexpr const size_t countBlocks = KernelCount / BlockSizeCount;
+            constexpr const size_t channelBlocks = ImageChannels / BlockSizeChannel;
+            constexpr const size_t outputHeight = ImageHeight / Stride;
+            constexpr const size_t outputWidth = ImageWidth / Stride;
 
             ImageInference::types::Image<T, OutPadding, BlockSizeCount, KernelCount, ImageHeight / Stride, ImageWidth / Stride> output;
             auto outputPtr = output.getPointer() + output.paddingOffset; // We skip the padding as we want to start at the data section.
             auto meanPtr = output.getMeanPointer();                      // Count = CountBlocks x CountElements
             auto variancePtr = output.getBatchVariancePointer();         // Count = CountBlocks x CountElements
 
-            auto imagePtr = image.getPointer();                              // ChannelBlocks x Height x Width x ChannelElements
-            auto kernelPtr = kernel.getPointer();                            // CountBlocks x ChannelBlocks x Height x Width x ChannelElements x CountElements
-            auto gammaPtr = batchNorm.getGammaPointer();                     // Count = CountBlocks x CountElements
-            auto betaPtr = batchNorm.getBetaPointer();                       // Count = CountBlocks x CountElements
-            auto shortcutPtr = shortcut.getPointer();                        // ChannelBlocks x Height x Width x ChannelElements
-            auto projectionKernelPtr = projectionKernel.getPointer();        // CountBlocks x CountBlocks x 1 x 1 x CountElements x CountElements
-            auto projectionGammaPtr = projectionBatchNorm.getGammaPointer(); // Count = CountBlocks x CountElements
-            auto projectionBetaPtr = projectionBatchNorm.getBetaPointer();   // Count = CountBlocks x CountElements
+            const auto imagePtr = image.getPointer();                              // ChannelBlocks x Height x Width x ChannelElements
+            const auto kernelPtr = kernel.getPointer();                            // CountBlocks x ChannelBlocks x Height x Width x ChannelElements x CountElements
+            const auto gammaPtr = batchNorm.getGammaPointer();                     // Count = CountBlocks x CountElements
+            const auto betaPtr = batchNorm.getBetaPointer();                       // Count = CountBlocks x CountElements
+            const auto shortcutPtr = shortcut.getPointer();                        // ChannelBlocks x Height x Width x ChannelElements
+            const auto projectionKernelPtr = projectionKernel.getPointer();        // CountBlocks x CountBlocks x 1 x 1 x CountElements x CountElements
+            const auto projectionGammaPtr = projectionBatchNorm.getGammaPointer(); // Count = CountBlocks x CountElements
+            const auto projectionBetaPtr = projectionBatchNorm.getBetaPointer();   // Count = CountBlocks x CountElements
 
             size_t meanVarianceCount[KernelCount]{0};
 
+#ifdef USE_OMP
+#pragma omp parallel for collapse(2)
+#endif // USE_OMP
             for (size_t iBCount = 0; iBCount < countBlocks; iBCount++)
             {
                 for (size_t iHeight = 0; iHeight < outputHeight; iHeight++)
@@ -982,9 +1014,9 @@ namespace ImageInference
                         {
                             for (size_t kWidth = 0; kWidth < KernelWidth; kWidth++)
                             {
-                                size_t inputOffset = image.getOffset(iBChannel, iHeight + kHeight, kWidth, 0);
-                                size_t kernelOffset = kernel.getOffset(iBCount, iBChannel, kHeight, kWidth, 0, 0);
-                                size_t outputOffset = output.getOffset(iBCount, iHeight, 0, 0);
+                                const size_t inputOffset = image.getOffset(iBChannel, iHeight + kHeight, kWidth, 0);
+                                const size_t kernelOffset = kernel.getOffset(iBCount, iBChannel, kHeight, kWidth, 0, 0);
+                                const size_t outputOffset = output.getOffset(iBCount, iHeight, 0, 0);
 
                                 // Kernel of shape BlockSizeChannel x BlockSizeCount
                                 // Input of shape ImageWidth x BlockSizeChannel
@@ -992,15 +1024,15 @@ namespace ImageInference
 
                                 // If we use libxsmm directly we don't need to do add separately!
                                 // Both input and output have the same stride therefore we can do a norma matrix multiplication.
-                                constexpr int MM = outputWidth;
-                                constexpr int KK = BlockSizeChannel;
-                                constexpr int NN = BlockSizeCount;
-                                constexpr int ldImage = NN;
-                                constexpr float alpha = 1.0;
-                                constexpr float beta = 1.0;
+                                constexpr const int MM = outputWidth;
+                                constexpr const int KK = BlockSizeChannel;
+                                constexpr const int NN = BlockSizeCount;
+                                constexpr const int ldImage = NN;
+                                constexpr const float alpha = 1.0;
+                                constexpr const float beta = 1.0;
 
-                                constexpr char transa = 'N';
-                                constexpr char transb = 'N';
+                                constexpr const char transa = 'N';
+                                constexpr const char transb = 'N';
 
                                 libxsmm_sgemm(
                                     &transa /*transa*/,
@@ -1025,10 +1057,13 @@ namespace ImageInference
                     // We will also update the mean and variance as we already loaded the data.
                     for (size_t iWidth = 0; iWidth < outputWidth; iWidth++)
                     {
+#ifdef USE_OMP
+#pragma omp simd
+#endif // USE_OMP
                         for (size_t iCount = 0; iCount < BlockSizeCount; iCount++)
                         {
-                            size_t offsetOutput = output.getOffset(iBCount, iHeight, iWidth, iCount);
-                            size_t offsetCount = iBCount * BlockSizeCount + iCount;
+                            const size_t offsetOutput = output.getOffset(iBCount, iHeight, iWidth, iCount);
+                            const size_t offsetCount = iBCount * BlockSizeCount + iCount;
                             output.updateMeanVariance(outputPtr[offsetOutput], offsetCount, ++meanVarianceCount[offsetCount]);
                         }
                     }
@@ -1036,10 +1071,10 @@ namespace ImageInference
             }
 
             // Calculate the shortcut projection
-            constexpr size_t shortcutChannelBlock = KernelCount / ShortcutDimExpand / BlockSizeCount;
+            constexpr const size_t shortcutChannelBlock = KernelCount / ShortcutDimExpand / BlockSizeCount;
 
-            constexpr size_t projectionHeight = ImageHeight / Stride;
-            constexpr size_t projectionWidth = ImageWidth / Stride;
+            constexpr const size_t projectionHeight = ImageHeight / Stride;
+            constexpr const size_t projectionWidth = ImageWidth / Stride;
 
             ImageInference::types::Image<T, 0, BlockSizeCount, KernelCount, ImageHeight / Stride, ImageWidth / Stride> projection;
             auto projectionPtr = projection.getPointer() + projection.paddingOffset; // We skip the padding as we want to start at the data section.
@@ -1047,6 +1082,10 @@ namespace ImageInference
             auto projectionVariancePtr = projection.getBatchVariancePointer();       // Count = CountBlocks x CountElements
 
             size_t meanVarianceCountProjection[KernelCount]{0};
+
+#ifdef USE_OMP
+#pragma omp parallel for collapse(2)
+#endif // USE_OMP
             for (size_t iBCount = 0; iBCount < countBlocks; iBCount++)
             {
                 for (size_t iHeight = 0; iHeight < projectionHeight; iHeight++)
@@ -1054,9 +1093,9 @@ namespace ImageInference
                     // Do the projection
                     for (size_t iBChannel = 0; iBChannel < shortcutChannelBlock; iBChannel++)
                     {
-                        size_t offsetShortcut = shortcut.getOffset(iBChannel, iHeight * Stride, 0, 0);
-                        size_t offsetProjectionKernel = projectionKernel.getOffset(iBCount, iBChannel, 0, 0, 0, 0);
-                        size_t offsetProjection = projection.getOffset(iBCount, iHeight, 0, 0);
+                        const size_t offsetShortcut = shortcut.getOffset(iBChannel, iHeight * Stride, 0, 0);
+                        const size_t offsetProjectionKernel = projectionKernel.getOffset(iBCount, iBChannel, 0, 0, 0, 0);
+                        const size_t offsetProjection = projection.getOffset(iBCount, iHeight, 0, 0);
 
                         // Kernel of shape BlockSizeChannel x BlockSizeCount
                         // Input of shape ImageWidth x BlockSizeChannel
@@ -1065,15 +1104,15 @@ namespace ImageInference
                         // If we use libxsmm directly we don't need to do add separately!
                         // If we use the leading dimension on the image we can use it as stride.
                         // With the leading dimension we skip the next blocks as they should be skipped by the stride.
-                        constexpr int MM = projectionWidth;
-                        constexpr int KK = BlockSizeChannel;
-                        constexpr int NN = BlockSizeCount;
-                        constexpr int ldImage = NN * Stride;
-                        constexpr float alpha = 1.0;
-                        constexpr float beta = 0.0;
+                        constexpr const int MM = projectionWidth;
+                        constexpr const int KK = BlockSizeChannel;
+                        constexpr const int NN = BlockSizeCount;
+                        constexpr const int ldImage = NN * Stride;
+                        constexpr const float alpha = 1.0;
+                        constexpr const float beta = 0.0;
 
-                        constexpr char transa = 'N';
-                        constexpr char transb = 'N';
+                        constexpr const char transa = 'N';
+                        constexpr const char transb = 'N';
 
                         libxsmm_sgemm(
                             &transa /*transa*/,
@@ -1096,21 +1135,30 @@ namespace ImageInference
                     // We will also update the mean and variance as we already loaded the data.
                     for (size_t iWidth = 0; iWidth < projectionWidth; iWidth++)
                     {
+#ifdef USE_OMP
+#pragma omp simd
+#endif // USE_OMP
                         for (size_t iCount = 0; iCount < BlockSizeCount; iCount++)
                         {
-                            size_t offsetProjection = projection.getOffset(iBCount, iHeight, iWidth, iCount);
-                            size_t offsetCount = iBCount * BlockSizeCount + iCount;
+                            const size_t offsetProjection = projection.getOffset(iBCount, iHeight, iWidth, iCount);
+                            const size_t offsetCount = iBCount * BlockSizeCount + iCount;
                             projection.updateMeanVariance(projectionPtr[offsetProjection], offsetCount, ++meanVarianceCountProjection[offsetCount]);
                         }
                     }
                 }
             }
 
+#ifdef USE_OMP
+#pragma omp parallel for
+#endif // USE_OMP
             for (size_t iBCount = 0; iBCount < countBlocks; iBCount++)
             {
+#ifdef USE_OMP
+#pragma omp simd
+#endif // USE_OMP
                 for (size_t iCount = 0; iCount < BlockSizeCount; iCount++)
                 {
-                    size_t offsetCount = iBCount * BlockSizeCount + iCount;
+                    const size_t offsetCount = iBCount * BlockSizeCount + iCount;
                     projection.finalizeMeanVariance(offsetCount, meanVarianceCountProjection[offsetCount]);
                 }
 
@@ -1119,10 +1167,13 @@ namespace ImageInference
                 {
                     for (size_t iWidth = 0; iWidth < projectionWidth; iWidth++)
                     {
+#ifdef USE_OMP
+#pragma omp simd
+#endif // USE_OMP
                         for (size_t iCount = 0; iCount < BlockSizeCount; iCount++)
                         {
-                            size_t offsetProject = projection.getOffset(iBCount, iHeight, iWidth, iCount);
-                            size_t offsetCount = iBCount * BlockSizeCount + iCount;
+                            const size_t offsetProject = projection.getOffset(iBCount, iHeight, iWidth, iCount);
+                            const size_t offsetCount = iBCount * BlockSizeCount + iCount;
                             projectionPtr[offsetProject] = ResNet50::batchNorm<T>(
                                 projectionPtr[offsetProject],
                                 projectionGammaPtr[offsetCount],
@@ -1134,12 +1185,18 @@ namespace ImageInference
                 }
             }
 
-            // Continue with processing the actual input.
+// Continue with processing the actual input.
+#ifdef USE_OMP
+#pragma omp parallel for
+#endif // USE_OMP
             for (size_t iBCount = 0; iBCount < countBlocks; iBCount++)
             {
+#ifdef USE_OMP
+#pragma omp simd
+#endif // USE_OMP
                 for (size_t iCount = 0; iCount < BlockSizeCount; iCount++)
                 {
-                    size_t offsetCount = iBCount * BlockSizeCount + iCount;
+                    const size_t offsetCount = iBCount * BlockSizeCount + iCount;
                     output.finalizeMeanVariance(offsetCount, meanVarianceCount[offsetCount]);
                 }
 
@@ -1148,19 +1205,22 @@ namespace ImageInference
                 {
                     for (size_t iWidth = 0; iWidth < outputWidth; iWidth++)
                     {
+#ifdef USE_OMP
+#pragma omp simd
+#endif // USE_OMP
                         for (size_t iCount = 0; iCount < BlockSizeCount; iCount++)
                         {
-                            size_t offsetOutput = output.getOffset(iBCount, iHeight, iWidth, iCount);
-                            size_t offsetCount = iBCount * BlockSizeCount + iCount;
-                            T batchNormValue = ResNet50::batchNorm<T>(
+                            const size_t offsetOutput = output.getOffset(iBCount, iHeight, iWidth, iCount);
+                            const size_t offsetCount = iBCount * BlockSizeCount + iCount;
+                            const T batchNormValue = ResNet50::batchNorm<T>(
                                 outputPtr[offsetOutput],
                                 gammaPtr[offsetCount],
                                 betaPtr[offsetCount],
                                 meanPtr[offsetCount],
                                 variancePtr[offsetCount]);
 
-                            size_t projectionOffset = projection.getOffset(iBCount, iHeight, iWidth, iCount);
-                            T projectedValue = projectionPtr[projectionOffset];
+                            const size_t projectionOffset = projection.getOffset(iBCount, iHeight, iWidth, iCount);
+                            const T projectedValue = projectionPtr[projectionOffset];
                             outputPtr[offsetOutput] = relu<T>(batchNormValue + projectedValue);
                         }
                     }
@@ -1183,28 +1243,34 @@ namespace ImageInference
                 throw std::runtime_error("ResNet50::maxPool: Padding is too small or to large for 3x3 Max Pooling!");
             }
 
-            constexpr size_t channelBlocks = ImageChannels / BlockSize;
-            constexpr size_t outputHeight = ImageHeight / Stride;
-            constexpr size_t outputWidth = ImageWidth / Stride;
+            constexpr const size_t channelBlocks = ImageChannels / BlockSize;
+            constexpr const size_t outputHeight = ImageHeight / Stride;
+            constexpr const size_t outputWidth = ImageWidth / Stride;
 
             ImageInference::types::Image<T, OutPadding, BlockSize, ImageChannels, ImageHeight / Stride, ImageWidth / Stride> output;
 
             auto outputPtr = output.getPointer() + output.paddingOffset; // We skip the padding as we want to start at the data section.
 
-            auto imagePtr = image.getPointer();
+            const auto imagePtr = image.getPointer();
 
-            // 3x3 Stencil that gets the max value
+// 3x3 Stencil that gets the max value
+#ifdef USE_OMP
+#pragma omp parallel for collapse(2)
+#endif // USE_OMP
             for (size_t iBChannel = 0; iBChannel < channelBlocks; iBChannel++)
             {
                 for (size_t iHeight = 0; iHeight < outputHeight; iHeight++)
                 {
                     for (size_t iWidth = 0; iWidth < outputWidth; iWidth++)
                     {
-                        size_t preOffsetOutput = output.getOffset(iBChannel, iHeight, iWidth, 0);
+                        const size_t preOffsetOutput = output.getOffset(iBChannel, iHeight, iWidth, 0);
 
+#ifdef USE_OMP
+#pragma omp simd
+#endif // USE_OMP
                         for (size_t iChannel = 0; iChannel < BlockSize; iChannel++)
                         {
-                            auto offsetOutput = preOffsetOutput + iChannel * output.strideChannel;
+                            const size_t offsetOutput = preOffsetOutput + iChannel * output.strideChannel;
                             outputPtr[offsetOutput] = std::numeric_limits<T>::lowest();
                         }
 
@@ -1212,10 +1278,13 @@ namespace ImageInference
                         {
                             for (size_t kWidth = 0; kWidth < 3; kWidth++)
                             {
+#ifdef USE_OMP // We can apply simd because the elements are independent of each other.
+#pragma omp simd
+#endif // USE_OMP
                                 for (size_t iChannel = 0; iChannel < BlockSize; iChannel++)
                                 {
-                                    auto offsetOutput = preOffsetOutput + iChannel * output.strideChannel;
-                                    auto offsetImage = image.getOffset(iBChannel, iHeight * Stride + kHeight, iWidth * Stride + kWidth, iChannel);
+                                    const size_t offsetOutput = preOffsetOutput + iChannel * output.strideChannel;
+                                    const size_t offsetImage = image.getOffset(iBChannel, iHeight * Stride + kHeight, iWidth * Stride + kWidth, iChannel);
                                     outputPtr[offsetOutput] = std::max(outputPtr[offsetOutput], imagePtr[offsetImage]);
                                 }
                             }
@@ -1232,13 +1301,13 @@ namespace ImageInference
         inline ImageInference::types::Image<T, OutPadding, BlockSize, ImageChannels, 1, 1> ResNet50::globalAveragePool(
             ImageInference::types::Image<T, InPadding, BlockSize, ImageChannels, ImageHeight, ImageWidth> &image)
         {
-            constexpr size_t channelBlocks = ImageChannels / BlockSize;
+            constexpr const size_t channelBlocks = ImageChannels / BlockSize;
 
             ImageInference::types::Image<T, OutPadding, BlockSize, ImageChannels, 1, 1> output;
             auto outputPtr = output.getPointer() + output.paddingOffset; // We skip the padding as we want to start at the data section.
 
             auto imagePtr = image.getPointer() + image.paddingOffset; // We skip the padding as padding should not be averaged.
-            constexpr float scale = 1.0f / (ImageHeight * ImageWidth);
+            constexpr const float scale = 1.0f / (ImageHeight * ImageWidth);
 #ifdef USE_OMP
 #pragma omp parallel for
 #endif // USE_OMP
@@ -1248,18 +1317,24 @@ namespace ImageInference
                 {
                     for (size_t iWidth = 0; iWidth < ImageWidth; iWidth++)
                     {
+#ifdef USE_OMP // We can apply simd because the elements are independent of each other.
+#pragma omp simd
+#endif // USE_OMP
                         for (size_t iChannel = 0; iChannel < BlockSize; iChannel++)
                         {
-                            auto offsetOutput = output.getOffset(iBChannel, 0, 0, iChannel);
-                            auto offsetImage = image.getOffset(iBChannel, iHeight, iWidth, iChannel);
+                            const size_t offsetOutput = output.getOffset(iBChannel, 0, 0, iChannel);
+                            const size_t offsetImage = image.getOffset(iBChannel, iHeight, iWidth, iChannel);
                             outputPtr[offsetOutput] += imagePtr[offsetImage];
                         }
                     }
                 }
 
+#ifdef USE_OMP // We can apply simd because the elements are independent of each other.
+#pragma omp simd
+#endif // USE_OMP
                 for (size_t iChannel = 0; iChannel < BlockSize; iChannel++)
                 {
-                    auto offsetOutput = output.getOffset(iBChannel, 0, 0, iChannel);
+                    const size_t offsetOutput = output.getOffset(iBChannel, 0, 0, iChannel);
                     outputPtr[offsetOutput] = static_cast<T>(outputPtr[offsetOutput] * scale);
                 }
             }
@@ -1284,19 +1359,25 @@ namespace ImageInference
         }
 
         template <typename T>
-        inline T *ResNet50::getWeight(size_t index)
+        inline T *ResNet50::getWeight(const size_t index)
         {
             return static_cast<T *>(modelWeights[index]);
         }
 
+#ifdef USE_OMP
+#pragma omp declare simd
+#endif // USE_OMP
         template <typename T>
-        inline T ResNet50::relu(T value)
+        inline T ResNet50::relu(const T value)
         {
             return (value > 0) * value;
         }
 
+#ifdef USE_OMP
+#pragma omp declare simd
+#endif // USE_OMP
         template <typename T>
-        inline T ResNet50::batchNorm(T value, T gamma, T beta, T mean, T batchVariance)
+        inline T ResNet50::batchNorm(const T value, const T gamma, const T beta, const T mean, const T batchVariance)
         {
             return gamma * (value - mean) * batchVariance + beta;
         }

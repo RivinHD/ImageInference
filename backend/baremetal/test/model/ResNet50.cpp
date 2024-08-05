@@ -884,7 +884,7 @@ namespace ImageInference
             REQUIRE(success);
         }
 
-        TEST_CASE("test_resnet50_whole_model", "[resnet50]")
+        TEST_CASE("test_resnet50_whole_model", "[resnet50][inference]")
         {
 
             // Read the weights from the file
@@ -913,6 +913,7 @@ namespace ImageInference
 
             ImageInference::model::ResNet50 resnet50(weightPtrs, ImageInference::types::ScalarType::Float);
 
+            testWholeResnet50(resnet50, "resnet50_test_ones.bin");
             testWholeResnet50(resnet50, "resnet50_test0.bin");
             testWholeResnet50(resnet50, "resnet50_test1.bin");
             testWholeResnet50(resnet50, "resnet50_test2.bin");
@@ -923,6 +924,318 @@ namespace ImageInference
             testWholeResnet50(resnet50, "resnet50_test7.bin");
             testWholeResnet50(resnet50, "resnet50_test8.bin");
             testWholeResnet50(resnet50, "resnet50_test9.bin");
+        }
+
+        void testResnet50Block0(ImageInference::model::ResNet50 &resnet50, const std::string &compareFilepath)
+        {
+            // Read the input and comparison output
+            const char *projectDirectory = std::getenv("PROJECT_ROOT");
+            if (projectDirectory == nullptr)
+            {
+                throw std::runtime_error("PROJECT_ROOT environment variable is not set");
+            }
+
+            std::string inputPath = std::string(projectDirectory) + "/test_data/" + compareFilepath;
+            ImageInference::test::utils::Reader reader(inputPath);
+
+            Tensor in = reader.getNextTensor();
+            Tensor outExpected = reader.getNextTensor();
+            Tensor out = at::zeros({1, 256, 56, 56});
+
+            float *inPtr = in.mutable_data_ptr<float>();
+            float *outPtr = out.mutable_data_ptr<float>();
+
+            REQUIRE((in.size(0) == 1));
+            REQUIRE((in.size(1) == 64));
+            REQUIRE((in.size(2) == 56));
+            REQUIRE((in.size(3) == 56));
+
+            REQUIRE((outExpected.size(0) == 1));
+            REQUIRE((outExpected.size(1) == 256));
+            REQUIRE((outExpected.size(2) == 56));
+            REQUIRE((outExpected.size(3) == 56));
+
+            ImageInference::model::test::ResNet50Test::block0(resnet50, inPtr, outPtr);
+
+            bool success = at::allclose(out, outExpected, 1.0e-4, 1.0e-5);
+            printMismatchedValues(success, out[0], outExpected[0], 1, 256, 56, 56);
+            REQUIRE(success);
+        }
+
+        TEST_CASE("test_resnet50_block0", "[resnet50][block0]")
+        {
+
+            // Read the weights from the file
+            const char *projectDirectory = std::getenv("PROJECT_ROOT");
+            if (projectDirectory == nullptr)
+            {
+                throw std::runtime_error("PROJECT_ROOT environment variable is not set");
+            }
+
+            std::string weightsPath = std::string(projectDirectory) + "/test_data/resnet50_weights_v2.bin";
+            ImageInference::test::utils::Reader reader(weightsPath);
+            std::vector<at::Tensor> weights;
+            std::vector<void *> weightPtrs;
+            while (reader.hasNext())
+            {
+                auto tensor = reader.getNextTensor();
+                weights.push_back(tensor);
+                weightPtrs.push_back(tensor.mutable_data_ptr<float>());
+            }
+
+            // std::cerr << "Weights size: " << weights.size() << std::endl;
+            // for (size_t i = 0; i < weights.size(); i++)
+            // {
+            //     std::cerr << "Weight at Index " << i << " with size " << weights[i].sizes() << std::endl;
+            // }
+
+            ImageInference::model::ResNet50 resnet50(weightPtrs, ImageInference::types::ScalarType::Float);
+
+            testResnet50Block0(resnet50, "resnet50_block0_test_ones.bin");
+            testResnet50Block0(resnet50, "resnet50_block0_test0.bin");
+            testResnet50Block0(resnet50, "resnet50_block0_test1.bin");
+            testResnet50Block0(resnet50, "resnet50_block0_test2.bin");
+            testResnet50Block0(resnet50, "resnet50_block0_test3.bin");
+            testResnet50Block0(resnet50, "resnet50_block0_test4.bin");
+            testResnet50Block0(resnet50, "resnet50_block0_test5.bin");
+            testResnet50Block0(resnet50, "resnet50_block0_test6.bin");
+            testResnet50Block0(resnet50, "resnet50_block0_test7.bin");
+            testResnet50Block0(resnet50, "resnet50_block0_test8.bin");
+            testResnet50Block0(resnet50, "resnet50_block0_test9.bin");
+        }
+
+        void testResnet50Block1(ImageInference::model::ResNet50 &resnet50, const std::string &compareFilepath)
+        {
+            // Read the input and comparison output
+            const char *projectDirectory = std::getenv("PROJECT_ROOT");
+            if (projectDirectory == nullptr)
+            {
+                throw std::runtime_error("PROJECT_ROOT environment variable is not set");
+            }
+
+            std::string inputPath = std::string(projectDirectory) + "/test_data/" + compareFilepath;
+            ImageInference::test::utils::Reader reader(inputPath);
+
+            Tensor in = reader.getNextTensor();
+            Tensor outExpected = reader.getNextTensor();
+            Tensor out = at::zeros({1, 512, 28, 28});
+
+            float *inPtr = in.mutable_data_ptr<float>();
+            float *outPtr = out.mutable_data_ptr<float>();
+
+            REQUIRE((in.size(0) == 1));
+            REQUIRE((in.size(1) == 256));
+            REQUIRE((in.size(2) == 56));
+            REQUIRE((in.size(3) == 56));
+
+            REQUIRE((outExpected.size(0) == 1));
+            REQUIRE((outExpected.size(1) == 512));
+            REQUIRE((outExpected.size(2) == 28));
+            REQUIRE((outExpected.size(3) == 28));
+
+            ImageInference::model::test::ResNet50Test::block1(resnet50, inPtr, outPtr);
+
+            bool success = at::allclose(out, outExpected, 1.0e-4, 1.0e-5);
+            printMismatchedValues(success, out[0], outExpected[0], 1, 512, 28, 28);
+            REQUIRE(success);
+        }
+
+        TEST_CASE("test_resnet50_block1", "[resnet50][block1]")
+        {
+
+            // Read the weights from the file
+            const char *projectDirectory = std::getenv("PROJECT_ROOT");
+            if (projectDirectory == nullptr)
+            {
+                throw std::runtime_error("PROJECT_ROOT environment variable is not set");
+            }
+
+            std::string weightsPath = std::string(projectDirectory) + "/test_data/resnet50_weights_v2.bin";
+            ImageInference::test::utils::Reader reader(weightsPath);
+            std::vector<at::Tensor> weights;
+            std::vector<void *> weightPtrs;
+            while (reader.hasNext())
+            {
+                auto tensor = reader.getNextTensor();
+                weights.push_back(tensor);
+                weightPtrs.push_back(tensor.mutable_data_ptr<float>());
+            }
+
+            // std::cerr << "Weights size: " << weights.size() << std::endl;
+            // for (size_t i = 0; i < weights.size(); i++)
+            // {
+            //     std::cerr << "Weight at Index " << i << " with size " << weights[i].sizes() << std::endl;
+            // }
+
+            ImageInference::model::ResNet50 resnet50(weightPtrs, ImageInference::types::ScalarType::Float);
+
+            testResnet50Block1(resnet50, "resnet50_block1_test_ones.bin");
+            testResnet50Block1(resnet50, "resnet50_block1_test0.bin");
+            testResnet50Block1(resnet50, "resnet50_block1_test1.bin");
+            testResnet50Block1(resnet50, "resnet50_block1_test2.bin");
+            testResnet50Block1(resnet50, "resnet50_block1_test3.bin");
+            testResnet50Block1(resnet50, "resnet50_block1_test4.bin");
+            testResnet50Block1(resnet50, "resnet50_block1_test5.bin");
+            testResnet50Block1(resnet50, "resnet50_block1_test6.bin");
+            testResnet50Block1(resnet50, "resnet50_block1_test7.bin");
+            testResnet50Block1(resnet50, "resnet50_block1_test8.bin");
+            testResnet50Block1(resnet50, "resnet50_block1_test9.bin");
+        }
+
+        void testResnet50Block2(ImageInference::model::ResNet50 &resnet50, const std::string &compareFilepath)
+        {
+            // Read the input and comparison output
+            const char *projectDirectory = std::getenv("PROJECT_ROOT");
+            if (projectDirectory == nullptr)
+            {
+                throw std::runtime_error("PROJECT_ROOT environment variable is not set");
+            }
+
+            std::string inputPath = std::string(projectDirectory) + "/test_data/" + compareFilepath;
+            ImageInference::test::utils::Reader reader(inputPath);
+
+            Tensor in = reader.getNextTensor();
+            Tensor outExpected = reader.getNextTensor();
+            Tensor out = at::zeros({1, 1024, 14, 14});
+
+            float *inPtr = in.mutable_data_ptr<float>();
+            float *outPtr = out.mutable_data_ptr<float>();
+
+            REQUIRE((in.size(0) == 1));
+            REQUIRE((in.size(1) == 512));
+            REQUIRE((in.size(2) == 28));
+            REQUIRE((in.size(3) == 28));
+
+            REQUIRE((outExpected.size(0) == 1));
+            REQUIRE((outExpected.size(1) == 1024));
+            REQUIRE((outExpected.size(2) == 14));
+            REQUIRE((outExpected.size(3) == 14));
+
+            ImageInference::model::test::ResNet50Test::block2(resnet50, inPtr, outPtr);
+
+            bool success = at::allclose(out, outExpected, 1.0e-4, 1.0e-5);
+            printMismatchedValues(success, out[0], outExpected[0], 1, 1024, 14, 14);
+            REQUIRE(success);
+        }
+
+        TEST_CASE("test_resnet50_block2", "[resnet50][block2]")
+        {
+
+            // Read the weights from the file
+            const char *projectDirectory = std::getenv("PROJECT_ROOT");
+            if (projectDirectory == nullptr)
+            {
+                throw std::runtime_error("PROJECT_ROOT environment variable is not set");
+            }
+
+            std::string weightsPath = std::string(projectDirectory) + "/test_data/resnet50_weights_v2.bin";
+            ImageInference::test::utils::Reader reader(weightsPath);
+            std::vector<at::Tensor> weights;
+            std::vector<void *> weightPtrs;
+            while (reader.hasNext())
+            {
+                auto tensor = reader.getNextTensor();
+                weights.push_back(tensor);
+                weightPtrs.push_back(tensor.mutable_data_ptr<float>());
+            }
+
+            // std::cerr << "Weights size: " << weights.size() << std::endl;
+            // for (size_t i = 0; i < weights.size(); i++)
+            // {
+            //     std::cerr << "Weight at Index " << i << " with size " << weights[i].sizes() << std::endl;
+            // }
+
+            ImageInference::model::ResNet50 resnet50(weightPtrs, ImageInference::types::ScalarType::Float);
+
+            testResnet50Block2(resnet50, "resnet50_block2_test_ones.bin");
+            testResnet50Block2(resnet50, "resnet50_block2_test0.bin");
+            testResnet50Block2(resnet50, "resnet50_block2_test1.bin");
+            testResnet50Block2(resnet50, "resnet50_block2_test2.bin");
+            testResnet50Block2(resnet50, "resnet50_block2_test3.bin");
+            testResnet50Block2(resnet50, "resnet50_block2_test4.bin");
+            testResnet50Block2(resnet50, "resnet50_block2_test5.bin");
+            testResnet50Block2(resnet50, "resnet50_block2_test6.bin");
+            testResnet50Block2(resnet50, "resnet50_block2_test7.bin");
+            testResnet50Block2(resnet50, "resnet50_block2_test8.bin");
+            testResnet50Block2(resnet50, "resnet50_block2_test9.bin");
+        }
+
+        void testResnet50Block3(ImageInference::model::ResNet50 &resnet50, const std::string &compareFilepath)
+        {
+            // Read the input and comparison output
+            const char *projectDirectory = std::getenv("PROJECT_ROOT");
+            if (projectDirectory == nullptr)
+            {
+                throw std::runtime_error("PROJECT_ROOT environment variable is not set");
+            }
+
+            std::string inputPath = std::string(projectDirectory) + "/test_data/" + compareFilepath;
+            ImageInference::test::utils::Reader reader(inputPath);
+
+            Tensor in = reader.getNextTensor();
+            Tensor outExpected = reader.getNextTensor();
+            Tensor out = at::zeros({1, 2048, 7, 7});
+
+            float *inPtr = in.mutable_data_ptr<float>();
+            float *outPtr = out.mutable_data_ptr<float>();
+
+            REQUIRE((in.size(0) == 1));
+            REQUIRE((in.size(1) == 1024));
+            REQUIRE((in.size(2) == 14));
+            REQUIRE((in.size(3) == 14));
+
+            REQUIRE((outExpected.size(0) == 1));
+            REQUIRE((outExpected.size(1) == 2048));
+            REQUIRE((outExpected.size(2) == 7));
+            REQUIRE((outExpected.size(3) == 7));
+
+            ImageInference::model::test::ResNet50Test::block3(resnet50, inPtr, outPtr);
+
+            bool success = at::allclose(out, outExpected, 1.0e-4, 1.0e-5);
+            printMismatchedValues(success, out[0], outExpected[0], 1, 2048, 7, 7);
+            REQUIRE(success);
+        }
+
+        TEST_CASE("test_resnet50_block3", "[resnet50][block3]")
+        {
+            // Read the weights from the file
+            const char *projectDirectory = std::getenv("PROJECT_ROOT");
+            if (projectDirectory == nullptr)
+            {
+                throw std::runtime_error("PROJECT_ROOT environment variable is not set");
+            }
+
+            std::string weightsPath = std::string(projectDirectory) + "/test_data/resnet50_weights_v2.bin";
+            ImageInference::test::utils::Reader reader(weightsPath);
+            std::vector<at::Tensor> weights;
+            std::vector<void *> weightPtrs;
+            while (reader.hasNext())
+            {
+                auto tensor = reader.getNextTensor();
+                weights.push_back(tensor);
+                weightPtrs.push_back(tensor.mutable_data_ptr<float>());
+            }
+
+            // std::cerr << "Weights size: " << weights.size() << std::endl;
+            // for (size_t i = 0; i < weights.size(); i++)
+            // {
+            //     std::cerr << "Weight at Index " << i << " with size " << weights[i].sizes() << std::endl;
+            // }
+
+            ImageInference::model::ResNet50 resnet50(weightPtrs, ImageInference::types::ScalarType::Float);
+
+            testResnet50Block3(resnet50, "resnet50_block3_test_ones.bin");
+            testResnet50Block3(resnet50, "resnet50_block3_test0.bin");
+            testResnet50Block3(resnet50, "resnet50_block3_test0.bin");
+            testResnet50Block3(resnet50, "resnet50_block3_test1.bin");
+            testResnet50Block3(resnet50, "resnet50_block3_test2.bin");
+            testResnet50Block3(resnet50, "resnet50_block3_test3.bin");
+            testResnet50Block3(resnet50, "resnet50_block3_test4.bin");
+            testResnet50Block3(resnet50, "resnet50_block3_test5.bin");
+            testResnet50Block3(resnet50, "resnet50_block3_test6.bin");
+            testResnet50Block3(resnet50, "resnet50_block3_test7.bin");
+            testResnet50Block3(resnet50, "resnet50_block3_test8.bin");
+            testResnet50Block3(resnet50, "resnet50_block3_test9.bin");
         }
     }
 }
