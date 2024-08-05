@@ -390,10 +390,12 @@ class BenchmarkActivity : AppCompatActivity() {
         Log.d("Benchmark", "Running the model.")
         _benchmarkJob = lifecycleScope.launch {
             withContext(Dispatchers.Default) {
-                val warmupImage = fixedCollection.imageList.first()
-                val warmupDetails = ModelDetails(ModelInputType.IMAGE)
-                val warmupBitmap = warmupImage.getBitmap(contentResolver)
-                fixedModel.run(warmupBitmap, warmupDetails)
+                for (i in 0..25) {
+                    val warmupImage = fixedCollection.imageList.first()
+                    val warmupDetails = ModelDetails(ModelInputType.IMAGE)
+                    val warmupBitmap = warmupImage.getBitmap(contentResolver)
+                    fixedModel.run(warmupBitmap, warmupDetails)
+                }
             }
 
             for (image in fixedCollection.imageList) {
