@@ -48,6 +48,12 @@ namespace ImageInference
         inline Array<T, TSize>::Array()
         {
             data = new (std::align_val_t(PAGE_CACHE_ALIGN(T, TSize))) T[TSize];
+            if (data == nullptr)
+            {
+                std::cerr << "Could not allocate memory for Array (" << this << ")" << std::endl;
+                throw std::runtime_error("Could not allocate memory for Array");
+            }
+            
         }
 
         template <typename T, size_t TSize>

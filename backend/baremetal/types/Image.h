@@ -167,6 +167,24 @@ namespace ImageInference
             mean = new (std::align_val_t(PAGE_CACHE_ALIGN(T, TChannels))) T[TChannels]{0};
             batch_variance = new (std::align_val_t(PAGE_CACHE_ALIGN(T, TChannels))) T[TChannels]{0};
 
+            if (data == nullptr)
+            {
+                std::cerr << "Could not allocate memory for Image (" << this << ") on member 'data'" << std::endl;
+                throw std::runtime_error("Could not allocate memory for Image on member 'data'");
+            }
+
+            if (mean == nullptr)
+            {
+                std::cerr << "Could not allocate memory for Image (" << this << ") on member 'mean'" << std::endl;
+                throw std::runtime_error("Could not allocate memory for Image on member 'mean'");
+            }
+
+            if (batch_variance == nullptr)
+            {
+                std::cerr << "Could not allocate memory for Image (" << this << ") on member 'batch_variance'" << std::endl;
+                throw std::runtime_error("Could not allocate memory for Image on member 'batch_variance'");
+            }
+
             constexpr size_t channelBlocks = TChannels / TBlockSize;
 
             constexpr size_t strideInputChannel = THeight * TWidth;

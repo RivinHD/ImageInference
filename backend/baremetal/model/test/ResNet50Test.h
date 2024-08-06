@@ -36,7 +36,8 @@ namespace ImageInference
                     ImageInference::types::Kernel<float, TBlockSize, TBlockSize, TOutChannels, TInChannels, TKernelHeight, TKernelWidth> inputKernel(kernel);
                     ImageInference::types::BatchNorm<float, TOutChannels> batchNorm(batchGamma, batchBeta);
 
-                    auto outputImage = ImageInference::model::ResNet50::convBlock<TStride, 0>(inputImage, inputKernel, batchNorm);
+                    auto outputImage = ImageInference::types::Image<float, 0, TBlockSize, TOutChannels, THeight / TStride, TWidth / TStride>();
+                    ImageInference::model::ResNet50::convBlock<TStride>(inputImage, inputKernel, batchNorm, outputImage);
                     auto flatten = outputImage.flatten(); // Get the data order of Channel x Height x Width
                     std::copy(flatten.getPointer(), flatten.getPointer() + flatten.size, output);
                     std::copy(outputImage.getMeanPointer(), outputImage.getMeanPointer() + TOutChannels, outputMean);
@@ -62,7 +63,8 @@ namespace ImageInference
                     ImageInference::types::BatchNorm<float, TOutChannels> batchNorm(batchGamma, batchBeta);
                     ImageInference::types::Image<float, 0, TBlockSize, TOutChannels, THeight, TWidth> shortcutImage(shortcut);
 
-                    auto outputImage = ImageInference::model::ResNet50::convBlockAddIdentity<0>(inputImage, inputKernel, batchNorm, shortcutImage);
+                    auto outputImage = ImageInference::types::Image<float, 0, TBlockSize, TOutChannels, THeight, TWidth>();
+                    ImageInference::model::ResNet50::convBlockAddIdentity(inputImage, inputKernel, batchNorm, shortcutImage, outputImage);
                     auto flatten = outputImage.flatten(); // Get the data order of Channel x Height x Width
                     std::copy(flatten.getPointer(), flatten.getPointer() + flatten.size, output);
                     std::copy(outputImage.getMeanPointer(), outputImage.getMeanPointer() + TOutChannels, outputMean);
@@ -93,7 +95,8 @@ namespace ImageInference
                     ImageInference::types::Kernel<float, TBlockSize, TBlockSize, TOutChannels, TOutChannels / ShortcutDimExpand, 1, 1> projectionKernelImage(projectionKernel);
                     ImageInference::types::BatchNorm<float, TOutChannels> projectionBatchNorm(projectionBatchGamma, projectionBatchBeta);
 
-                    auto outputImage = ImageInference::model::ResNet50::convBlockAddProjection<TStride, ShortcutDimExpand, 0>(inputImage, inputKernel, batchNorm, shortcutImage, projectionKernelImage, projectionBatchNorm);
+                    auto outputImage = ImageInference::types::Image<float, 0, TBlockSize, TOutChannels, THeight / TStride, TWidth / TStride>();
+                    ImageInference::model::ResNet50::convBlockAddProjection<TStride, ShortcutDimExpand>(inputImage, inputKernel, batchNorm, shortcutImage, projectionKernelImage, projectionBatchNorm, outputImage);
                     auto flatten = outputImage.flatten(); // Get the data order of Channel x Height x Width
                     std::copy(flatten.getPointer(), flatten.getPointer() + flatten.size, output);
                     std::copy(outputImage.getMeanPointer(), outputImage.getMeanPointer() + TOutChannels, outputMean);
@@ -105,7 +108,8 @@ namespace ImageInference
                 static void maxPool(const float *input, float *output)
                 {
                     ImageInference::types::Image<float, TInPadding, TBlockSize, TInChannels, THeight, TWidth> inputImage(input);
-                    auto outputImage = ImageInference::model::ResNet50::maxPool<TStride, 0>(inputImage);
+                    auto outputImage = ImageInference::types::Image<float, 0, TBlockSize, TInChannels, THeight / TStride, TWidth / TStride>();
+                    ImageInference::model::ResNet50::maxPool<TStride>(inputImage, outputImage);
                     auto flatten = outputImage.flatten(); // Get the data order of Channel x Height x Width
                     std::copy(flatten.getPointer(), flatten.getPointer() + flatten.size, output);
                 }
@@ -115,7 +119,8 @@ namespace ImageInference
                 static void globalAveragePool(const float *input, float *output)
                 {
                     ImageInference::types::Image<float, TInPadding, TBlockSize, TInChannels, THeight, TWidth> inputImage(input);
-                    auto outputImage = ImageInference::model::ResNet50::globalAveragePool<0>(inputImage);
+                    auto outputImage = ImageInference::types::Image<float, 0, TBlockSize, TInChannels, 1, 1>();
+                    ImageInference::model::ResNet50::globalAveragePool(inputImage, outputImage);
                     auto flatten = outputImage.flatten(); // Get the data order of Channel x Height x Width
                     std::copy(flatten.getPointer(), flatten.getPointer() + flatten.size, output);
                 }

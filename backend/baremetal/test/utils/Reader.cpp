@@ -9,6 +9,11 @@ ImageInference::test::utils::Reader::Reader(std::string filepath)
 ImageInference::test::utils::Reader::~Reader()
 {
     fileStream.close();
+    
+    for (auto tensor : readTensors)
+    {
+        delete tensor;
+    }
 }
 
 bool ImageInference::test::utils::Reader::hasNext()
@@ -37,9 +42,10 @@ at::Tensor ImageInference::test::utils::Reader::getNextTensor()
 
     std::vector<int64_t> sizes(countSizes);
     fileStream.read(reinterpret_cast<char *>(sizes.data()), countSizes * sizeof(int64_t));
+    
+    at::Tensor* tensor = new at::Tensor(at::empty(sizes));
+    fileStream.read(reinterpret_cast<char *>(tensor->mutable_data_ptr()), tensor->numel() * sizeof(float));
+    readTensors.push_back(tensor);
 
-    at::Tensor tensor = at::empty(sizes, at::ScalarType::Float);
-    fileStream.read(reinterpret_cast<char *>(tensor.mutable_data_ptr()), tensor.numel() * sizeof(float));
-
-    return tensor;
+    return *tensor;
 }

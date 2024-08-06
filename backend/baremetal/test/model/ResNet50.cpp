@@ -60,6 +60,163 @@ namespace ImageInference
             }
         }
 
+        TEST_CASE("test_resnet50_conv1x1_channels16x16", "[resnet50][convolution]")
+        {
+            constexpr size_t stride = 1;
+            constexpr size_t inPadding = 0;
+            constexpr size_t blockSize = 16;
+            constexpr size_t outChannels = 16;
+            constexpr size_t inChannels = 16;
+            constexpr size_t height = 10;
+            constexpr size_t width = 10;
+            constexpr size_t kernelHeight = 1;
+            constexpr size_t kernelWidth = 1;
+
+            Tensor in = at::rand({1, inChannels, height, width});
+            Tensor weight = at::rand({outChannels, inChannels, kernelHeight, kernelWidth});
+            Tensor batchGamma = at::rand({outChannels});
+            Tensor batchBeta = at::rand({outChannels});
+
+            Tensor out = at::zeros({outChannels, height, width});
+            Tensor outMean = at::zeros({outChannels});
+            Tensor outVar = at::zeros({outChannels});
+
+            float *inPtr = in.mutable_data_ptr<float>();
+            float *weightPtr = weight.mutable_data_ptr<float>();
+            float *batchGammaPtr = batchGamma.mutable_data_ptr<float>();
+            float *batchBetaPtr = batchBeta.mutable_data_ptr<float>();
+            float *outPtr = out.mutable_data_ptr<float>();
+            float *outMeanPtr = outMean.mutable_data_ptr<float>();
+            float *outVarPtr = outVar.mutable_data_ptr<float>();
+
+            ImageInference::model::test::ResNet50Test::convBlock<
+                stride, inPadding, blockSize, outChannels, inChannels,
+                height, width, kernelHeight, kernelWidth>(inPtr, weightPtr, batchGammaPtr, batchBetaPtr, outPtr, outMeanPtr, outVarPtr);
+
+            Tensor expected = at::conv2d(in, weight, {}, stride, inPadding);
+            Tensor mean = at::mean(expected, {0, 2, 3});
+            Tensor var = at::var(expected, {0, 2, 3}, false);
+            expected = at::batch_norm(expected, batchGamma, batchBeta, mean, var, false, 0.1, 1e-5, false);
+            expected = at::relu(expected);
+
+            bool success = at::allclose(outMean, mean);
+            printMismatchedValues(success, outMean, mean, outChannels);
+            REQUIRE(success);
+
+            Tensor batchVar = 1 / at::sqrt(var + 1e-5);
+            success = at::allclose(outVar, batchVar);
+            printMismatchedValues(success, outVar, batchVar, outChannels);
+            REQUIRE(success);
+
+            success = at::allclose(out, expected[0], 1.0e-4, 1.0e-5);
+            printMismatchedValues(success, out, expected[0], stride, outChannels, height, width);
+            REQUIRE(success);
+        }
+
+        TEST_CASE("test_resnet50_conv1x1_channels64x32", "[resnet50][convolution]")
+        {
+            constexpr size_t stride = 1;
+            constexpr size_t inPadding = 0;
+            constexpr size_t blockSize = 32;
+            constexpr size_t outChannels = 64;
+            constexpr size_t inChannels = 64;
+            constexpr size_t height = 56;
+            constexpr size_t width = 56;
+            constexpr size_t kernelHeight = 1;
+            constexpr size_t kernelWidth = 1;
+
+            Tensor in = at::rand({1, inChannels, height, width});
+            Tensor weight = at::rand({outChannels, inChannels, kernelHeight, kernelWidth});
+            Tensor batchGamma = at::rand({outChannels});
+            Tensor batchBeta = at::rand({outChannels});
+
+            Tensor out = at::zeros({outChannels, height, width});
+            Tensor outMean = at::zeros({outChannels});
+            Tensor outVar = at::zeros({outChannels});
+
+            float *inPtr = in.mutable_data_ptr<float>();
+            float *weightPtr = weight.mutable_data_ptr<float>();
+            float *batchGammaPtr = batchGamma.mutable_data_ptr<float>();
+            float *batchBetaPtr = batchBeta.mutable_data_ptr<float>();
+            float *outPtr = out.mutable_data_ptr<float>();
+            float *outMeanPtr = outMean.mutable_data_ptr<float>();
+            float *outVarPtr = outVar.mutable_data_ptr<float>();
+
+            ImageInference::model::test::ResNet50Test::convBlock<
+                stride, inPadding, blockSize, outChannels, inChannels,
+                height, width, kernelHeight, kernelWidth>(inPtr, weightPtr, batchGammaPtr, batchBetaPtr, outPtr, outMeanPtr, outVarPtr);
+
+            Tensor expected = at::conv2d(in, weight, {}, stride, inPadding);
+            Tensor mean = at::mean(expected, {0, 2, 3});
+            Tensor var = at::var(expected, {0, 2, 3}, false);
+            expected = at::batch_norm(expected, batchGamma, batchBeta, mean, var, false, 0.1, 1e-5, false);
+            expected = at::relu(expected);
+
+            printMismatchedValues(at::allclose(outMean, mean), outMean, mean, outChannels);
+            REQUIRE(at::allclose(outMean, mean));
+
+            Tensor batchVar = 1 / at::sqrt(var + 1e-5);
+
+            printMismatchedValues(at::allclose(outVar, batchVar), outVar, batchVar, outChannels);
+            REQUIRE(at::allclose(outVar, batchVar));
+
+            printMismatchedValues(at::allclose(out, expected[0], 1.0e-3, 1.0e-4), out, expected[0], stride, outChannels, height, width);
+            REQUIRE(at::allclose(out, expected[0], 1.0e-3, 1.0e-4));
+        }
+
+        TEST_CASE("test_resnet50_conv1x1_channels16x32", "[resnet50][convolution]")
+        {
+            constexpr size_t stride = 1;
+            constexpr size_t inPadding = 0;
+            constexpr size_t blockSize = 16;
+            constexpr size_t outChannels = 32;
+            constexpr size_t inChannels = 16;
+            constexpr size_t height = 10;
+            constexpr size_t width = 10;
+            constexpr size_t kernelHeight = 1;
+            constexpr size_t kernelWidth = 1;
+
+            Tensor in = at::rand({1, inChannels, height, width});
+            Tensor weight = at::rand({outChannels, inChannels, kernelHeight, kernelWidth});
+            Tensor batchGamma = at::rand({outChannels});
+            Tensor batchBeta = at::rand({outChannels});
+
+            Tensor out = at::zeros({outChannels, height, width});
+            Tensor outMean = at::zeros({outChannels});
+            Tensor outVar = at::zeros({outChannels});
+
+            float *inPtr = in.mutable_data_ptr<float>();
+            float *weightPtr = weight.mutable_data_ptr<float>();
+            float *batchGammaPtr = batchGamma.mutable_data_ptr<float>();
+            float *batchBetaPtr = batchBeta.mutable_data_ptr<float>();
+            float *outPtr = out.mutable_data_ptr<float>();
+            float *outMeanPtr = outMean.mutable_data_ptr<float>();
+            float *outVarPtr = outVar.mutable_data_ptr<float>();
+
+            ImageInference::model::test::ResNet50Test::convBlock<
+                stride, inPadding, blockSize, outChannels, inChannels,
+                height, width, kernelHeight, kernelWidth>(inPtr, weightPtr, batchGammaPtr, batchBetaPtr, outPtr, outMeanPtr, outVarPtr);
+
+            Tensor expected = at::conv2d(in, weight, {}, stride, inPadding);
+            Tensor mean = at::mean(expected, {0, 2, 3});
+            Tensor var = at::var(expected, {0, 2, 3}, false);
+            expected = at::batch_norm(expected, batchGamma, batchBeta, mean, var, false, 0.1, 1e-5, false);
+            expected = at::relu(expected);
+
+            bool success = at::allclose(outMean, mean);
+            printMismatchedValues(success, outMean, mean, outChannels);
+            REQUIRE(success);
+
+            Tensor batchVar = 1 / at::sqrt(var + 1e-5);
+            success = at::allclose(outVar, batchVar);
+            printMismatchedValues(success, outVar, batchVar, outChannels);
+            REQUIRE(success);
+
+            success = at::allclose(out, expected[0], 1.0e-4, 1.0e-5);
+            printMismatchedValues(success, out, expected[0], stride, outChannels, height, width);
+            REQUIRE(success);
+        }
+
         TEST_CASE("test_resnet50_conv3x3_channels16x16", "[resnet50][convolution]")
         {
             constexpr size_t stride = 1;
@@ -434,11 +591,8 @@ namespace ImageInference
             Tensor projectionMean = at::mean(projection, {0, 2, 3});
             Tensor projectionVar = at::var(projection, {0, 2, 3}, false);
             projection = at::batch_norm(projection, projectionBatchGamma, projectionBatchBeta, projectionMean, projectionVar, false, 0.1, 1e-5, false);
-            std::cerr << "Expected:" << expected.sizes() << " Projection: " << projection.sizes() << std::endl;
             expected += projection;
             expected = at::relu(expected);
-
-            std::cerr << "HERE 2" << std::endl;
 
             bool success = at::allclose(outMean, mean);
             printMismatchedValues(success, outMean, mean, outChannels);
@@ -880,7 +1034,7 @@ namespace ImageInference
             resnet50.inference(inPtr, outPtr);
 
             bool success = at::allclose(out, outExpected, 1.0e-4, 1.0e-5);
-            //printMismatchedValues(success, out[0], outExpected[0], 1000);
+            // printMismatchedValues(success, out[0], outExpected[0], 1000);
             REQUIRE(success);
         }
 
@@ -958,7 +1112,7 @@ namespace ImageInference
             ImageInference::model::test::ResNet50Test::block0(resnet50, inPtr, outPtr);
 
             bool success = at::allclose(out, outExpected, 1.0e-4, 1.0e-5);
-            //printMismatchedValues(success, out[0], outExpected[0], 1, 256, 56, 56);
+            // printMismatchedValues(success, out[0], outExpected[0], 1, 256, 56, 56);
             REQUIRE(success);
         }
 
@@ -1036,7 +1190,7 @@ namespace ImageInference
             ImageInference::model::test::ResNet50Test::block1(resnet50, inPtr, outPtr);
 
             bool success = at::allclose(out, outExpected, 1.0e-4, 1.0e-5);
-            //printMismatchedValues(success, out[0], outExpected[0], 1, 512, 28, 28);
+            // printMismatchedValues(success, out[0], outExpected[0], 1, 512, 28, 28);
             REQUIRE(success);
         }
 
@@ -1114,7 +1268,7 @@ namespace ImageInference
             ImageInference::model::test::ResNet50Test::block2(resnet50, inPtr, outPtr);
 
             bool success = at::allclose(out, outExpected, 1.0e-4, 1.0e-5);
-            //printMismatchedValues(success, out[0], outExpected[0], 1, 1024, 14, 14);
+            // printMismatchedValues(success, out[0], outExpected[0], 1, 1024, 14, 14);
             REQUIRE(success);
         }
 
@@ -1192,7 +1346,7 @@ namespace ImageInference
             ImageInference::model::test::ResNet50Test::block3(resnet50, inPtr, outPtr);
 
             bool success = at::allclose(out, outExpected, 1.0e-4, 1.0e-5);
-            //printMismatchedValues(success, out[0], outExpected[0], 1, 2048, 7, 7);
+            // printMismatchedValues(success, out[0], outExpected[0], 1, 2048, 7, 7);
             REQUIRE(success);
         }
 
@@ -1238,8 +1392,19 @@ namespace ImageInference
             testResnet50Block3(resnet50, "resnet50_block3_test9.bin");
         }
 
-        at::Tensor atenConvBlock(at::Tensor &in, at::Tensor &weight, at::Tensor &batchGamma, at::Tensor &batchBeta, size_t stride, size_t inPadding)
+        at::Tensor atenConvBlock(
+            std::vector<at::Tensor> &weights,
+            at::Tensor &in,
+            size_t kernelIndex,
+            size_t gammaIndex,
+            size_t betaIndex,
+            size_t stride,
+            size_t inPadding)
         {
+            Tensor weight = weights[kernelIndex];
+            Tensor batchGamma = weights[gammaIndex];
+            Tensor batchBeta = weights[betaIndex];
+
             Tensor expected = at::conv2d(in, weight, {}, stride, inPadding);
             Tensor mean = at::mean(expected, {0, 2, 3});
             Tensor var = at::var(expected, {0, 2, 3}, false);
@@ -1248,8 +1413,19 @@ namespace ImageInference
             return expected;
         }
 
-        at::Tensor atenConvBlockShortcut(at::Tensor &in, at::Tensor &weight, at::Tensor &batchGamma, at::Tensor &batchBeta, size_t stride, size_t inPadding, at::Tensor &shortcut)
+        at::Tensor atenConvBlockShortcut(
+            std::vector<at::Tensor> &weights,
+            at::Tensor &in,
+            size_t kernelIndex,
+            size_t gammaIndex,
+            size_t betaIndex,
+            size_t inPadding,
+            at::Tensor &shortcut)
         {
+            Tensor weight = weights[kernelIndex];
+            Tensor batchGamma = weights[gammaIndex];
+            Tensor batchBeta = weights[betaIndex];
+
             Tensor expected = at::conv2d(in, weight, {}, 1, inPadding);
             Tensor mean = at::mean(expected, {0, 2, 3});
             Tensor var = at::var(expected, {0, 2, 3}, false);
@@ -1260,9 +1436,25 @@ namespace ImageInference
         }
 
         at::Tensor atenConvBlockProjection(
-            at::Tensor &in, at::Tensor &weight, at::Tensor &batchGamma, at::Tensor &batchBeta, size_t stride, size_t inPadding,
-            at::Tensor &shortcut, at::Tensor &projectionWeight, at::Tensor &projectionBatchGamma, at::Tensor &projectionBatchBeta)
+            std::vector<at::Tensor> &weights,
+            at::Tensor &in,
+            size_t kernelIndex,
+            size_t gammaIndex,
+            size_t betaIndex,
+            size_t stride,
+            size_t inPadding,
+            at::Tensor &shortcut,
+            size_t projectionKernelIndex,
+            size_t projectionGammaIndex,
+            size_t projectionBetaIndex)
         {
+            Tensor weight = weights[kernelIndex];
+            Tensor batchGamma = weights[gammaIndex];
+            Tensor batchBeta = weights[betaIndex];
+            Tensor projectionWeight = weights[projectionKernelIndex];
+            Tensor projectionBatchGamma = weights[projectionGammaIndex];
+            Tensor projectionBatchBeta = weights[projectionBetaIndex];
+
             Tensor expected = at::conv2d(in, weight, {}, 1, inPadding);
             Tensor mean = at::mean(expected, {0, 2, 3});
             Tensor var = at::var(expected, {0, 2, 3}, false);
@@ -1288,22 +1480,22 @@ namespace ImageInference
 
             std::string weightsPath = std::string(projectDirectory) + "/test_data/resnet50_weights_v2.bin";
             ImageInference::test::utils::Reader reader(weightsPath);
-            std::vector<at::Tensor> weights;
-            std::vector<void *> weightPtrs;
+            std::vector<at::Tensor>* weights = new std::vector<at::Tensor>();
+            std::vector<void *>* weightPtrs = new std::vector<void *>();
             while (reader.hasNext())
             {
                 auto tensor = reader.getNextTensor();
-                weights.push_back(tensor);
-                weightPtrs.push_back(tensor.mutable_data_ptr<float>());
+                weights->push_back(tensor);
+                weightPtrs->push_back(tensor.mutable_data_ptr());
             }
 
-            // std::cerr << "Weights size: " << weights.size() << std::endl;
-            // for (size_t i = 0; i < weights.size(); i++)
+            // std::cerr << "Weights size: " << weights->size() << std::endl;
+            // for (size_t i = 0; i < weights->size(); i++)
             // {
-            //     std::cerr << "Weight at Index " << i << " with size " << weights[i].sizes() << std::endl;
+            //     std::cerr << "Weight at Index " << i << " with size " << (*weights)[i].sizes() << std::endl;
             // }
 
-            ImageInference::model::ResNet50 resnet50(weightPtrs, ImageInference::types::ScalarType::Float);
+            ImageInference::model::ResNet50 resnet50(*weightPtrs, ImageInference::types::ScalarType::Float);
 
             std::string inputPath = std::string(projectDirectory) + "/test_data/" + "resnet50_block0_test_ones.bin";
             ImageInference::test::utils::Reader readerInput(inputPath);
@@ -1328,133 +1520,89 @@ namespace ImageInference
             REQUIRE((outExpected.size(3) == 56));
 
             // Do aten implementation of block0
-            std::cout << "Starting block0" << std::endl;
             shortcut = in;
-            Tensor kernel_0_0 = at::from_blob(
-                ImageInference::model::test::ResNet50Test::getWeight(resnet50, ImageInference::model::ResNet50::layer1_0_conv1_weight),
-                {64, 64, 1, 1});
-            Tensor bn_gamma_0_0 = at::from_blob(
-                ImageInference::model::test::ResNet50Test::getWeight(resnet50, ImageInference::model::ResNet50::layer1_0_bn1_weight),
-                {64});
-            Tensor bn_beta_0_0 = at::from_blob(
-                ImageInference::model::test::ResNet50Test::getWeight(resnet50, ImageInference::model::ResNet50::layer1_0_bn1_bias),
-                {64});
-            out = atenConvBlock(in, kernel_0_0, bn_gamma_0_0, bn_beta_0_0, 1, 0);
-            std::cout << "Finished Conv 0.1" << std::endl;
+            out = atenConvBlock(
+                *weights, in,
+                ImageInference::model::ResNet50::layer1_0_conv1_weight,
+                ImageInference::model::ResNet50::layer1_0_bn1_weight,
+                ImageInference::model::ResNet50::layer1_0_bn1_bias,
+                1, 0);
 
-            Tensor kernel_0_1 = at::from_blob(
-                ImageInference::model::test::ResNet50Test::getWeight(resnet50, ImageInference::model::ResNet50::layer1_0_conv2_weight),
-                {64, 64, 3, 3});
-            Tensor bn_gamma_0_1 = at::from_blob(
-                ImageInference::model::test::ResNet50Test::getWeight(resnet50, ImageInference::model::ResNet50::layer1_0_bn2_weight),
-                {64});
-            Tensor bn_beta_0_1 = at::from_blob(
-                ImageInference::model::test::ResNet50Test::getWeight(resnet50, ImageInference::model::ResNet50::layer1_0_bn2_bias),
-                {64});
-            out = atenConvBlock(out, kernel_0_1, bn_gamma_0_1, bn_beta_0_1, 1, 1);
-            std::cout << "Finished Conv 0.2" << std::endl;
+            out = atenConvBlock(
+                *weights, out,
+                ImageInference::model::ResNet50::layer1_0_conv2_weight,
+                ImageInference::model::ResNet50::layer1_0_bn2_weight,
+                ImageInference::model::ResNet50::layer1_0_bn2_bias,
+                1, 1);
 
-            Tensor kernel_0_2 = at::from_blob(
-                ImageInference::model::test::ResNet50Test::getWeight(resnet50, ImageInference::model::ResNet50::layer1_0_conv3_weight),
-                {256, 64, 1, 1});
-            Tensor bn_gamma_0_2 = at::from_blob(
-                ImageInference::model::test::ResNet50Test::getWeight(resnet50, ImageInference::model::ResNet50::layer1_0_bn3_weight),
-                {256});
-            Tensor bn_beta_0_2 = at::from_blob(
-                ImageInference::model::test::ResNet50Test::getWeight(resnet50, ImageInference::model::ResNet50::layer1_0_bn3_bias),
-                {256});
-            Tensor projectionKernel_0 = at::from_blob(
-                ImageInference::model::test::ResNet50Test::getWeight(resnet50, ImageInference::model::ResNet50::layer1_0_downsample_0_weight),
-                {256, 64, 1, 1});
-            Tensor projectionBnGamma_0 = at::from_blob(
-                ImageInference::model::test::ResNet50Test::getWeight(resnet50, ImageInference::model::ResNet50::layer1_0_downsample_1_weight),
-                {256});
-            Tensor projectionBnBeta_0 = at::from_blob(
-                ImageInference::model::test::ResNet50Test::getWeight(resnet50, ImageInference::model::ResNet50::layer1_0_downsample_1_bias),
-                {256});
-            out = atenConvBlockProjection(out, kernel_0_2, bn_gamma_0_2, bn_beta_0_2, 1, 0, shortcut, projectionKernel_0, projectionBnGamma_0, projectionBnBeta_0);
-            std::cout << "Finished Conv 0.3" << std::endl;
+            out = atenConvBlockProjection(
+                *weights, out,
+                ImageInference::model::ResNet50::layer1_0_conv3_weight,
+                ImageInference::model::ResNet50::layer1_0_bn3_weight,
+                ImageInference::model::ResNet50::layer1_0_bn3_bias,
+                1, 0, shortcut,
+                ImageInference::model::ResNet50::layer1_0_downsample_0_weight,
+                ImageInference::model::ResNet50::layer1_0_downsample_1_weight,
+                ImageInference::model::ResNet50::layer1_0_downsample_1_bias);
 
             shortcut = out;
-            Tensor kernel_1_0 = at::from_blob(
-                ImageInference::model::test::ResNet50Test::getWeight(resnet50, ImageInference::model::ResNet50::layer1_1_conv1_weight),
-                {64, 256, 1, 1});
-            Tensor bn_gamma_1_0 = at::from_blob(
-                ImageInference::model::test::ResNet50Test::getWeight(resnet50, ImageInference::model::ResNet50::layer1_1_bn1_weight),
-                {64});
-            Tensor bn_beta_1_0 = at::from_blob(
-                ImageInference::model::test::ResNet50Test::getWeight(resnet50, ImageInference::model::ResNet50::layer1_1_bn1_bias),
-                {64});
-            out = atenConvBlock(out, kernel_1_0, bn_gamma_1_0, bn_beta_1_0, 1, 0);
-            std::cout << "Finished Conv 1.1" << std::endl;
+            out = atenConvBlock(
+                *weights, out,
+                ImageInference::model::ResNet50::layer1_1_conv1_weight,
+                ImageInference::model::ResNet50::layer1_1_bn1_weight,
+                ImageInference::model::ResNet50::layer1_1_bn1_bias,
+                1, 0);
 
-            Tensor kernel_1_1 = at::from_blob(
-                ImageInference::model::test::ResNet50Test::getWeight(resnet50, ImageInference::model::ResNet50::layer1_1_conv2_weight),
-                {64, 64, 3, 3});
-            Tensor bn_gamma_1_1 = at::from_blob(
-                ImageInference::model::test::ResNet50Test::getWeight(resnet50, ImageInference::model::ResNet50::layer1_1_bn2_weight),
-                {64});
-            Tensor bn_beta_1_1 = at::from_blob(
-                ImageInference::model::test::ResNet50Test::getWeight(resnet50, ImageInference::model::ResNet50::layer1_1_bn2_bias),
-                {64});
-            out = atenConvBlock(out, kernel_1_1, bn_gamma_1_1, bn_beta_1_1, 1, 1);
-            std::cout << "Finished Conv 1.2" << std::endl;
+            out = atenConvBlock(
+                *weights, out,
+                ImageInference::model::ResNet50::layer1_1_conv2_weight,
+                ImageInference::model::ResNet50::layer1_1_bn2_weight,
+                ImageInference::model::ResNet50::layer1_1_bn2_bias,
+                1, 1);
 
-            Tensor kernel_1_2 = at::from_blob(
-                ImageInference::model::test::ResNet50Test::getWeight(resnet50, ImageInference::model::ResNet50::layer1_1_conv3_weight),
-                {256, 64, 1, 1});
-            Tensor bn_gamma_1_2 = at::from_blob(
-                ImageInference::model::test::ResNet50Test::getWeight(resnet50, ImageInference::model::ResNet50::layer1_1_bn3_weight),
-                {256});
-            Tensor bn_beta_1_2 = at::from_blob(
-                ImageInference::model::test::ResNet50Test::getWeight(resnet50, ImageInference::model::ResNet50::layer1_1_bn3_bias),
-                {256});
-            out = atenConvBlockShortcut(out, kernel_1_2, bn_gamma_1_2, bn_beta_1_2, 1, 0, shortcut);
-            std::cout << "Finished Conv 1.3" << std::endl;
-
+            out = atenConvBlockShortcut(
+                *weights, out,
+                ImageInference::model::ResNet50::layer1_1_conv3_weight,
+                ImageInference::model::ResNet50::layer1_1_bn3_weight,
+                ImageInference::model::ResNet50::layer1_1_bn3_bias,
+                0, shortcut);
 
             shortcut = out;
-            Tensor kernel_2_0 = at::from_blob(
-                ImageInference::model::test::ResNet50Test::getWeight(resnet50, ImageInference::model::ResNet50::layer1_2_conv1_weight),
-                {64, 256, 1, 1});
-            Tensor bn_gamma_2_0 = at::from_blob(
-                ImageInference::model::test::ResNet50Test::getWeight(resnet50, ImageInference::model::ResNet50::layer1_2_bn1_weight),
-                {64});
-            Tensor bn_beta_2_0 = at::from_blob(
-                ImageInference::model::test::ResNet50Test::getWeight(resnet50, ImageInference::model::ResNet50::layer1_2_bn1_bias),
-                {64});
-            out = atenConvBlock(out, kernel_2_0, bn_gamma_2_0, bn_beta_2_0, 1, 0);
-            std::cout << "Finished Conv 2.1" << std::endl;
+            out = atenConvBlock(
+                *weights, out,
+                ImageInference::model::ResNet50::layer1_2_conv1_weight,
+                ImageInference::model::ResNet50::layer1_2_bn1_weight,
+                ImageInference::model::ResNet50::layer1_2_bn1_bias,
+                1, 0);
 
-            Tensor kernel_2_1 = at::from_blob(
-                ImageInference::model::test::ResNet50Test::getWeight(resnet50, ImageInference::model::ResNet50::layer1_2_conv2_weight),
-                {64, 64, 3, 3});
-            Tensor bn_gamma_2_1 = at::from_blob(
-                ImageInference::model::test::ResNet50Test::getWeight(resnet50, ImageInference::model::ResNet50::layer1_2_bn2_weight),
-                {64});
-            Tensor bn_beta_2_1 = at::from_blob(
-                ImageInference::model::test::ResNet50Test::getWeight(resnet50, ImageInference::model::ResNet50::layer1_2_bn2_bias),
-                {64});
-            out = atenConvBlock(out, kernel_2_1, bn_gamma_2_1, bn_beta_2_1, 1, 1);
-            std::cout << "Finished Conv 2.2" << std::endl;
+            out = atenConvBlock(
+                *weights, out,
+                ImageInference::model::ResNet50::layer1_2_conv2_weight,
+                ImageInference::model::ResNet50::layer1_2_bn2_weight,
+                ImageInference::model::ResNet50::layer1_2_bn2_bias,
+                1, 1);
 
-            Tensor kernel_2_2 = at::from_blob(
-                ImageInference::model::test::ResNet50Test::getWeight(resnet50, ImageInference::model::ResNet50::layer1_2_conv3_weight),
-                {256, 64, 1, 1});
-            Tensor bn_gamma_2_2 = at::from_blob(
-                ImageInference::model::test::ResNet50Test::getWeight(resnet50, ImageInference::model::ResNet50::layer1_2_bn3_weight),
-                {256});
-            Tensor bn_beta_2_2 = at::from_blob(
-                ImageInference::model::test::ResNet50Test::getWeight(resnet50, ImageInference::model::ResNet50::layer1_2_bn3_bias),
-                {256});
-            out = atenConvBlockShortcut(out, kernel_2_2, bn_gamma_2_2, bn_beta_2_2, 1, 0, shortcut);
-            std::cout << "Finished Conv 2.3" << std::endl;
+            out = atenConvBlockShortcut(
+                *weights, out,
+                ImageInference::model::ResNet50::layer1_2_conv3_weight,
+                ImageInference::model::ResNet50::layer1_2_bn3_weight,
+                ImageInference::model::ResNet50::layer1_2_bn3_bias,
+                0, shortcut);
 
             ImageInference::model::test::ResNet50Test::block0(resnet50, inPtr, outCustomPtr);
+
+            delete weights;
+            delete weightPtrs;
+
+            REQUIRE((out.size(0) == 1));
+            REQUIRE((out.size(1) == 256));
+            REQUIRE((out.size(2) == 56));
+            REQUIRE((out.size(3) == 56));
+
             CHECK(at::allclose(outCustom, out, 1.0e-4, 1.0e-5));
 
             bool success = at::allclose(out, outExpected, 1.0e-4, 1.0e-5);
-            //printMismatchedValues(success, out[0], outExpected[0], 1, 256, 56, 56);
+            // printMismatchedValues(success, out[0], outExpected[0], 1, 256, 56, 56);
             REQUIRE(success);
         }
     }

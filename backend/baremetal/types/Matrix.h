@@ -58,6 +58,12 @@ namespace ImageInference
         inline Matrix<T, TColumns, TRows>::Matrix()
         {
             data = new (std::align_val_t(PAGE_CACHE_ALIGN(T, size))) T[size]{0};
+            if (data == nullptr)
+            {
+                std::cerr << "Could not allocate memory for Matrix (" << this << ")" << std::endl;
+                throw std::runtime_error("Could not allocate memory for Matrix");
+            }
+            
         }
 
         template <typename T, size_t TColumns, size_t TRows>

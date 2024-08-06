@@ -14,6 +14,7 @@ namespace ImageInference
             {
             private:
                 std::ifstream fileStream;
+                std::vector<at::Tensor*> readTensors;
                 inline static const std::string HEADER_TENSOR = "Tensor";
 
             public:

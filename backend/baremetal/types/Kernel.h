@@ -84,6 +84,12 @@ namespace ImageInference
 
             data = new (std::align_val_t(PAGE_CACHE_ALIGN(T, size))) T[size]{0};
 
+            if (data == nullptr)
+            {
+                std::cerr << "Could not allocate memory for Kernel (" << this << ")" << std::endl;
+                throw std::runtime_error("Could not allocate memory for Kernel");
+            }
+
             constexpr size_t countBlocks = TCount / TBlockSizeCount;
             constexpr size_t channelBlocks = TChannels / TBlockSizeChannel;
 
