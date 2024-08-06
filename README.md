@@ -1,3 +1,9 @@
+# Requirements
+**System**: Linux (Tested on Ubuntu 23.04) with 13th Gen Intel(R) Core(TM) i7-1360P \
+**Compiler**: Any compiler supporting C++17 should work (Tested with GNU 12.3.0) \
+**Cmake**: Cmake version 3.19
+
+
 # Installation
 
 Clone the repository
@@ -5,15 +11,6 @@ Clone the repository
 ```
 git clone https://github.com/RivinHD/ImageInference.git
 ```
-
-Then the submodules needed to be installed.
-
-```
-git submodule init
-git submodule update --init --recursive
-```
-
-The `--init --recursive` is needed, because the submodule executorch also holds some submodules.
 
 Then run the `install.sh` to install the needed requirements.\
 **INFO:** Additional files will be added to the parent directory of the project.
@@ -41,3 +38,6 @@ Then you are ready to work with the project again.
 
 If you place it somewhere else you needed to modify the path in the `config.sh`.
 Also check if the version is the same i.e. the folder path `aistack/qairt/2.21.0.240401` exists otherwise you need to change the last folder to an available version folder.
+
+# ImageNet Dataset
+You can download the ImageNet dataset from [IMAGENET](https://image-net.org/download-images).
