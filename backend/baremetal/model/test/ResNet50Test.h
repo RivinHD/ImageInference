@@ -132,7 +132,7 @@ namespace ImageInference
                     ImageInference::types::Matrix<float, TColumns, TRows> weightMatrix(weight);
                     ImageInference::types::Array<float, TColumns> biasAccumulator(bias);
 
-                    ResNet50::fullyConnectedLayer<float>(inputVector, weightMatrix, biasAccumulator);
+                    ResNet50::fullyConnectedLayer<64>(inputVector, weightMatrix, biasAccumulator);
                     std::copy(biasAccumulator.getPointer(), biasAccumulator.getPointer() + biasAccumulator.size, output);
                 }
 

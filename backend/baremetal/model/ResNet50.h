@@ -79,9 +79,9 @@ namespace ImageInference
                 ImageInference::types::Image<T, 0, BlockSize, 1024, 14, 14> &input,
                 ImageInference::types::Image<T, 0, BlockSize, 2048, 7, 7> &output);
 
-            //TODO change every function so that the output is a parameter instead of a return value
-            // This ensures that the object is not deleted when the function returns.
-            // And we don't have to care about the default copy operator.
+            // TODO change every function so that the output is a parameter instead of a return value
+            //  This ensures that the object is not deleted when the function returns.
+            //  And we don't have to care about the default copy operator.
 
             template <size_t Stride, size_t OutPadding, size_t InPadding,
                       typename T, size_t BlockSizeCount, size_t BlockSizeChannel,
@@ -131,7 +131,7 @@ namespace ImageInference
                 ImageInference::types::Image<T, InPadding, BlockSize, ImageChannels, ImageHeight, ImageWidth> &image,
                 ImageInference::types::Image<T, OutPadding, BlockSize, ImageChannels, 1, 1> &output);
 
-            template <typename T, size_t Columns, size_t Rows>
+            template <size_t BlockSize, typename T, size_t Columns, size_t Rows>
             static void fullyConnectedLayer(
                 ImageInference::types::Array<T, Rows> &input,
                 ImageInference::types::Matrix<T, Columns, Rows> &weight,
@@ -498,7 +498,7 @@ namespace ImageInference
             auto kernel_0_0 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 64, 64, 1, 1>(getWeight<T>(weightIndex::layer1_0_conv1_weight));
             auto batchNorm_0_0 = ImageInference::types::BatchNorm<T, 64>(getWeight<T>(weightIndex::layer1_0_bn1_weight), getWeight<T>(weightIndex::layer1_0_bn1_bias));
             auto image_0_0 = ImageInference::types::Image<T, 1, BlockSize, 64, 56, 56>(); // OutPadding of 1 is because a 3x3 kernel is coming next
-            convBlock<1>(input, kernel_0_0, batchNorm_0_0, image_0_0); 
+            convBlock<1>(input, kernel_0_0, batchNorm_0_0, image_0_0);
             auto kernel_0_1 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 64, 64, 3, 3>(getWeight<T>(weightIndex::layer1_0_conv2_weight));
             auto batchNorm_0_1 = ImageInference::types::BatchNorm<T, 64>(getWeight<T>(weightIndex::layer1_0_bn2_weight), getWeight<T>(weightIndex::layer1_0_bn2_bias));
             auto image_0_1 = ImageInference::types::Image<T, 0, BlockSize, 64, 56, 56>(); // OutPadding of 0 is because a 1x1 kernel is coming next
@@ -514,7 +514,7 @@ namespace ImageInference
             auto kernel_1_0 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 64, 256, 1, 1>(getWeight<T>(weightIndex::layer1_1_conv1_weight));
             auto batchNorm_1_0 = ImageInference::types::BatchNorm<T, 64>(getWeight<T>(weightIndex::layer1_1_bn1_weight), getWeight<T>(weightIndex::layer1_1_bn1_bias));
             auto image_1_0 = ImageInference::types::Image<T, 1, BlockSize, 64, 56, 56>(); // OutPadding of 1 is because a 3x3 kernel is coming next
-            convBlock<1>(image_0_2, kernel_1_0, batchNorm_1_0, image_1_0); // OutPadding of 1 is because a 3x3 kernel is coming next
+            convBlock<1>(image_0_2, kernel_1_0, batchNorm_1_0, image_1_0);                // OutPadding of 1 is because a 3x3 kernel is coming next
             auto kernel_1_1 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 64, 64, 3, 3>(getWeight<T>(weightIndex::layer1_1_conv2_weight));
             auto batchNorm_1_1 = ImageInference::types::BatchNorm<T, 64>(getWeight<T>(weightIndex::layer1_1_bn2_weight), getWeight<T>(weightIndex::layer1_1_bn2_bias));
             auto image_1_1 = ImageInference::types::Image<T, 0, BlockSize, 64, 56, 56>(); // OutPadding of 0 is because a 1x1 kernel is coming next
@@ -540,7 +540,7 @@ namespace ImageInference
 
         template <typename T, size_t BlockSize>
         void ResNet50::block1(
-            ImageInference::types::Image<T, 0, BlockSize, 256, 56, 56> &input, 
+            ImageInference::types::Image<T, 0, BlockSize, 256, 56, 56> &input,
             ImageInference::types::Image<T, 0, BlockSize, 512, 28, 28> &output)
         {
             auto kernel_0_0 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 128, 256, 1, 1>(getWeight<T>(weightIndex::layer2_0_conv1_weight));
@@ -599,7 +599,7 @@ namespace ImageInference
 
         template <typename T, size_t BlockSize>
         void ResNet50::block2(
-            ImageInference::types::Image<T, 0, BlockSize, 512, 28, 28> &input, 
+            ImageInference::types::Image<T, 0, BlockSize, 512, 28, 28> &input,
             ImageInference::types::Image<T, 0, BlockSize, 1024, 14, 14> &output)
         {
             auto kernel_0_0 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 256, 512, 1, 1>(getWeight<T>(weightIndex::layer3_0_conv1_weight));
@@ -763,7 +763,7 @@ namespace ImageInference
             size_t meanVarianceCount[KernelCount]{0};
 
 #ifdef USE_OMP
-#pragma omp parallel for collapse(2) private(iBCount, iHeight) reduction(+ : meanVarianceCount[:KernelCount], meanPtr[:KernelCount], variancePtr[:KernelCount])
+#pragma omp parallel for collapse(2) private(iBCount, iHeight) reduction(+ : meanVarianceCount[ : KernelCount], meanPtr[ : KernelCount], variancePtr[ : KernelCount])
 #endif // USE_OMP
             for (size_t iBCount = 0; iBCount < countBlocks; iBCount++)
             {
@@ -780,13 +780,13 @@ namespace ImageInference
                                 const size_t kernelOffset = kernel.getOffset(iBCount, iBChannel, kHeight, kWidth, 0, 0);
                                 const size_t outputOffset = output.getOffset(iBCount, iHeight, 0, 0);
 
-                                #ifdef IMAGEINFERENCE_TESTING
+#ifdef IMAGEINFERENCE_TESTING
                                 // Get the last element touched by the matmul.
-                                image.getOffset(iBChannel, iHeight * Stride + kHeight, ImageWidth - 1 + kWidth , BlockSizeChannel - 1);
+                                image.getOffset(iBChannel, iHeight * Stride + kHeight, ImageWidth - 1 + kWidth, BlockSizeChannel - 1);
                                 kernel.getOffset(iBCount, iBChannel, kHeight, kWidth, BlockSizeChannel - 1, BlockSizeCount - 1);
-                                 // Adding padding offset as this is already applied at the output.
+                                // Adding padding offset as this is already applied at the output.
                                 output.getOffset(iBCount, iHeight, outputWidth - 1, BlockSizeCount - 1 + output.paddingOffset);
-                                #endif // IMAGEINFERENCE_TESTING
+#endif // IMAGEINFERENCE_TESTING
 
                                 // Kernel of shape BlockSizeChannel x BlockSizeCount
                                 // Input of shape ImageWidth x BlockSizeChannel
@@ -842,7 +842,7 @@ namespace ImageInference
             }
 
 #ifdef USE_OMP // The mean is not update during finalization.
-#pragma omp parallel for private(iBCount) reduction(+ : variancePtr[:KernelCount])
+#pragma omp parallel for private(iBCount) reduction(+ : variancePtr[ : KernelCount])
 #endif // USE_OMP
             for (size_t iBCount = 0; iBCount < countBlocks; iBCount++)
             {
@@ -915,7 +915,7 @@ namespace ImageInference
 
             size_t meanVarianceCount[KernelCount]{0};
 #ifdef USE_OMP
-#pragma omp parallel for collapse(2) private(iBCount, iHeight) reduction(+ : meanVarianceCount[:KernelCount], meanPtr[:KernelCount], variancePtr[:KernelCount])
+#pragma omp parallel for collapse(2) private(iBCount, iHeight) reduction(+ : meanVarianceCount[ : KernelCount], meanPtr[ : KernelCount], variancePtr[ : KernelCount])
 #endif // USE_OMP
             for (size_t iBCount = 0; iBCount < countBlocks; iBCount++)
             {
@@ -984,7 +984,7 @@ namespace ImageInference
             }
 
 #ifdef USE_OMP
-#pragma omp parallel for private(iBCount) reduction(+ : variancePtr[:KernelCount])
+#pragma omp parallel for private(iBCount) reduction(+ : variancePtr[ : KernelCount])
 #endif // USE_OMP
             for (size_t iBCount = 0; iBCount < countBlocks; iBCount++)
             {
@@ -1065,7 +1065,7 @@ namespace ImageInference
             size_t meanVarianceCount[KernelCount]{0};
 
 #ifdef USE_OMP
-#pragma omp parallel for collapse(2) private(iBCount, iHeight) reduction(+ : meanVarianceCount[:KernelCount], meanPtr[:KernelCount], variancePtr[:KernelCount])
+#pragma omp parallel for collapse(2) private(iBCount, iHeight) reduction(+ : meanVarianceCount[ : KernelCount], meanPtr[ : KernelCount], variancePtr[ : KernelCount])
 #endif // USE_OMP
             for (size_t iBCount = 0; iBCount < countBlocks; iBCount++)
             {
@@ -1148,7 +1148,7 @@ namespace ImageInference
             size_t meanVarianceCountProjection[KernelCount]{0};
 
 #ifdef USE_OMP
-#pragma omp parallel for collapse(2) private(iBCount, iHeight) reduction(+ : meanVarianceCountProjection[:KernelCount], projectionMeanPtr[:KernelCount], projectionVariancePtr[:KernelCount])
+#pragma omp parallel for collapse(2) private(iBCount, iHeight) reduction(+ : meanVarianceCountProjection[ : KernelCount], projectionMeanPtr[ : KernelCount], projectionVariancePtr[ : KernelCount])
 #endif // USE_OMP
             for (size_t iBCount = 0; iBCount < countBlocks; iBCount++)
             {
@@ -1213,7 +1213,7 @@ namespace ImageInference
             }
 
 #ifdef USE_OMP
-#pragma omp parallel for private(iBCount) reduction(+ : projectionVariancePtr[:KernelCount])
+#pragma omp parallel for private(iBCount) reduction(+ : projectionVariancePtr[ : KernelCount])
 #endif // USE_OMP
             for (size_t iBCount = 0; iBCount < countBlocks; iBCount++)
             {
@@ -1251,7 +1251,7 @@ namespace ImageInference
 
 // Continue with processing the actual input.
 #ifdef USE_OMP
-#pragma omp parallel for private(iBCount) reduction(+ : variancePtr[:KernelCount])
+#pragma omp parallel for private(iBCount) reduction(+ : variancePtr[ : KernelCount])
 #endif // USE_OMP
             for (size_t iBCount = 0; iBCount < countBlocks; iBCount++)
             {
@@ -1371,8 +1371,8 @@ namespace ImageInference
 // We can do this reduction because the ouput has only one element per channel.
 // The channel are larger (2048). Therefore we have many blocks to parallelize on.
 // Otherwise the loops should be split and collapsed.
-#ifdef USE_OMP  
-#pragma omp parallel for private(iBChannel) reduction(+ : outputPtr[:ImageChannels])
+#ifdef USE_OMP
+#pragma omp parallel for private(iBChannel) reduction(+ : outputPtr[ : ImageChannels])
 #endif // USE_OMP
             for (size_t iBChannel = 0; iBChannel < channelBlocks; iBChannel++)
             {
@@ -1403,19 +1403,42 @@ namespace ImageInference
             }
         }
 
-        template <typename T, size_t Columns, size_t Rows>
+        template <size_t BlockSize, typename T, size_t Columns, size_t Rows>
         void ResNet50::fullyConnectedLayer(
             ImageInference::types::Array<T, Rows> &input,
             ImageInference::types::Matrix<T, Columns, Rows> &weight,
             ImageInference::types::Array<T, Columns> &biasAccumulator)
         {
+            constexpr const size_t ColumnsBlocks = Columns / BlockSize;
+            constexpr const size_t RowsBlocks = Rows / BlockSize;
+            constexpr const size_t processableColumns = ColumnsBlocks * BlockSize;
+            constexpr const size_t remainderColumns = Columns % BlockSize;
+
             auto inputPtr = input.getPointer();
             auto weightPtr = weight.getPointer();
             auto biasPtr = biasAccumulator.getPointer();
 
+#ifdef USE_OMP
+#pragma omp parallel for private(iBColumn)
+#endif // USE_OMP
+            for (size_t iBColumn = 0; iBColumn < processableColumns; iBColumn += BlockSize)
+            {
+                size_t weightOffset = weight.getOffset(iBColumn, 0);
+                size_t biasOffset = biasAccumulator.getOffset(iBColumn);
+
+                Fastor::TensorMap<T, Rows> inputMap(inputPtr);
+                Fastor::TensorMap<T, BlockSize, Rows> weightMap(weightPtr + weightOffset);
+                Fastor::TensorMap<T, BlockSize> biasMap(biasPtr + biasOffset);
+                biasMap += Fastor::matmul(weightMap, inputMap);
+            }
+
+            // Handle the remainder
+            size_t weightOffset = weight.getOffset(processableColumns, 0);
+            size_t biasOffset = biasAccumulator.getOffset(processableColumns);
+
             Fastor::TensorMap<T, Rows> inputMap(inputPtr);
-            Fastor::TensorMap<T, Columns, Rows> weightMap(weightPtr);
-            Fastor::TensorMap<T, Columns> biasMap(biasPtr);
+            Fastor::TensorMap<T, remainderColumns, Rows> weightMap(weightPtr + weightOffset);
+            Fastor::TensorMap<T, remainderColumns> biasMap(biasPtr + biasOffset);
             biasMap += Fastor::matmul(weightMap, inputMap);
         }
 

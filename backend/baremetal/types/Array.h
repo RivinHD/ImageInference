@@ -42,6 +42,7 @@ namespace ImageInference
             ~Array();
 
             T *getPointer();
+            size_t getOffset(size_t iRow);
         };
 
         template <typename T, size_t TSize>
@@ -97,6 +98,26 @@ namespace ImageInference
         inline T *Array<T, TSize>::getPointer()
         {
             return data;
+        }
+
+        template <typename T, size_t TSize>
+        inline size_t Array<T, TSize>::getOffset(size_t iRow)
+        {
+            size_t offset = iRow;
+
+#ifdef IMAGEINFERENCE_TESTING
+            if (offset >= TSize)
+            {
+                std::cerr << "Array (" << this << "): Offset is out of bounds: " << offset << " >= " << TSize << std::endl
+                          << "Indices: Row:= " << iRow << std::endl
+                          << "Stride: Row:= " << 1 << std::endl
+                          << std::endl;
+
+                throw std::runtime_error(" Array: Offset is out of bounds.");
+            }
+#endif // IMAGEINFERENCE_TESTING
+
+            return iRow;
         }
     } // namespace types
 } // namespace ImageInference

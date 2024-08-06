@@ -62,7 +62,7 @@ void ImageInference::model::ResNet50::inference(const float *input, float* outpu
     auto weight = ImageInference::types::Matrix<float, 1000, 2048>(getWeight<float>(weightIndex::fc_weight));
     auto biasAccumulator = ImageInference::types::Array<float, 1000>(getWeight<float>(weightIndex::fc_bias));
     auto flatten = imageGAP.flatten();
-    fullyConnectedLayer(flatten, weight, biasAccumulator);
+    fullyConnectedLayer<RESNET50_BLOCK_SIZE>(flatten, weight, biasAccumulator);
     std::copy(biasAccumulator.getPointer(), biasAccumulator.getPointer() + biasAccumulator.size, output);
 }
 
