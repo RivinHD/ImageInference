@@ -55,6 +55,9 @@ android {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
     }
+    lint {  // Linting fails with includeBuild https://issuetracker.google.com/issues/327670497
+        checkReleaseBuilds = false
+    }
     kotlinOptions {
         jvmTarget = "1.8"
     }
