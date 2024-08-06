@@ -2,7 +2,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
-#include <ATen/ATen.h>
+#include <vector>
 
 namespace ImageInference
 {
@@ -14,7 +14,7 @@ namespace ImageInference
             {
             private:
                 std::ifstream fileStream;
-                std::vector<at::Tensor*> readTensors;
+                std::vector<float *> readFloatData;
                 inline static const std::string HEADER_TENSOR = "Tensor";
 
             public:
@@ -31,7 +31,7 @@ namespace ImageInference
                 ~Reader();
 
                 bool hasNext();
-                at::Tensor getNextTensor();
+                float *getNextTensor(std::vector<int64_t> &outSizes);
             };
         }
     }

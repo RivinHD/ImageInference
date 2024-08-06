@@ -30,9 +30,6 @@
 #include <omp.h>
 #include <iostream>
 #include <stdexcept>
-#ifndef FASTOR_USE_LIBXSMM
-#define FASTOR_USE_LIBXSMM
-#endif // !FASTOR_USE_LIBXSMM
 #include <Fastor/Fastor.h>
 #include <libxsmm.h>
 
@@ -57,6 +54,8 @@ namespace ImageInference
             std::vector<void *> modelWeights;
             ImageInference::types::ScalarType type;
             // TODO Libxsmm kernels with code dispatch see https://github.com/libxsmm/libxsmm/blob/main/documentation/libxsmm_mm.md#manual-code-dispatch
+            // TODO use Libxsmm header only library.
+            // TODO add zones { <code> } inside the block, so that no more needed kernels, images, batchNorms get deleted. 
             // All the blocks start with a 1x1 kernel. Therefore no padding is required.
 
             template <typename T, size_t BlockSize>
@@ -78,10 +77,6 @@ namespace ImageInference
             void block3(
                 ImageInference::types::Image<T, 0, BlockSize, 1024, 14, 14> &input,
                 ImageInference::types::Image<T, 0, BlockSize, 2048, 7, 7> &output);
-
-            // TODO change every function so that the output is a parameter instead of a return value
-            //  This ensures that the object is not deleted when the function returns.
-            //  And we don't have to care about the default copy operator.
 
             template <size_t Stride, size_t OutPadding, size_t InPadding,
                       typename T, size_t BlockSizeCount, size_t BlockSizeChannel,
@@ -151,335 +146,279 @@ namespace ImageInference
             /// @param weights The weights of the model with the following shape.
             /// @param type The scalar type of the weights.
             ///
-            /// @code
-            ///     conv1.weight: [64, 3, 7, 7]
-            ///     bn1.weight: [64]
-            ///     bn1.bias: [64]
-            ///     layer1.0.conv1.weight: [64, 64, 1, 1]
-            ///     layer1.0.bn1.weight: [64]
-            ///     layer1.0.bn1.bias: [64]
-            ///     layer1.0.conv2.weight: [64, 64, 3, 3]
-            ///     layer1.0.bn2.weight: [64]
-            ///     layer1.0.bn2.bias: [64]
-            ///     layer1.0.conv3.weight: [256, 64, 1, 1]
-            ///     layer1.0.bn3.weight: [256]
-            ///     layer1.0.bn3.bias: [256]
-            ///     layer1.0.downsample.0.weight: [256, 64, 1, 1]
-            ///     layer1.0.downsample.1.weight: [256]
-            ///     layer1.0.downsample.1.bias: [256]
-            ///     layer1.1.conv1.weight: [64, 256, 1, 1]
-            ///     layer1.1.bn1.weight: [64]
-            ///     layer1.1.bn1.bias: [64]
-            ///     layer1.1.conv2.weight: [64, 64, 3, 3]
-            ///     layer1.1.bn2.weight: [64]
-            ///     layer1.1.bn2.bias: [64]
-            ///     layer1.1.conv3.weight: [256, 64, 1, 1]
-            ///     layer1.1.bn3.weight: [256]
-            ///     layer1.1.bn3.bias: [256]
-            ///     layer1.2.conv1.weight: [64, 256, 1, 1]
-            ///     layer1.2.bn1.weight: [64]
-            ///     layer1.2.bn1.bias: [64]
-            ///     layer1.2.conv2.weight: [64, 64, 3, 3]
-            ///     layer1.2.bn2.weight: [64]
-            ///     layer1.2.bn2.bias: [64]
-            ///     layer1.2.conv3.weight: [256, 64, 1, 1]
-            ///     layer1.2.bn3.weight: [256]
-            ///     layer1.2.bn3.bias: [256]
-            ///     layer2.0.conv1.weight: [128, 256, 1, 1]
-            ///     layer2.0.bn1.weight: [128]
-            ///     layer2.0.bn1.bias: [128]
-            ///     layer2.0.conv2.weight: [128, 128, 3, 3]
-            ///     layer2.0.bn2.weight: [128]
-            ///     layer2.0.bn2.bias: [128]
-            ///     layer2.0.conv3.weight: [512, 128, 1, 1]
-            ///     layer2.0.bn3.weight: [512]
-            ///     layer2.0.bn3.bias: [512]
-            ///     layer2.0.downsample.0.weight: [512, 256, 1, 1]
-            ///     layer2.0.downsample.1.weight: [512]
-            ///     layer2.0.downsample.1.bias: [512]
-            ///     layer2.1.conv1.weight: [128, 512, 1, 1]
-            ///     layer2.1.bn1.weight: [128]
-            ///     layer2.1.bn1.bias: [128]
-            ///     layer2.1.conv2.weight: [128, 128, 3, 3]
-            ///     layer2.1.bn2.weight: [128]
-            ///     layer2.1.bn2.bias: [128]
-            ///     layer2.1.conv3.weight: [512, 128, 1, 1]
-            ///     layer2.1.bn3.weight: [512]
-            ///     layer2.1.bn3.bias: [512]
-            ///     layer2.2.conv1.weight: [128, 512, 1, 1]
-            ///     layer2.2.bn1.weight: [128]
-            ///     layer2.2.bn1.bias: [128]
-            ///     layer2.2.conv2.weight: [128, 128, 3, 3]
-            ///     layer2.2.bn2.weight: [128]
-            ///     layer2.2.bn2.bias: [128]
-            ///     layer2.2.conv3.weight: [512, 128, 1, 1]
-            ///     layer2.2.bn3.weight: [512]
-            ///     layer2.2.bn3.bias: [512]
-            ///     layer2.3.conv1.weight: [128, 512, 1, 1]
-            ///     layer2.3.bn1.weight: [128]
-            ///     layer2.3.bn1.bias: [128]
-            ///     layer2.3.conv2.weight: [128, 128, 3, 3]
-            ///     layer2.3.bn2.weight: [128]
-            ///     layer2.3.bn2.bias: [128]
-            ///     layer2.3.conv3.weight: [512, 128, 1, 1]
-            ///     layer2.3.bn3.weight: [512]
-            ///     layer2.3.bn3.bias: [512]
-            ///     layer3.0.conv1.weight: [256, 512, 1, 1]
-            ///     layer3.0.bn1.weight: [256]
-            ///     layer3.0.bn1.bias: [256]
-            ///     layer3.0.conv2.weight: [256, 256, 3, 3]
-            ///     layer3.0.bn2.weight: [256]
-            ///     layer3.0.bn2.bias: [256]
-            ///     layer3.0.conv3.weight: [1024, 256, 1, 1]
-            ///     layer3.0.bn3.weight: [1024]
-            ///     layer3.0.bn3.bias: [1024]
-            ///     layer3.0.downsample.0.weight: [1024, 512, 1, 1]
-            ///     layer3.0.downsample.1.weight: [1024]
-            ///     layer3.0.downsample.1.bias: [1024]
-            ///     layer3.1.conv1.weight: [256, 1024, 1, 1]
-            ///     layer3.1.bn1.weight: [256]
-            ///     layer3.1.bn1.bias: [256]
-            ///     layer3.1.conv2.weight: [256, 256, 3, 3]
-            ///     layer3.1.bn2.weight: [256]
-            ///     layer3.1.bn2.bias: [256]
-            ///     layer3.1.conv3.weight: [1024, 256, 1, 1]
-            ///     layer3.1.bn3.weight: [1024]
-            ///     layer3.1.bn3.bias: [1024]
-            ///     layer3.2.conv1.weight: [256, 1024, 1, 1]
-            ///     layer3.2.bn1.weight: [256]
-            ///     layer3.2.bn1.bias: [256]
-            ///     layer3.2.conv2.weight: [256, 256, 3, 3]
-            ///     layer3.2.bn2.weight: [256]
-            ///     layer3.2.bn2.bias: [256]
-            ///     layer3.2.conv3.weight: [1024, 256, 1, 1]
-            ///     layer3.2.bn3.weight: [1024]
-            ///     layer3.2.bn3.bias: [1024]
-            ///     layer3.3.conv1.weight: [256, 1024, 1, 1]
-            ///     layer3.3.bn1.weight: [256]
-            ///     layer3.3.bn1.bias: [256]
-            ///     layer3.3.conv2.weight: [256, 256, 3, 3]
-            ///     layer3.3.bn2.weight: [256]
-            ///     layer3.3.bn2.bias: [256]
-            ///     layer3.3.conv3.weight: [1024, 256, 1, 1]
-            ///     layer3.3.bn3.weight: [1024]
-            ///     layer3.3.bn3.bias: [1024]
-            ///     layer3.4.conv1.weight: [256, 1024, 1, 1]
-            ///     layer3.4.bn1.weight: [256]
-            ///     layer3.4.bn1.bias: [256]
-            ///     layer3.4.conv2.weight: [256, 256, 3, 3]
-            ///     layer3.4.bn2.weight: [256]
-            ///     layer3.4.bn2.bias: [256]
-            ///     layer3.4.conv3.weight: [1024, 256, 1, 1]
-            ///     layer3.4.bn3.weight: [1024]
-            ///     layer3.4.bn3.bias: [1024]
-            ///     layer3.5.conv1.weight: [256, 1024, 1, 1]
-            ///     layer3.5.bn1.weight: [256]
-            ///     layer3.5.bn1.bias: [256]
-            ///     layer3.5.conv2.weight: [256, 256, 3, 3]
-            ///     layer3.5.bn2.weight: [256]
-            ///     layer3.5.bn2.bias: [256]
-            ///     layer3.5.conv3.weight: [1024, 256, 1, 1]
-            ///     layer3.5.bn3.weight: [1024]
-            ///     layer3.5.bn3.bias: [1024]
-            ///     layer4.0.conv1.weight: [512, 1024, 1, 1]
-            ///     layer4.0.bn1.weight: [512]
-            ///     layer4.0.bn1.bias: [512]
-            ///     layer4.0.conv2.weight: [512, 512, 3, 3]
-            ///     layer4.0.bn2.weight: [512]
-            ///     layer4.0.bn2.bias: [512]
-            ///     layer4.0.conv3.weight: [2048, 512, 1, 1]
-            ///     layer4.0.bn3.weight: [2048]
-            ///     layer4.0.bn3.bias: [2048]
-            ///     layer4.0.downsample.0.weight: [2048, 1024, 1, 1]
-            ///     layer4.0.downsample.1.weight: [2048]
-            ///     layer4.0.downsample.1.bias: [2048]
-            ///     layer4.1.conv1.weight: [512, 2048, 1, 1]
-            ///     layer4.1.bn1.weight: [512]
-            ///     layer4.1.bn1.bias: [512]
-            ///     layer4.1.conv2.weight: [512, 512, 3, 3]
-            ///     layer4.1.bn2.weight: [512]
-            ///     layer4.1.bn2.bias: [512]
-            ///     layer4.1.conv3.weight: [2048, 512, 1, 1]
-            ///     layer4.1.bn3.weight: [2048]
-            ///     layer4.1.bn3.bias: [2048]
-            ///     layer4.2.conv1.weight: [512, 2048, 1, 1]
-            ///     layer4.2.bn1.weight: [512]
-            ///     layer4.2.bn1.bias: [512]
-            ///     layer4.2.conv2.weight: [512, 512, 3, 3]
-            ///     layer4.2.bn2.weight: [512]
-            ///     layer4.2.bn2.bias: [512]
-            ///     layer4.2.conv3.weight: [2048, 512, 1, 1]
-            ///     layer4.2.bn3.weight: [2048]
-            ///     layer4.2.bn3.bias: [2048]
-            ///     fc.weight: [1000, 2048]
-            ///     fc.bias: [1000]
-            /// @endcode
+            /// see file backend/baremetal/resnet50weights.txt for size information.
             ResNet50(const std::vector<void *> &modelWeights, ImageInference::types::ScalarType type);
             ~ResNet50();
 
             enum weightIndex
             {
-                conv1_weight = 0,
-                bn1_weight = 1,
-                bn1_bias = 2,
-                layer1_0_conv1_weight = 3,
-                layer1_0_bn1_weight = 4,
-                layer1_0_bn1_bias = 5,
-                layer1_0_conv2_weight = 6,
-                layer1_0_bn2_weight = 7,
-                layer1_0_bn2_bias = 8,
-                layer1_0_conv3_weight = 9,
-                layer1_0_bn3_weight = 10,
-                layer1_0_bn3_bias = 11,
-                layer1_0_downsample_0_weight = 12,
-                layer1_0_downsample_1_weight = 13,
-                layer1_0_downsample_1_bias = 14,
-                layer1_1_conv1_weight = 15,
-                layer1_1_bn1_weight = 16,
-                layer1_1_bn1_bias = 17,
-                layer1_1_conv2_weight = 18,
-                layer1_1_bn2_weight = 19,
-                layer1_1_bn2_bias = 20,
-                layer1_1_conv3_weight = 21,
-                layer1_1_bn3_weight = 22,
-                layer1_1_bn3_bias = 23,
-                layer1_2_conv1_weight = 24,
-                layer1_2_bn1_weight = 25,
-                layer1_2_bn1_bias = 26,
-                layer1_2_conv2_weight = 27,
-                layer1_2_bn2_weight = 28,
-                layer1_2_bn2_bias = 29,
-                layer1_2_conv3_weight = 30,
-                layer1_2_bn3_weight = 31,
-                layer1_2_bn3_bias = 32,
-                layer2_0_conv1_weight = 33,
-                layer2_0_bn1_weight = 34,
-                layer2_0_bn1_bias = 35,
-                layer2_0_conv2_weight = 36,
-                layer2_0_bn2_weight = 37,
-                layer2_0_bn2_bias = 38,
-                layer2_0_conv3_weight = 39,
-                layer2_0_bn3_weight = 40,
-                layer2_0_bn3_bias = 41,
-                layer2_0_downsample_0_weight = 42,
-                layer2_0_downsample_1_weight = 43,
-                layer2_0_downsample_1_bias = 44,
-                layer2_1_conv1_weight = 45,
-                layer2_1_bn1_weight = 46,
-                layer2_1_bn1_bias = 47,
-                layer2_1_conv2_weight = 48,
-                layer2_1_bn2_weight = 49,
-                layer2_1_bn2_bias = 50,
-                layer2_1_conv3_weight = 51,
-                layer2_1_bn3_weight = 52,
-                layer2_1_bn3_bias = 53,
-                layer2_2_conv1_weight = 54,
-                layer2_2_bn1_weight = 55,
-                layer2_2_bn1_bias = 56,
-                layer2_2_conv2_weight = 57,
-                layer2_2_bn2_weight = 58,
-                layer2_2_bn2_bias = 59,
-                layer2_2_conv3_weight = 60,
-                layer2_2_bn3_weight = 61,
-                layer2_2_bn3_bias = 62,
-                layer2_3_conv1_weight = 63,
-                layer2_3_bn1_weight = 64,
-                layer2_3_bn1_bias = 65,
-                layer2_3_conv2_weight = 66,
-                layer2_3_bn2_weight = 67,
-                layer2_3_bn2_bias = 68,
-                layer2_3_conv3_weight = 69,
-                layer2_3_bn3_weight = 70,
-                layer2_3_bn3_bias = 71,
-                layer3_0_conv1_weight = 72,
-                layer3_0_bn1_weight = 73,
-                layer3_0_bn1_bias = 74,
-                layer3_0_conv2_weight = 75,
-                layer3_0_bn2_weight = 76,
-                layer3_0_bn2_bias = 77,
-                layer3_0_conv3_weight = 78,
-                layer3_0_bn3_weight = 79,
-                layer3_0_bn3_bias = 80,
-                layer3_0_downsample_0_weight = 81,
-                layer3_0_downsample_1_weight = 82,
-                layer3_0_downsample_1_bias = 83,
-                layer3_1_conv1_weight = 84,
-                layer3_1_bn1_weight = 85,
-                layer3_1_bn1_bias = 86,
-                layer3_1_conv2_weight = 87,
-                layer3_1_bn2_weight = 88,
-                layer3_1_bn2_bias = 89,
-                layer3_1_conv3_weight = 90,
-                layer3_1_bn3_weight = 91,
-                layer3_1_bn3_bias = 92,
-                layer3_2_conv1_weight = 93,
-                layer3_2_bn1_weight = 94,
-                layer3_2_bn1_bias = 95,
-                layer3_2_conv2_weight = 96,
-                layer3_2_bn2_weight = 97,
-                layer3_2_bn2_bias = 98,
-                layer3_2_conv3_weight = 99,
-                layer3_2_bn3_weight = 100,
-                layer3_2_bn3_bias = 101,
-                layer3_3_conv1_weight = 102,
-                layer3_3_bn1_weight = 103,
-                layer3_3_bn1_bias = 104,
-                layer3_3_conv2_weight = 105,
-                layer3_3_bn2_weight = 106,
-                layer3_3_bn2_bias = 107,
-                layer3_3_conv3_weight = 108,
-                layer3_3_bn3_weight = 109,
-                layer3_3_bn3_bias = 110,
-                layer3_4_conv1_weight = 111,
-                layer3_4_bn1_weight = 112,
-                layer3_4_bn1_bias = 113,
-                layer3_4_conv2_weight = 114,
-                layer3_4_bn2_weight = 115,
-                layer3_4_bn2_bias = 116,
-                layer3_4_conv3_weight = 117,
-                layer3_4_bn3_weight = 118,
-                layer3_4_bn3_bias = 119,
-                layer3_5_conv1_weight = 120,
-                layer3_5_bn1_weight = 121,
-                layer3_5_bn1_bias = 122,
-                layer3_5_conv2_weight = 123,
-                layer3_5_bn2_weight = 124,
-                layer3_5_bn2_bias = 125,
-                layer3_5_conv3_weight = 126,
-                layer3_5_bn3_weight = 127,
-                layer3_5_bn3_bias = 128,
-                layer4_0_conv1_weight = 129,
-                layer4_0_bn1_weight = 130,
-                layer4_0_bn1_bias = 131,
-                layer4_0_conv2_weight = 132,
-                layer4_0_bn2_weight = 133,
-                layer4_0_bn2_bias = 134,
-                layer4_0_conv3_weight = 135,
-                layer4_0_bn3_weight = 136,
-                layer4_0_bn3_bias = 137,
-                layer4_0_downsample_0_weight = 138,
-                layer4_0_downsample_1_weight = 139,
-                layer4_0_downsample_1_bias = 140,
-                layer4_1_conv1_weight = 141,
-                layer4_1_bn1_weight = 142,
-                layer4_1_bn1_bias = 143,
-                layer4_1_conv2_weight = 144,
-                layer4_1_bn2_weight = 145,
-                layer4_1_bn2_bias = 146,
-                layer4_1_conv3_weight = 147,
-                layer4_1_bn3_weight = 148,
-                layer4_1_bn3_bias = 149,
-                layer4_2_conv1_weight = 150,
-                layer4_2_bn1_weight = 151,
-                layer4_2_bn1_bias = 152,
-                layer4_2_conv2_weight = 153,
-                layer4_2_bn2_weight = 154,
-                layer4_2_bn2_bias = 155,
-                layer4_2_conv3_weight = 156,
-                layer4_2_bn3_weight = 157,
-                layer4_2_bn3_bias = 158,
-                fc_weight = 159,
-                fc_bias = 160
+                conv1_weight = 0,                         // [64, 3, 7, 7]
+                bn1_weight = 1,                           // [64]
+                bn1_bias = 2,                             // [64]
+                layer1_0_conv1_weight = 3,                // [64, 64, 1, 1]
+                layer1_0_bn1_weight = 4,                  // [64]
+                layer1_0_bn1_bias = 5,                    // [64]
+                layer1_0_conv2_weight = 6,                // [64, 64, 3, 3]
+                layer1_0_bn2_weight = 7,                  // [64]
+                layer1_0_bn2_bias = 8,                    // [64]
+                layer1_0_conv3_weight = 9,                // [256, 64, 1, 1]
+                layer1_0_bn3_weight = 10,                 // [256]
+                layer1_0_bn3_bias = 11,                   // [256]
+                layer1_0_downsample_0_weight = 12,        // [256, 64, 1, 1]
+                layer1_0_downsample_1_weight = 13,        // [256]
+                layer1_0_downsample_1_bias = 14,          // [256]
+                layer1_1_conv1_weight = 15,               // [64, 256, 1, 1]
+                layer1_1_bn1_weight = 16,                 // [64]
+                layer1_1_bn1_bias = 17,                   // [64]
+                layer1_1_conv2_weight = 18,               // [64, 64, 3, 3]
+                layer1_1_bn2_weight = 19,                 // [64]
+                layer1_1_bn2_bias = 20,                   // [64]
+                layer1_1_conv3_weight = 21,               // [256, 64, 1, 1]
+                layer1_1_bn3_weight = 22,                 // [256]
+                layer1_1_bn3_bias = 23,                   // [256]
+                layer1_2_conv1_weight = 24,               // [64, 256, 1, 1]
+                layer1_2_bn1_weight = 25,                 // [64]
+                layer1_2_bn1_bias = 26,                   // [64]
+                layer1_2_conv2_weight = 27,               // [64, 64, 3, 3]
+                layer1_2_bn2_weight = 28,                 // [64]
+                layer1_2_bn2_bias = 29,                   // [64]
+                layer1_2_conv3_weight = 30,               // [256, 64, 1, 1]
+                layer1_2_bn3_weight = 31,                 // [256]
+                layer1_2_bn3_bias = 32,                   // [256]
+                layer2_0_conv1_weight = 33,               // [128, 256, 1, 1]
+                layer2_0_bn1_weight = 34,                 // [128]
+                layer2_0_bn1_bias = 35,                   // [128]
+                layer2_0_conv2_weight = 36,               // [128, 128, 3, 3]
+                layer2_0_bn2_weight = 37,                 // [128]
+                layer2_0_bn2_bias = 38,                   // [128]
+                layer2_0_conv3_weight = 39,               // [512, 128, 1, 1]
+                layer2_0_bn3_weight = 40,                 // [512]
+                layer2_0_bn3_bias = 41,                   // [512]
+                layer2_0_downsample_0_weight = 42,        // [512, 256, 1, 1]
+                layer2_0_downsample_1_weight = 43,        // [512]
+                layer2_0_downsample_1_bias = 44,          // [512]
+                layer2_1_conv1_weight = 45,               // [128, 512, 1, 1]
+                layer2_1_bn1_weight = 46,                 // [128]
+                layer2_1_bn1_bias = 47,                   // [128]
+                layer2_1_conv2_weight = 48,               // [128, 128, 3, 3]
+                layer2_1_bn2_weight = 49,                 // [128]
+                layer2_1_bn2_bias = 50,                   // [128]
+                layer2_1_conv3_weight = 51,               // [512, 128, 1, 1]
+                layer2_1_bn3_weight = 52,                 // [512]
+                layer2_1_bn3_bias = 53,                   // [512]
+                layer2_2_conv1_weight = 54,               // [128, 512, 1, 1]
+                layer2_2_bn1_weight = 55,                 // [128]
+                layer2_2_bn1_bias = 56,                   // [128]
+                layer2_2_conv2_weight = 57,               // [128, 128, 3, 3]
+                layer2_2_bn2_weight = 58,                 // [128]
+                layer2_2_bn2_bias = 59,                   // [128]
+                layer2_2_conv3_weight = 60,               // [512, 128, 1, 1]
+                layer2_2_bn3_weight = 61,                 // [512]
+                layer2_2_bn3_bias = 62,                   // [512]
+                layer2_3_conv1_weight = 63,               // [128, 512, 1, 1]
+                layer2_3_bn1_weight = 64,                 // [128]
+                layer2_3_bn1_bias = 65,                   // [128]
+                layer2_3_conv2_weight = 66,               // [128, 128, 3, 3]
+                layer2_3_bn2_weight = 67,                 // [128]
+                layer2_3_bn2_bias = 68,                   // [128]
+                layer2_3_conv3_weight = 69,               // [512, 128, 1, 1]
+                layer2_3_bn3_weight = 70,                 // [512]
+                layer2_3_bn3_bias = 71,                   // [512]
+                layer3_0_conv1_weight = 72,               // [256, 512, 1, 1]
+                layer3_0_bn1_weight = 73,                 // [256]
+                layer3_0_bn1_bias = 74,                   // [256]
+                layer3_0_conv2_weight = 75,               // [256, 256, 3, 3]
+                layer3_0_bn2_weight = 76,                 // [256]
+                layer3_0_bn2_bias = 77,                   // [256]
+                layer3_0_conv3_weight = 78,               // [1024, 256, 1, 1]
+                layer3_0_bn3_weight = 79,                 // [1024]
+                layer3_0_bn3_bias = 80,                   // [1024]
+                layer3_0_downsample_0_weight = 81,        // [1024, 512, 1, 1]
+                layer3_0_downsample_1_weight = 82,        // [1024]
+                layer3_0_downsample_1_bias = 83,          // [1024]
+                layer3_1_conv1_weight = 84,               // [256, 1024, 1, 1]
+                layer3_1_bn1_weight = 85,                 // [256]
+                layer3_1_bn1_bias = 86,                   // [256]
+                layer3_1_conv2_weight = 87,               // [256, 256, 3, 3]
+                layer3_1_bn2_weight = 88,                 // [256]
+                layer3_1_bn2_bias = 89,                   // [256]
+                layer3_1_conv3_weight = 90,               // [1024, 256, 1, 1]
+                layer3_1_bn3_weight = 91,                 // [1024]
+                layer3_1_bn3_bias = 92,                   // [1024]
+                layer3_2_conv1_weight = 93,               // [256, 1024, 1, 1]
+                layer3_2_bn1_weight = 94,                 // [256]
+                layer3_2_bn1_bias = 95,                   // [256]
+                layer3_2_conv2_weight = 96,               // [256, 256, 3, 3]
+                layer3_2_bn2_weight = 97,                 // [256]
+                layer3_2_bn2_bias = 98,                   // [256]
+                layer3_2_conv3_weight = 99,               // [1024, 256, 1, 1]
+                layer3_2_bn3_weight = 100,                // [1024]
+                layer3_2_bn3_bias = 101,                  // [1024]
+                layer3_3_conv1_weight = 102,              // [256, 1024, 1, 1]
+                layer3_3_bn1_weight = 103,                // [256]
+                layer3_3_bn1_bias = 104,                  // [256]
+                layer3_3_conv2_weight = 105,              // [256, 256, 3, 3]
+                layer3_3_bn2_weight = 106,                // [256]
+                layer3_3_bn2_bias = 107,                  // [256]
+                layer3_3_conv3_weight = 108,              // [1024, 256, 1, 1]
+                layer3_3_bn3_weight = 109,                // [1024]
+                layer3_3_bn3_bias = 110,                  // [1024]
+                layer3_4_conv1_weight = 111,              // [256, 1024, 1, 1]
+                layer3_4_bn1_weight = 112,                // [256]
+                layer3_4_bn1_bias = 113,                  // [256]
+                layer3_4_conv2_weight = 114,              // [256, 256, 3, 3]
+                layer3_4_bn2_weight = 115,                // [256]
+                layer3_4_bn2_bias = 116,                  // [256]
+                layer3_4_conv3_weight = 117,              // [1024, 256, 1, 1]
+                layer3_4_bn3_weight = 118,                // [1024]
+                layer3_4_bn3_bias = 119,                  // [1024]
+                layer3_5_conv1_weight = 120,              // [256, 1024, 1, 1]
+                layer3_5_bn1_weight = 121,                // [256]
+                layer3_5_bn1_bias = 122,                  // [256]
+                layer3_5_conv2_weight = 123,              // [256, 256, 3, 3]
+                layer3_5_bn2_weight = 124,                // [256]
+                layer3_5_bn2_bias = 125,                  // [256]
+                layer3_5_conv3_weight = 126,              // [1024, 256, 1, 1]
+                layer3_5_bn3_weight = 127,                // [1024]
+                layer3_5_bn3_bias = 128,                  // [1024]
+                layer4_0_conv1_weight = 129,              // [512, 1024, 1, 1]
+                layer4_0_bn1_weight = 130,                // [512]
+                layer4_0_bn1_bias = 131,                  // [512]
+                layer4_0_conv2_weight = 132,              // [512, 512, 3, 3]
+                layer4_0_bn2_weight = 133,                // [512]
+                layer4_0_bn2_bias = 134,                  // [512]
+                layer4_0_conv3_weight = 135,              // [2048, 512, 1, 1]
+                layer4_0_bn3_weight = 136,                // [2048]
+                layer4_0_bn3_bias = 137,                  // [2048]
+                layer4_0_downsample_0_weight = 138,       // [2048, 1024, 1, 1]
+                layer4_0_downsample_1_weight = 139,       // [2048]
+                layer4_0_downsample_1_bias = 140,         // [2048]
+                layer4_1_conv1_weight = 141,              // [512, 2048, 1, 1]
+                layer4_1_bn1_weight = 142,                // [512]
+                layer4_1_bn1_bias = 143,                  // [512]
+                layer4_1_conv2_weight = 144,              // [512, 512, 3, 3]
+                layer4_1_bn2_weight = 145,                // [512]
+                layer4_1_bn2_bias = 146,                  // [512]
+                layer4_1_conv3_weight = 147,              // [2048, 512, 1, 1]
+                layer4_1_bn3_weight = 148,                // [2048]
+                layer4_1_bn3_bias = 149,                  // [2048]
+                layer4_2_conv1_weight = 150,              // [512, 2048, 1, 1]
+                layer4_2_bn1_weight = 151,                // [512]
+                layer4_2_bn1_bias = 152,                  // [512]
+                layer4_2_conv2_weight = 153,              // [512, 512, 3, 3]
+                layer4_2_bn2_weight = 154,                // [512]
+                layer4_2_bn2_bias = 155,                  // [512]
+                layer4_2_conv3_weight = 156,              // [2048, 512, 1, 1]
+                layer4_2_bn3_weight = 157,                // [2048]
+                layer4_2_bn3_bias = 158,                  // [2048]
+                fc_weight = 159,                          // [1000, 2048]
+                fc_bias = 160,                            // [1000]
+                bn1_running_mean = 161,                   // [64]
+                bn1_running_var = 162,                    // [64]
+                layer1_0_bn1_running_mean = 163,          // [64]
+                layer1_0_bn1_running_var = 164,           // [64]
+                layer1_0_bn2_running_mean = 165,          // [64]
+                layer1_0_bn2_running_var = 166,           // [64]
+                layer1_0_bn3_running_mean = 167,          // [256]
+                layer1_0_bn3_running_var = 168,           // [256]
+                layer1_0_downsample_1_running_mean = 169, // [256]
+                layer1_0_downsample_1_running_var = 170,  // [256]
+                layer1_1_bn1_running_mean = 171,          // [64]
+                layer1_1_bn1_running_var = 172,           // [64]
+                layer1_1_bn2_running_mean = 173,          // [64]
+                layer1_1_bn2_running_var = 174,           // [64]
+                layer1_1_bn3_running_mean = 175,          // [256]
+                layer1_1_bn3_running_var = 176,           // [256]
+                layer1_2_bn1_running_mean = 177,          // [64]
+                layer1_2_bn1_running_var = 178,           // [64]
+                layer1_2_bn2_running_mean = 179,          // [64]
+                layer1_2_bn2_running_var = 180,           // [64]
+                layer1_2_bn3_running_mean = 181,          // [256]
+                layer1_2_bn3_running_var = 182,           // [256]
+                layer2_0_bn1_running_mean = 183,          // [128]
+                layer2_0_bn1_running_var = 184,           // [128]
+                layer2_0_bn2_running_mean = 185,          // [128]
+                layer2_0_bn2_running_var = 186,           // [128]
+                layer2_0_bn3_running_mean = 187,          // [512]
+                layer2_0_bn3_running_var = 188,           // [512]
+                layer2_0_downsample_1_running_mean = 189, // [512]
+                layer2_0_downsample_1_running_var = 190,  // [512]
+                layer2_1_bn1_running_mean = 191,          // [128]
+                layer2_1_bn1_running_var = 192,           // [128]
+                layer2_1_bn2_running_mean = 193,          // [128]
+                layer2_1_bn2_running_var = 194,           // [128]
+                layer2_1_bn3_running_mean = 195,          // [512]
+                layer2_1_bn3_running_var = 196,           // [512]
+                layer2_2_bn1_running_mean = 197,          // [128]
+                layer2_2_bn1_running_var = 198,           // [128]
+                layer2_2_bn2_running_mean = 199,          // [128]
+                layer2_2_bn2_running_var = 200,           // [128]
+                layer2_2_bn3_running_mean = 201,          // [512]
+                layer2_2_bn3_running_var = 202,           // [512]
+                layer2_3_bn1_running_mean = 203,          // [128]
+                layer2_3_bn1_running_var = 204,           // [128]
+                layer2_3_bn2_running_mean = 205,          // [128]
+                layer2_3_bn2_running_var = 206,           // [128]
+                layer2_3_bn3_running_mean = 207,          // [512]
+                layer2_3_bn3_running_var = 208,           // [512]
+                layer3_0_bn1_running_mean = 209,          // [256]
+                layer3_0_bn1_running_var = 210,           // [256]
+                layer3_0_bn2_running_mean = 211,          // [256]
+                layer3_0_bn2_running_var = 212,           // [256]
+                layer3_0_bn3_running_mean = 213,          // [1024]
+                layer3_0_bn3_running_var = 214,           // [1024]
+                layer3_0_downsample_1_running_mean = 215, // [1024]
+                layer3_0_downsample_1_running_var = 216,  // [1024]
+                layer3_1_bn1_running_mean = 217,          // [256]
+                layer3_1_bn1_running_var = 218,           // [256]
+                layer3_1_bn2_running_mean = 219,          // [256]
+                layer3_1_bn2_running_var = 220,           // [256]
+                layer3_1_bn3_running_mean = 221,          // [1024]
+                layer3_1_bn3_running_var = 222,           // [1024]
+                layer3_2_bn1_running_mean = 223,          // [256]
+                layer3_2_bn1_running_var = 224,           // [256]
+                layer3_2_bn2_running_mean = 225,          // [256]
+                layer3_2_bn2_running_var = 226,           // [256]
+                layer3_2_bn3_running_mean = 227,          // [1024]
+                layer3_2_bn3_running_var = 228,           // [1024]
+                layer3_3_bn1_running_mean = 229,          // [256]
+                layer3_3_bn1_running_var = 230,           // [256]
+                layer3_3_bn2_running_mean = 231,          // [256]
+                layer3_3_bn2_running_var = 232,           // [256]
+                layer3_3_bn3_running_mean = 233,          // [1024]
+                layer3_3_bn3_running_var = 234,           // [1024]
+                layer3_4_bn1_running_mean = 235,          // [256]
+                layer3_4_bn1_running_var = 236,           // [256]
+                layer3_4_bn2_running_mean = 237,          // [256]
+                layer3_4_bn2_running_var = 238,           // [256]
+                layer3_4_bn3_running_mean = 239,          // [1024]
+                layer3_4_bn3_running_var = 240,           // [1024]
+                layer3_5_bn1_running_mean = 241,          // [256]
+                layer3_5_bn1_running_var = 242,           // [256]
+                layer3_5_bn2_running_mean = 243,          // [256]
+                layer3_5_bn2_running_var = 244,           // [256]
+                layer3_5_bn3_running_mean = 245,          // [1024]
+                layer3_5_bn3_running_var = 246,           // [1024]
+                layer4_0_bn1_running_mean = 247,          // [512]
+                layer4_0_bn1_running_var = 248,           // [512]
+                layer4_0_bn2_running_mean = 249,          // [512]
+                layer4_0_bn2_running_var = 250,           // [512]
+                layer4_0_bn3_running_mean = 251,          // [2048]
+                layer4_0_bn3_running_var = 252,           // [2048]
+                layer4_0_downsample_1_running_mean = 253, // [2048]
+                layer4_0_downsample_1_running_var = 254,  // [2048]
+                layer4_1_bn1_running_mean = 255,          // [512]
+                layer4_1_bn1_running_var = 256,           // [512]
+                layer4_1_bn2_running_mean = 257,          // [512]
+                layer4_1_bn2_running_var = 258,           // [512]
+                layer4_1_bn3_running_mean = 259,          // [2048]
+                layer4_1_bn3_running_var = 260,           // [2048]
+                layer4_2_bn1_running_mean = 261,          // [512]
+                layer4_2_bn1_running_var = 262,           // [512]
+                layer4_2_bn2_running_mean = 263,          // [512]
+                layer4_2_bn2_running_var = 264,           // [512]
+                layer4_2_bn3_running_mean = 265,          // [2048]
+                layer4_2_bn3_running_var = 266,           // [2048]
             };
 
             void inference(const float *input, float *output) override;
@@ -496,45 +435,85 @@ namespace ImageInference
             ImageInference::types::Image<T, 0, BlockSize, 256, 56, 56> &output)
         {
             auto kernel_0_0 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 64, 64, 1, 1>(getWeight<T>(weightIndex::layer1_0_conv1_weight));
-            auto batchNorm_0_0 = ImageInference::types::BatchNorm<T, 64>(getWeight<T>(weightIndex::layer1_0_bn1_weight), getWeight<T>(weightIndex::layer1_0_bn1_bias));
+            auto batchNorm_0_0 = ImageInference::types::BatchNorm<T, 64>(
+                getWeight<T>(weightIndex::layer1_0_bn1_weight), 
+                getWeight<T>(weightIndex::layer1_0_bn1_bias),
+                getWeight<T>(weightIndex::layer1_0_bn1_running_mean),
+                getWeight<T>(weightIndex::layer1_0_bn1_running_var));
             auto image_0_0 = ImageInference::types::Image<T, 1, BlockSize, 64, 56, 56>(); // OutPadding of 1 is because a 3x3 kernel is coming next
             convBlock<1>(input, kernel_0_0, batchNorm_0_0, image_0_0);
             auto kernel_0_1 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 64, 64, 3, 3>(getWeight<T>(weightIndex::layer1_0_conv2_weight));
-            auto batchNorm_0_1 = ImageInference::types::BatchNorm<T, 64>(getWeight<T>(weightIndex::layer1_0_bn2_weight), getWeight<T>(weightIndex::layer1_0_bn2_bias));
+            auto batchNorm_0_1 = ImageInference::types::BatchNorm<T, 64>(
+                getWeight<T>(weightIndex::layer1_0_bn2_weight), 
+                getWeight<T>(weightIndex::layer1_0_bn2_bias),
+                getWeight<T>(weightIndex::layer1_0_bn2_running_mean),
+                getWeight<T>(weightIndex::layer1_0_bn2_running_var));
             auto image_0_1 = ImageInference::types::Image<T, 0, BlockSize, 64, 56, 56>(); // OutPadding of 0 is because a 1x1 kernel is coming next
             convBlock<1>(image_0_0, kernel_0_1, batchNorm_0_1, image_0_1);
             auto kernel_0_2 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 256, 64, 1, 1>(getWeight<T>(weightIndex::layer1_0_conv3_weight));
-            auto batchNorm_0_2 = ImageInference::types::BatchNorm<T, 256>(getWeight<T>(weightIndex::layer1_0_bn3_weight), getWeight<T>(weightIndex::layer1_0_bn3_bias));
+            auto batchNorm_0_2 = ImageInference::types::BatchNorm<T, 256>(
+                getWeight<T>(weightIndex::layer1_0_bn3_weight), 
+                getWeight<T>(weightIndex::layer1_0_bn3_bias),
+                getWeight<T>(weightIndex::layer1_0_bn3_running_mean),
+                getWeight<T>(weightIndex::layer1_0_bn3_running_var));
             auto projectionKernel = ImageInference::types::Kernel<T, BlockSize, BlockSize, 256, 64, 1, 1>(getWeight<T>(weightIndex::layer1_0_downsample_0_weight));
-            auto projectionBatchNorm = ImageInference::types::BatchNorm<T, 256>(getWeight<T>(weightIndex::layer1_0_downsample_1_weight), getWeight<T>(weightIndex::layer1_0_downsample_1_bias));
+            auto projectionBatchNorm = ImageInference::types::BatchNorm<T, 256>(
+                getWeight<T>(weightIndex::layer1_0_downsample_1_weight), 
+                getWeight<T>(weightIndex::layer1_0_downsample_1_bias),
+                getWeight<T>(weightIndex::layer1_0_downsample_1_running_mean),
+                getWeight<T>(weightIndex::layer1_0_downsample_1_running_var));
             // OutPadding of 0 is because a 1x1 kernel is coming next
             auto image_0_2 = ImageInference::types::Image<T, 0, BlockSize, 256, 56, 56>();
             convBlockAddProjection<1, 4>(image_0_1, kernel_0_2, batchNorm_0_2, input, projectionKernel, projectionBatchNorm, image_0_2);
 
             auto kernel_1_0 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 64, 256, 1, 1>(getWeight<T>(weightIndex::layer1_1_conv1_weight));
-            auto batchNorm_1_0 = ImageInference::types::BatchNorm<T, 64>(getWeight<T>(weightIndex::layer1_1_bn1_weight), getWeight<T>(weightIndex::layer1_1_bn1_bias));
+            auto batchNorm_1_0 = ImageInference::types::BatchNorm<T, 64>(
+                getWeight<T>(weightIndex::layer1_1_bn1_weight), 
+                getWeight<T>(weightIndex::layer1_1_bn1_bias),
+                getWeight<T>(weightIndex::layer1_1_bn1_running_mean),
+                getWeight<T>(weightIndex::layer1_1_bn1_running_var));
             auto image_1_0 = ImageInference::types::Image<T, 1, BlockSize, 64, 56, 56>(); // OutPadding of 1 is because a 3x3 kernel is coming next
             convBlock<1>(image_0_2, kernel_1_0, batchNorm_1_0, image_1_0);                // OutPadding of 1 is because a 3x3 kernel is coming next
             auto kernel_1_1 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 64, 64, 3, 3>(getWeight<T>(weightIndex::layer1_1_conv2_weight));
-            auto batchNorm_1_1 = ImageInference::types::BatchNorm<T, 64>(getWeight<T>(weightIndex::layer1_1_bn2_weight), getWeight<T>(weightIndex::layer1_1_bn2_bias));
+            auto batchNorm_1_1 = ImageInference::types::BatchNorm<T, 64>(
+                getWeight<T>(weightIndex::layer1_1_bn2_weight), 
+                getWeight<T>(weightIndex::layer1_1_bn2_bias),
+                getWeight<T>(weightIndex::layer1_1_bn2_running_mean),
+                getWeight<T>(weightIndex::layer1_1_bn2_running_var));
             auto image_1_1 = ImageInference::types::Image<T, 0, BlockSize, 64, 56, 56>(); // OutPadding of 0 is because a 1x1 kernel is coming next
             convBlock<1>(image_1_0, kernel_1_1, batchNorm_1_1, image_1_1);
             auto kernel_1_2 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 256, 64, 1, 1>(getWeight<T>(weightIndex::layer1_1_conv3_weight));
-            auto batchNorm_1_2 = ImageInference::types::BatchNorm<T, 256>(getWeight<T>(weightIndex::layer1_1_bn3_weight), getWeight<T>(weightIndex::layer1_1_bn3_bias));
+            auto batchNorm_1_2 = ImageInference::types::BatchNorm<T, 256>(
+                getWeight<T>(weightIndex::layer1_1_bn3_weight), 
+                getWeight<T>(weightIndex::layer1_1_bn3_bias),
+                getWeight<T>(weightIndex::layer1_1_bn3_running_mean),
+                getWeight<T>(weightIndex::layer1_1_bn3_running_var));
             // OutPadding of 0 is because a 1x1 kernel is coming next
             auto image_1_2 = ImageInference::types::Image<T, 0, BlockSize, 256, 56, 56>();
             convBlockAddIdentity(image_1_1, kernel_1_2, batchNorm_1_2, image_0_2, image_1_2);
 
             auto kernel_2_0 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 64, 256, 1, 1>(getWeight<T>(weightIndex::layer1_2_conv1_weight));
-            auto batchNorm_2_0 = ImageInference::types::BatchNorm<T, 64>(getWeight<T>(weightIndex::layer1_2_bn1_weight), getWeight<T>(weightIndex::layer1_2_bn1_bias));
+            auto batchNorm_2_0 = ImageInference::types::BatchNorm<T, 64>(
+                getWeight<T>(weightIndex::layer1_2_bn1_weight), 
+                getWeight<T>(weightIndex::layer1_2_bn1_bias),
+                getWeight<T>(weightIndex::layer1_2_bn1_running_mean),
+                getWeight<T>(weightIndex::layer1_2_bn1_running_var));
             auto image_2_0 = ImageInference::types::Image<T, 1, BlockSize, 64, 56, 56>(); // OutPadding of 1 is because a 3x3 kernel is coming next
             convBlock<1>(image_1_2, kernel_2_0, batchNorm_2_0, image_2_0);
             auto kernel_2_1 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 64, 64, 3, 3>(getWeight<T>(weightIndex::layer1_2_conv2_weight));
-            auto batchNorm_2_1 = ImageInference::types::BatchNorm<T, 64>(getWeight<T>(weightIndex::layer1_2_bn2_weight), getWeight<T>(weightIndex::layer1_2_bn2_bias));
+            auto batchNorm_2_1 = ImageInference::types::BatchNorm<T, 64>(
+                getWeight<T>(weightIndex::layer1_2_bn2_weight), 
+                getWeight<T>(weightIndex::layer1_2_bn2_bias),
+                getWeight<T>(weightIndex::layer1_2_bn2_running_mean),
+                getWeight<T>(weightIndex::layer1_2_bn2_running_var));
             auto image_2_1 = ImageInference::types::Image<T, 0, BlockSize, 64, 56, 56>(); // OutPadding of 0 is because a 1x1 kernel is coming next
             convBlock<1, 0>(image_2_0, kernel_2_1, batchNorm_2_1, image_2_1);
             auto kernel_2_2 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 256, 64, 1, 1>(getWeight<T>(weightIndex::layer1_2_conv3_weight));
-            auto batchNorm_2_2 = ImageInference::types::BatchNorm<T, 256>(getWeight<T>(weightIndex::layer1_2_bn3_weight), getWeight<T>(weightIndex::layer1_2_bn3_bias));
+            auto batchNorm_2_2 = ImageInference::types::BatchNorm<T, 256>(
+                getWeight<T>(weightIndex::layer1_2_bn3_weight), 
+                getWeight<T>(weightIndex::layer1_2_bn3_bias),
+                getWeight<T>(weightIndex::layer1_2_bn3_running_mean),
+                getWeight<T>(weightIndex::layer1_2_bn3_running_var));
             convBlockAddIdentity(image_2_1, kernel_2_2, batchNorm_2_2, image_1_2, output);
         }
 
@@ -544,56 +523,108 @@ namespace ImageInference
             ImageInference::types::Image<T, 0, BlockSize, 512, 28, 28> &output)
         {
             auto kernel_0_0 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 128, 256, 1, 1>(getWeight<T>(weightIndex::layer2_0_conv1_weight));
-            auto batchNorm_0_0 = ImageInference::types::BatchNorm<T, 128>(getWeight<T>(weightIndex::layer2_0_bn1_weight), getWeight<T>(weightIndex::layer2_0_bn1_bias));
+            auto batchNorm_0_0 = ImageInference::types::BatchNorm<T, 128>(
+                getWeight<T>(weightIndex::layer2_0_bn1_weight), 
+                getWeight<T>(weightIndex::layer2_0_bn1_bias),
+                getWeight<T>(weightIndex::layer2_0_bn1_running_mean),
+                getWeight<T>(weightIndex::layer2_0_bn1_running_var));
             auto image_0_0 = ImageInference::types::Image<T, 1, BlockSize, 128, 56, 56>(); // OutPadding of 1 is because a 3x3 kernel is coming next
             convBlock<1>(input, kernel_0_0, batchNorm_0_0, image_0_0);
             auto kernel_0_1 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 128, 128, 3, 3>(getWeight<T>(weightIndex::layer2_0_conv2_weight));
-            auto batchNorm_0_1 = ImageInference::types::BatchNorm<T, 128>(getWeight<T>(weightIndex::layer2_0_bn2_weight), getWeight<T>(weightIndex::layer2_0_bn2_bias));
+            auto batchNorm_0_1 = ImageInference::types::BatchNorm<T, 128>(
+                getWeight<T>(weightIndex::layer2_0_bn2_weight), 
+                getWeight<T>(weightIndex::layer2_0_bn2_bias),
+                getWeight<T>(weightIndex::layer2_0_bn2_running_mean),
+                getWeight<T>(weightIndex::layer2_0_bn2_running_var));
             auto image_0_1 = ImageInference::types::Image<T, 0, BlockSize, 128, 28, 28>(); // OutPadding of 0 is because a 1x1 kernel is coming next
             convBlock<2>(image_0_0, kernel_0_1, batchNorm_0_1, image_0_1);
             auto kernel_0_2 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 512, 128, 1, 1>(getWeight<T>(weightIndex::layer2_0_conv3_weight));
-            auto batchNorm_0_2 = ImageInference::types::BatchNorm<T, 512>(getWeight<T>(weightIndex::layer2_0_bn3_weight), getWeight<T>(weightIndex::layer2_0_bn3_bias));
+            auto batchNorm_0_2 = ImageInference::types::BatchNorm<T, 512>(
+                getWeight<T>(weightIndex::layer2_0_bn3_weight), 
+                getWeight<T>(weightIndex::layer2_0_bn3_bias),
+                getWeight<T>(weightIndex::layer2_0_bn3_running_mean),
+                getWeight<T>(weightIndex::layer2_0_bn3_running_var));
             auto projectionKernel = ImageInference::types::Kernel<T, BlockSize, BlockSize, 512, 256, 1, 1>(getWeight<T>(weightIndex::layer2_0_downsample_0_weight));
-            auto projectionBatchNorm = ImageInference::types::BatchNorm<T, 512>(getWeight<T>(weightIndex::layer2_0_downsample_1_weight), getWeight<T>(weightIndex::layer2_0_downsample_1_bias));
+            auto projectionBatchNorm = ImageInference::types::BatchNorm<T, 512>(
+                getWeight<T>(weightIndex::layer2_0_downsample_1_weight), 
+                getWeight<T>(weightIndex::layer2_0_downsample_1_bias),
+                getWeight<T>(weightIndex::layer2_0_downsample_1_running_mean),
+                getWeight<T>(weightIndex::layer2_0_downsample_1_running_var));
             auto image_0_2 = ImageInference::types::Image<T, 0, BlockSize, 512, 28, 28>(); // OutPadding of 0 is because a 1x1 kernel is coming next
             convBlockAddProjection<2, 2>(image_0_1, kernel_0_2, batchNorm_0_2, input, projectionKernel, projectionBatchNorm, image_0_2);
 
             auto kernel_1_0 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 128, 512, 1, 1>(getWeight<T>(weightIndex::layer2_1_conv1_weight));
-            auto batchNorm_1_0 = ImageInference::types::BatchNorm<T, 128>(getWeight<T>(weightIndex::layer2_1_bn1_weight), getWeight<T>(weightIndex::layer2_1_bn1_bias));
+            auto batchNorm_1_0 = ImageInference::types::BatchNorm<T, 128>(
+                getWeight<T>(weightIndex::layer2_1_bn1_weight), 
+                getWeight<T>(weightIndex::layer2_1_bn1_bias),
+                getWeight<T>(weightIndex::layer2_1_bn1_running_mean),
+                getWeight<T>(weightIndex::layer2_1_bn1_running_var));
             auto image_1_0 = ImageInference::types::Image<T, 1, BlockSize, 128, 28, 28>(); // OutPadding of 1 is because a 3x3 kernel is coming next
             convBlock<1>(image_0_2, kernel_1_0, batchNorm_1_0, image_1_0);
             auto kernel_1_1 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 128, 128, 3, 3>(getWeight<T>(weightIndex::layer2_1_conv2_weight));
-            auto batchNorm_1_1 = ImageInference::types::BatchNorm<T, 128>(getWeight<T>(weightIndex::layer2_1_bn2_weight), getWeight<T>(weightIndex::layer2_1_bn2_bias));
+            auto batchNorm_1_1 = ImageInference::types::BatchNorm<T, 128>(
+                getWeight<T>(weightIndex::layer2_1_bn2_weight), 
+                getWeight<T>(weightIndex::layer2_1_bn2_bias),
+                getWeight<T>(weightIndex::layer2_1_bn2_running_mean),
+                getWeight<T>(weightIndex::layer2_1_bn2_running_var));
             auto image_1_1 = ImageInference::types::Image<T, 0, BlockSize, 128, 28, 28>(); // OutPadding of 0 is because a 1x1 kernel is coming next
             convBlock<1>(image_1_0, kernel_1_1, batchNorm_1_1, image_1_1);
             auto kernel_1_2 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 512, 128, 1, 1>(getWeight<T>(weightIndex::layer2_1_conv3_weight));
-            auto batchNorm_1_2 = ImageInference::types::BatchNorm<T, 512>(getWeight<T>(weightIndex::layer2_1_bn3_weight), getWeight<T>(weightIndex::layer2_1_bn3_bias));
+            auto batchNorm_1_2 = ImageInference::types::BatchNorm<T, 512>(
+                getWeight<T>(weightIndex::layer2_1_bn3_weight), 
+                getWeight<T>(weightIndex::layer2_1_bn3_bias),
+                getWeight<T>(weightIndex::layer2_1_bn3_running_mean),
+                getWeight<T>(weightIndex::layer2_1_bn3_running_var));
             auto image_1_2 = ImageInference::types::Image<T, 0, BlockSize, 512, 28, 28>(); // OutPadding of 0 is because a 1x1 kernel is coming next
             convBlockAddIdentity(image_1_1, kernel_1_2, batchNorm_1_2, image_0_2, image_1_2);
 
             auto kernel_2_0 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 128, 512, 1, 1>(getWeight<T>(weightIndex::layer2_2_conv1_weight));
-            auto batchNorm_2_0 = ImageInference::types::BatchNorm<T, 128>(getWeight<T>(weightIndex::layer2_2_bn1_weight), getWeight<T>(weightIndex::layer2_2_bn1_bias));
+            auto batchNorm_2_0 = ImageInference::types::BatchNorm<T, 128>(
+                getWeight<T>(weightIndex::layer2_2_bn1_weight), 
+                getWeight<T>(weightIndex::layer2_2_bn1_bias),
+                getWeight<T>(weightIndex::layer2_2_bn1_running_mean),
+                getWeight<T>(weightIndex::layer2_2_bn1_running_var));
             auto image_2_0 = ImageInference::types::Image<T, 1, BlockSize, 128, 28, 28>(); // OutPadding of 1 is because a 3x3 kernel is coming next
             convBlock<1>(image_1_2, kernel_2_0, batchNorm_2_0, image_2_0);
             auto kernel_2_1 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 128, 128, 3, 3>(getWeight<T>(weightIndex::layer2_2_conv2_weight));
-            auto batchNorm_2_1 = ImageInference::types::BatchNorm<T, 128>(getWeight<T>(weightIndex::layer2_2_bn2_weight), getWeight<T>(weightIndex::layer2_2_bn2_bias));
+            auto batchNorm_2_1 = ImageInference::types::BatchNorm<T, 128>(
+                getWeight<T>(weightIndex::layer2_2_bn2_weight), 
+                getWeight<T>(weightIndex::layer2_2_bn2_bias),
+                getWeight<T>(weightIndex::layer2_2_bn2_running_mean),
+                getWeight<T>(weightIndex::layer2_2_bn2_running_var));
             auto image_2_1 = ImageInference::types::Image<T, 0, BlockSize, 128, 28, 28>(); // OutPadding of 0 is because a 1x1 kernel is coming next
             convBlock<1>(image_2_0, kernel_2_1, batchNorm_2_1, image_2_1);
             auto kernel_2_2 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 512, 128, 1, 1>(getWeight<T>(weightIndex::layer2_2_conv3_weight));
-            auto batchNorm_2_2 = ImageInference::types::BatchNorm<T, 512>(getWeight<T>(weightIndex::layer2_2_bn3_weight), getWeight<T>(weightIndex::layer2_2_bn3_bias));
+            auto batchNorm_2_2 = ImageInference::types::BatchNorm<T, 512>(
+                getWeight<T>(weightIndex::layer2_2_bn3_weight), 
+                getWeight<T>(weightIndex::layer2_2_bn3_bias),
+                getWeight<T>(weightIndex::layer2_2_bn3_running_mean),
+                getWeight<T>(weightIndex::layer2_2_bn3_running_var));
             auto image_2_2 = ImageInference::types::Image<T, 0, BlockSize, 512, 28, 28>(); // OutPadding of 0 is because a 1x1 kernel is coming next
             convBlockAddIdentity(image_2_1, kernel_2_2, batchNorm_2_2, image_1_2, image_2_2);
 
             auto kernel_3_0 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 128, 512, 1, 1>(getWeight<T>(weightIndex::layer2_3_conv1_weight));
-            auto batchNorm_3_0 = ImageInference::types::BatchNorm<T, 128>(getWeight<T>(weightIndex::layer2_3_bn1_weight), getWeight<T>(weightIndex::layer2_3_bn1_bias));
+            auto batchNorm_3_0 = ImageInference::types::BatchNorm<T, 128>(
+                getWeight<T>(weightIndex::layer2_3_bn1_weight), 
+                getWeight<T>(weightIndex::layer2_3_bn1_bias),
+                getWeight<T>(weightIndex::layer2_3_bn1_running_mean),
+                getWeight<T>(weightIndex::layer2_3_bn1_running_var));
             auto image_3_0 = ImageInference::types::Image<T, 1, BlockSize, 128, 28, 28>(); // OutPadding of 1 is because a 3x3 kernel is coming next
             convBlock<1>(image_2_2, kernel_3_0, batchNorm_3_0, image_3_0);
             auto kernel_3_1 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 128, 128, 3, 3>(getWeight<T>(weightIndex::layer2_3_conv2_weight));
-            auto batchNorm_3_1 = ImageInference::types::BatchNorm<T, 128>(getWeight<T>(weightIndex::layer2_3_bn2_weight), getWeight<T>(weightIndex::layer2_3_bn2_bias));
+            auto batchNorm_3_1 = ImageInference::types::BatchNorm<T, 128>(
+                getWeight<T>(weightIndex::layer2_3_bn2_weight), 
+                getWeight<T>(weightIndex::layer2_3_bn2_bias),
+                getWeight<T>(weightIndex::layer2_3_bn2_running_mean),
+                getWeight<T>(weightIndex::layer2_3_bn2_running_var));
             auto image_3_1 = ImageInference::types::Image<T, 0, BlockSize, 128, 28, 28>(); // OutPadding of 0 is because a 1x1 kernel is coming next
             convBlock<1>(image_3_0, kernel_3_1, batchNorm_3_1, image_3_1);
             auto kernel_3_2 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 512, 128, 1, 1>(getWeight<T>(weightIndex::layer2_3_conv3_weight));
-            auto batchNorm_3_2 = ImageInference::types::BatchNorm<T, 512>(getWeight<T>(weightIndex::layer2_3_bn3_weight), getWeight<T>(weightIndex::layer2_3_bn3_bias));
+            auto batchNorm_3_2 = ImageInference::types::BatchNorm<T, 512>(
+                getWeight<T>(weightIndex::layer2_3_bn3_weight), 
+                getWeight<T>(weightIndex::layer2_3_bn3_bias),
+                getWeight<T>(weightIndex::layer2_3_bn3_running_mean),
+                getWeight<T>(weightIndex::layer2_3_bn3_running_var));
             convBlockAddIdentity(image_3_1, kernel_3_2, batchNorm_3_2, image_2_2, output);
         }
 
@@ -603,82 +634,158 @@ namespace ImageInference
             ImageInference::types::Image<T, 0, BlockSize, 1024, 14, 14> &output)
         {
             auto kernel_0_0 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 256, 512, 1, 1>(getWeight<T>(weightIndex::layer3_0_conv1_weight));
-            auto batchNorm_0_0 = ImageInference::types::BatchNorm<T, 256>(getWeight<T>(weightIndex::layer3_0_bn1_weight), getWeight<T>(weightIndex::layer3_0_bn1_bias));
+            auto batchNorm_0_0 = ImageInference::types::BatchNorm<T, 256>(
+                getWeight<T>(weightIndex::layer3_0_bn1_weight), 
+                getWeight<T>(weightIndex::layer3_0_bn1_bias),
+                getWeight<T>(weightIndex::layer3_0_bn1_running_mean),
+                getWeight<T>(weightIndex::layer3_0_bn1_running_var));
             auto image_0_0 = ImageInference::types::Image<T, 1, BlockSize, 256, 28, 28>(); // OutPadding of 1 is because a 3x3 kernel is coming next
             convBlock<1>(input, kernel_0_0, batchNorm_0_0, image_0_0);
             auto kernel_0_1 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 256, 256, 3, 3>(getWeight<T>(weightIndex::layer3_0_conv2_weight));
-            auto batchNorm_0_1 = ImageInference::types::BatchNorm<T, 256>(getWeight<T>(weightIndex::layer3_0_bn2_weight), getWeight<T>(weightIndex::layer3_0_bn2_bias));
+            auto batchNorm_0_1 = ImageInference::types::BatchNorm<T, 256>(
+                getWeight<T>(weightIndex::layer3_0_bn2_weight), 
+                getWeight<T>(weightIndex::layer3_0_bn2_bias),
+                getWeight<T>(weightIndex::layer3_0_bn2_running_mean),
+                getWeight<T>(weightIndex::layer3_0_bn2_running_var));
             auto image_0_1 = ImageInference::types::Image<T, 0, BlockSize, 256, 14, 14>(); // OutPadding of 0 is because a 1x1 kernel is coming next
             convBlock<2>(image_0_0, kernel_0_1, batchNorm_0_1, image_0_1);
             auto kernel_0_2 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 1024, 256, 1, 1>(getWeight<T>(weightIndex::layer3_0_conv3_weight));
-            auto batchNorm_0_2 = ImageInference::types::BatchNorm<T, 1024>(getWeight<T>(weightIndex::layer3_0_bn3_weight), getWeight<T>(weightIndex::layer3_0_bn3_bias));
+            auto batchNorm_0_2 = ImageInference::types::BatchNorm<T, 1024>(
+                getWeight<T>(weightIndex::layer3_0_bn3_weight), 
+                getWeight<T>(weightIndex::layer3_0_bn3_bias),
+                getWeight<T>(weightIndex::layer3_0_bn3_running_mean),
+                getWeight<T>(weightIndex::layer3_0_bn3_running_var));
             auto projectionKernel = ImageInference::types::Kernel<T, BlockSize, BlockSize, 1024, 512, 1, 1>(getWeight<T>(weightIndex::layer3_0_downsample_0_weight));
-            auto projectionBatchNorm = ImageInference::types::BatchNorm<T, 1024>(getWeight<T>(weightIndex::layer3_0_downsample_1_weight), getWeight<T>(weightIndex::layer3_0_downsample_1_bias));
+            auto projectionBatchNorm = ImageInference::types::BatchNorm<T, 1024>(
+                getWeight<T>(weightIndex::layer3_0_downsample_1_weight), 
+                getWeight<T>(weightIndex::layer3_0_downsample_1_bias),
+                getWeight<T>(weightIndex::layer3_0_downsample_1_running_mean),
+                getWeight<T>(weightIndex::layer3_0_downsample_1_running_var));
             auto image_0_2 = ImageInference::types::Image<T, 0, BlockSize, 1024, 14, 14>(); // OutPadding of 0 is because a 1x1 kernel is coming next
             convBlockAddProjection<2, 2>(image_0_1, kernel_0_2, batchNorm_0_2, input, projectionKernel, projectionBatchNorm, image_0_2);
 
             auto kernel_1_0 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 256, 1024, 1, 1>(getWeight<T>(weightIndex::layer3_1_conv1_weight));
-            auto batchNorm_1_0 = ImageInference::types::BatchNorm<T, 256>(getWeight<T>(weightIndex::layer3_1_bn1_weight), getWeight<T>(weightIndex::layer3_1_bn1_bias));
+            auto batchNorm_1_0 = ImageInference::types::BatchNorm<T, 256>(
+                getWeight<T>(weightIndex::layer3_1_bn1_weight), 
+                getWeight<T>(weightIndex::layer3_1_bn1_bias),
+                getWeight<T>(weightIndex::layer3_1_bn1_running_mean),
+                getWeight<T>(weightIndex::layer3_1_bn1_running_var));
             auto image_1_0 = ImageInference::types::Image<T, 1, BlockSize, 256, 14, 14>(); // OutPadding of 1 is because a 3x3 kernel is coming next
             convBlock<1>(image_0_2, kernel_1_0, batchNorm_1_0, image_1_0);
             auto kernel_1_1 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 256, 256, 3, 3>(getWeight<T>(weightIndex::layer3_1_conv2_weight));
-            auto batchNorm_1_1 = ImageInference::types::BatchNorm<T, 256>(getWeight<T>(weightIndex::layer3_1_bn2_weight), getWeight<T>(weightIndex::layer3_1_bn2_bias));
+            auto batchNorm_1_1 = ImageInference::types::BatchNorm<T, 256>(
+                getWeight<T>(weightIndex::layer3_1_bn2_weight), 
+                getWeight<T>(weightIndex::layer3_1_bn2_bias),
+                getWeight<T>(weightIndex::layer3_1_bn2_running_mean),
+                getWeight<T>(weightIndex::layer3_1_bn2_running_var));
             auto image_1_1 = ImageInference::types::Image<T, 0, BlockSize, 256, 14, 14>(); // OutPadding of 0 is because a 1x1 kernel is coming next
             convBlock<1>(image_1_0, kernel_1_1, batchNorm_1_1, image_1_1);
             auto kernel_1_2 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 1024, 256, 1, 1>(getWeight<T>(weightIndex::layer3_1_conv3_weight));
-            auto batchNorm_1_2 = ImageInference::types::BatchNorm<T, 1024>(getWeight<T>(weightIndex::layer3_1_bn3_weight), getWeight<T>(weightIndex::layer3_1_bn3_bias));
+            auto batchNorm_1_2 = ImageInference::types::BatchNorm<T, 1024>(
+                getWeight<T>(weightIndex::layer3_1_bn3_weight), 
+                getWeight<T>(weightIndex::layer3_1_bn3_bias),
+                getWeight<T>(weightIndex::layer3_1_bn3_running_mean),
+                getWeight<T>(weightIndex::layer3_1_bn3_running_var));
             auto image_1_2 = ImageInference::types::Image<T, 0, BlockSize, 1024, 14, 14>(); // OutPadding of 0 is because a 1x1 kernel is coming next
             convBlockAddIdentity(image_1_1, kernel_1_2, batchNorm_1_2, image_0_2, image_1_2);
 
             auto kernel_2_0 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 256, 1024, 1, 1>(getWeight<T>(weightIndex::layer3_2_conv1_weight));
-            auto batchNorm_2_0 = ImageInference::types::BatchNorm<T, 256>(getWeight<T>(weightIndex::layer3_2_bn1_weight), getWeight<T>(weightIndex::layer3_2_bn1_bias));
+            auto batchNorm_2_0 = ImageInference::types::BatchNorm<T, 256>(
+                getWeight<T>(weightIndex::layer3_2_bn1_weight), 
+                getWeight<T>(weightIndex::layer3_2_bn1_bias),
+                getWeight<T>(weightIndex::layer3_2_bn1_running_mean),
+                getWeight<T>(weightIndex::layer3_2_bn1_running_var));
             auto image_2_0 = ImageInference::types::Image<T, 1, BlockSize, 256, 14, 14>(); // OutPadding of 1 is because a 3x3 kernel is coming next
             convBlock<1>(image_1_2, kernel_2_0, batchNorm_2_0, image_2_0);
             auto kernel_2_1 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 256, 256, 3, 3>(getWeight<T>(weightIndex::layer3_2_conv2_weight));
-            auto batchNorm_2_1 = ImageInference::types::BatchNorm<T, 256>(getWeight<T>(weightIndex::layer3_2_bn2_weight), getWeight<T>(weightIndex::layer3_2_bn2_bias));
+            auto batchNorm_2_1 = ImageInference::types::BatchNorm<T, 256>(
+                getWeight<T>(weightIndex::layer3_2_bn2_weight), 
+                getWeight<T>(weightIndex::layer3_2_bn2_bias),
+                getWeight<T>(weightIndex::layer3_2_bn2_running_mean),
+                getWeight<T>(weightIndex::layer3_2_bn2_running_var));
             auto image_2_1 = ImageInference::types::Image<T, 0, BlockSize, 256, 14, 14>(); // OutPadding of 0 is because a 1x1 kernel is coming next
             convBlock<1>(image_2_0, kernel_2_1, batchNorm_2_1, image_2_1);
             auto kernel_2_2 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 1024, 256, 1, 1>(getWeight<T>(weightIndex::layer3_2_conv3_weight));
-            auto batchNorm_2_2 = ImageInference::types::BatchNorm<T, 1024>(getWeight<T>(weightIndex::layer3_2_bn3_weight), getWeight<T>(weightIndex::layer3_2_bn3_bias));
+            auto batchNorm_2_2 = ImageInference::types::BatchNorm<T, 1024>(
+                getWeight<T>(weightIndex::layer3_2_bn3_weight), 
+                getWeight<T>(weightIndex::layer3_2_bn3_bias),
+                getWeight<T>(weightIndex::layer3_2_bn3_running_mean),
+                getWeight<T>(weightIndex::layer3_2_bn3_running_var));
             auto image_2_2 = ImageInference::types::Image<T, 0, BlockSize, 1024, 14, 14>(); // OutPadding of 0 is because a 1x1 kernel is coming next
             convBlockAddIdentity(image_2_1, kernel_2_2, batchNorm_2_2, image_1_2, image_2_2);
 
             auto kernel_3_0 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 256, 1024, 1, 1>(getWeight<T>(weightIndex::layer3_3_conv1_weight));
-            auto batchNorm_3_0 = ImageInference::types::BatchNorm<T, 256>(getWeight<T>(weightIndex::layer3_3_bn1_weight), getWeight<T>(weightIndex::layer3_3_bn1_bias));
+            auto batchNorm_3_0 = ImageInference::types::BatchNorm<T, 256>(
+                getWeight<T>(weightIndex::layer3_3_bn1_weight), 
+                getWeight<T>(weightIndex::layer3_3_bn1_bias),
+                getWeight<T>(weightIndex::layer3_3_bn1_running_mean),
+                getWeight<T>(weightIndex::layer3_3_bn1_running_var));
             auto image_3_0 = ImageInference::types::Image<T, 1, BlockSize, 256, 14, 14>(); // OutPadding of 1 is because a 3x3 kernel is coming next
             convBlock<1>(image_2_2, kernel_3_0, batchNorm_3_0, image_3_0);
             auto kernel_3_1 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 256, 256, 3, 3>(getWeight<T>(weightIndex::layer3_3_conv2_weight));
-            auto batchNorm_3_1 = ImageInference::types::BatchNorm<T, 256>(getWeight<T>(weightIndex::layer3_3_bn2_weight), getWeight<T>(weightIndex::layer3_3_bn2_bias));
+            auto batchNorm_3_1 = ImageInference::types::BatchNorm<T, 256>(
+                getWeight<T>(weightIndex::layer3_3_bn2_weight),
+                 getWeight<T>(weightIndex::layer3_3_bn2_bias),
+                 getWeight<T>(weightIndex::layer3_3_bn2_running_mean),
+                 getWeight<T>(weightIndex::layer3_3_bn2_running_var));
             auto image_3_1 = ImageInference::types::Image<T, 0, BlockSize, 256, 14, 14>(); // OutPadding of 0 is because a 1x1 kernel is coming next
             convBlock<1>(image_3_0, kernel_3_1, batchNorm_3_1, image_3_1);
             auto kernel_3_2 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 1024, 256, 1, 1>(getWeight<T>(weightIndex::layer3_3_conv3_weight));
-            auto batchNorm_3_2 = ImageInference::types::BatchNorm<T, 1024>(getWeight<T>(weightIndex::layer3_3_bn3_weight), getWeight<T>(weightIndex::layer3_3_bn3_bias));
+            auto batchNorm_3_2 = ImageInference::types::BatchNorm<T, 1024>(
+                getWeight<T>(weightIndex::layer3_3_bn3_weight), 
+                getWeight<T>(weightIndex::layer3_3_bn3_bias),
+                getWeight<T>(weightIndex::layer3_3_bn3_running_mean),
+                getWeight<T>(weightIndex::layer3_3_bn3_running_var));
             auto image_3_2 = ImageInference::types::Image<T, 0, BlockSize, 1024, 14, 14>(); // OutPadding of 0 is because a 1x1 kernel is coming next
             convBlockAddIdentity(image_3_1, kernel_3_2, batchNorm_3_2, image_2_2, image_3_2);
 
             auto kernel_4_0 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 256, 1024, 1, 1>(getWeight<T>(weightIndex::layer3_4_conv1_weight));
-            auto batchNorm_4_0 = ImageInference::types::BatchNorm<T, 256>(getWeight<T>(weightIndex::layer3_4_bn1_weight), getWeight<T>(weightIndex::layer3_4_bn1_bias));
+            auto batchNorm_4_0 = ImageInference::types::BatchNorm<T, 256>(
+                getWeight<T>(weightIndex::layer3_4_bn1_weight), 
+                getWeight<T>(weightIndex::layer3_4_bn1_bias),
+                getWeight<T>(weightIndex::layer3_4_bn1_running_mean),
+                getWeight<T>(weightIndex::layer3_4_bn1_running_var));
             auto image_4_0 = ImageInference::types::Image<T, 1, BlockSize, 256, 14, 14>(); // OutPadding of 1 is because a 3x3 kernel is coming next
             convBlock<1>(image_3_2, kernel_4_0, batchNorm_4_0, image_4_0);
             auto kernel_4_1 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 256, 256, 3, 3>(getWeight<T>(weightIndex::layer3_4_conv2_weight));
-            auto batchNorm_4_1 = ImageInference::types::BatchNorm<T, 256>(getWeight<T>(weightIndex::layer3_4_bn2_weight), getWeight<T>(weightIndex::layer3_4_bn2_bias));
+            auto batchNorm_4_1 = ImageInference::types::BatchNorm<T, 256>(
+                getWeight<T>(weightIndex::layer3_4_bn2_weight), 
+                getWeight<T>(weightIndex::layer3_4_bn2_bias),
+                getWeight<T>(weightIndex::layer3_4_bn2_running_mean),
+                getWeight<T>(weightIndex::layer3_4_bn2_running_var));
             auto image_4_1 = ImageInference::types::Image<T, 0, BlockSize, 256, 14, 14>(); // OutPadding of 0 is because a 1x1 kernel is coming next
             convBlock<1>(image_4_0, kernel_4_1, batchNorm_4_1, image_4_1);
             auto kernel_4_2 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 1024, 256, 1, 1>(getWeight<T>(weightIndex::layer3_4_conv3_weight));
-            auto batchNorm_4_2 = ImageInference::types::BatchNorm<T, 1024>(getWeight<T>(weightIndex::layer3_4_bn3_weight), getWeight<T>(weightIndex::layer3_4_bn3_bias));
+            auto batchNorm_4_2 = ImageInference::types::BatchNorm<T, 1024>(
+                getWeight<T>(weightIndex::layer3_4_bn3_weight), 
+                getWeight<T>(weightIndex::layer3_4_bn3_bias),
+                getWeight<T>(weightIndex::layer3_4_bn3_running_mean),
+                getWeight<T>(weightIndex::layer3_4_bn3_running_var));
             auto image_4_2 = ImageInference::types::Image<T, 0, BlockSize, 1024, 14, 14>(); // OutPadding of 0 is because a 1x1 kernel is coming next
             convBlockAddIdentity(image_4_1, kernel_4_2, batchNorm_4_2, image_3_2, image_4_2);
 
             auto kernel_5_0 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 256, 1024, 1, 1>(getWeight<T>(weightIndex::layer3_5_conv1_weight));
-            auto batchNorm_5_0 = ImageInference::types::BatchNorm<T, 256>(getWeight<T>(weightIndex::layer3_5_bn1_weight), getWeight<T>(weightIndex::layer3_5_bn1_bias));
+            auto batchNorm_5_0 = ImageInference::types::BatchNorm<T, 256>(
+                getWeight<T>(weightIndex::layer3_5_bn1_weight), 
+                getWeight<T>(weightIndex::layer3_5_bn1_bias),
+                getWeight<T>(weightIndex::layer3_5_bn1_running_mean),
+                getWeight<T>(weightIndex::layer3_5_bn1_running_var));
             auto image_5_0 = ImageInference::types::Image<T, 1, BlockSize, 256, 14, 14>(); // OutPadding of 1 is because a 3x3 kernel is coming next
             convBlock<1>(image_4_2, kernel_5_0, batchNorm_5_0, image_5_0);
             auto kernel_5_1 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 256, 256, 3, 3>(getWeight<T>(weightIndex::layer3_5_conv2_weight));
-            auto batchNorm_5_1 = ImageInference::types::BatchNorm<T, 256>(getWeight<T>(weightIndex::layer3_5_bn2_weight), getWeight<T>(weightIndex::layer3_5_bn2_bias));
+            auto batchNorm_5_1 = ImageInference::types::BatchNorm<T, 256>(
+                getWeight<T>(weightIndex::layer3_5_bn2_weight), 
+                getWeight<T>(weightIndex::layer3_5_bn2_bias),
+                getWeight<T>(weightIndex::layer3_5_bn2_running_mean),
+                getWeight<T>(weightIndex::layer3_5_bn2_running_var));
             auto image_5_1 = ImageInference::types::Image<T, 0, BlockSize, 256, 14, 14>(); // OutPadding of 0 is because a 1x1 kernel is coming next
             convBlock<1>(image_5_0, kernel_5_1, batchNorm_5_1, image_5_1);
             auto kernel_5_2 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 1024, 256, 1, 1>(getWeight<T>(weightIndex::layer3_5_conv3_weight));
-            auto batchNorm_5_2 = ImageInference::types::BatchNorm<T, 1024>(getWeight<T>(weightIndex::layer3_5_bn3_weight), getWeight<T>(weightIndex::layer3_5_bn3_bias));
+            auto batchNorm_5_2 = ImageInference::types::BatchNorm<T, 1024>(
+                getWeight<T>(weightIndex::layer3_5_bn3_weight), 
+                getWeight<T>(weightIndex::layer3_5_bn3_bias),
+                getWeight<T>(weightIndex::layer3_5_bn3_running_mean),
+                getWeight<T>(weightIndex::layer3_5_bn3_running_var));
             convBlockAddIdentity(image_5_1, kernel_5_2, batchNorm_5_2, image_4_2, output);
         }
 
@@ -688,43 +795,83 @@ namespace ImageInference
             ImageInference::types::Image<T, 0, BlockSize, 2048, 7, 7> &output)
         {
             auto kernel_0_0 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 512, 1024, 1, 1>(getWeight<T>(weightIndex::layer4_0_conv1_weight));
-            auto batchNorm_0_0 = ImageInference::types::BatchNorm<T, 512>(getWeight<T>(weightIndex::layer4_0_bn1_weight), getWeight<T>(weightIndex::layer4_0_bn1_bias));
+            auto batchNorm_0_0 = ImageInference::types::BatchNorm<T, 512>(
+                getWeight<T>(weightIndex::layer4_0_bn1_weight), 
+                getWeight<T>(weightIndex::layer4_0_bn1_bias),
+                getWeight<T>(weightIndex::layer4_0_bn1_running_mean),
+                getWeight<T>(weightIndex::layer4_0_bn1_running_var));
             auto image_0_0 = ImageInference::types::Image<T, 1, BlockSize, 512, 14, 14>(); // OutPadding of 1 is because a 3x3 kernel is coming next
             convBlock<1>(input, kernel_0_0, batchNorm_0_0, image_0_0);
             auto kernel_0_1 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 512, 512, 3, 3>(getWeight<T>(weightIndex::layer4_0_conv2_weight));
-            auto batchNorm_0_1 = ImageInference::types::BatchNorm<T, 512>(getWeight<T>(weightIndex::layer4_0_bn2_weight), getWeight<T>(weightIndex::layer4_0_bn2_bias));
+            auto batchNorm_0_1 = ImageInference::types::BatchNorm<T, 512>(
+                getWeight<T>(weightIndex::layer4_0_bn2_weight), 
+                getWeight<T>(weightIndex::layer4_0_bn2_bias),
+                getWeight<T>(weightIndex::layer4_0_bn2_running_mean),
+                getWeight<T>(weightIndex::layer4_0_bn2_running_var));
             auto image_0_1 = ImageInference::types::Image<T, 0, BlockSize, 512, 7, 7>(); // OutPadding of 0 is because a 1x1 kernel is coming next
             convBlock<2>(image_0_0, kernel_0_1, batchNorm_0_1, image_0_1);
             auto kernel_0_2 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 2048, 512, 1, 1>(getWeight<T>(weightIndex::layer4_0_conv3_weight));
-            auto batchNorm_0_2 = ImageInference::types::BatchNorm<T, 2048>(getWeight<T>(weightIndex::layer4_0_bn3_weight), getWeight<T>(weightIndex::layer4_0_bn3_bias));
+            auto batchNorm_0_2 = ImageInference::types::BatchNorm<T, 2048>(
+                getWeight<T>(weightIndex::layer4_0_bn3_weight), 
+                getWeight<T>(weightIndex::layer4_0_bn3_bias),
+                getWeight<T>(weightIndex::layer4_0_bn3_running_mean),
+                getWeight<T>(weightIndex::layer4_0_bn3_running_var));
             auto projectionKernel = ImageInference::types::Kernel<T, BlockSize, BlockSize, 2048, 1024, 1, 1>(getWeight<T>(weightIndex::layer4_0_downsample_0_weight));
-            auto projectionBatchNorm = ImageInference::types::BatchNorm<T, 2048>(getWeight<T>(weightIndex::layer4_0_downsample_1_weight), getWeight<T>(weightIndex::layer4_0_downsample_1_bias));
+            auto projectionBatchNorm = ImageInference::types::BatchNorm<T, 2048>(
+                getWeight<T>(weightIndex::layer4_0_downsample_1_weight), 
+                getWeight<T>(weightIndex::layer4_0_downsample_1_bias),
+                getWeight<T>(weightIndex::layer4_0_downsample_1_running_mean),
+                getWeight<T>(weightIndex::layer4_0_downsample_1_running_var));
             auto image_0_2 = ImageInference::types::Image<T, 0, BlockSize, 2048, 7, 7>(); // OutPadding of 0 is because a 1x1 kernel is coming next
             convBlockAddProjection<2, 2>(image_0_1, kernel_0_2, batchNorm_0_2, input, projectionKernel, projectionBatchNorm, image_0_2);
 
             auto kernel_1_0 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 512, 2048, 1, 1>(getWeight<T>(weightIndex::layer4_1_conv1_weight));
-            auto batchNorm_1_0 = ImageInference::types::BatchNorm<T, 512>(getWeight<T>(weightIndex::layer4_1_bn1_weight), getWeight<T>(weightIndex::layer4_1_bn1_bias));
+            auto batchNorm_1_0 = ImageInference::types::BatchNorm<T, 512>(
+                getWeight<T>(weightIndex::layer4_1_bn1_weight), 
+                getWeight<T>(weightIndex::layer4_1_bn1_bias),
+                getWeight<T>(weightIndex::layer4_1_bn1_running_mean),
+                getWeight<T>(weightIndex::layer4_1_bn1_running_var));
             auto image_1_0 = ImageInference::types::Image<T, 1, BlockSize, 512, 7, 7>(); // OutPadding of 1 is because a 3x3 kernel is coming next
             convBlock<1>(image_0_2, kernel_1_0, batchNorm_1_0, image_1_0);
             auto kernel_1_1 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 512, 512, 3, 3>(getWeight<T>(weightIndex::layer4_1_conv2_weight));
-            auto batchNorm_1_1 = ImageInference::types::BatchNorm<T, 512>(getWeight<T>(weightIndex::layer4_1_bn2_weight), getWeight<T>(weightIndex::layer4_1_bn2_bias));
+            auto batchNorm_1_1 = ImageInference::types::BatchNorm<T, 512>(
+                getWeight<T>(weightIndex::layer4_1_bn2_weight), 
+                getWeight<T>(weightIndex::layer4_1_bn2_bias),
+                getWeight<T>(weightIndex::layer4_1_bn2_running_mean),
+                getWeight<T>(weightIndex::layer4_1_bn2_running_var));
             auto image_1_1 = ImageInference::types::Image<T, 0, BlockSize, 512, 7, 7>(); // OutPadding of 0 is because a 1x1 kernel is coming next
             convBlock<1>(image_1_0, kernel_1_1, batchNorm_1_1, image_1_1);
             auto kernel_1_2 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 2048, 512, 1, 1>(getWeight<T>(weightIndex::layer4_1_conv3_weight));
-            auto batchNorm_1_2 = ImageInference::types::BatchNorm<T, 2048>(getWeight<T>(weightIndex::layer4_1_bn3_weight), getWeight<T>(weightIndex::layer4_1_bn3_bias));
+            auto batchNorm_1_2 = ImageInference::types::BatchNorm<T, 2048>(
+                getWeight<T>(weightIndex::layer4_1_bn3_weight), 
+                getWeight<T>(weightIndex::layer4_1_bn3_bias),
+                getWeight<T>(weightIndex::layer4_1_bn3_running_mean),
+                getWeight<T>(weightIndex::layer4_1_bn3_running_var));
             auto image_1_2 = ImageInference::types::Image<T, 0, BlockSize, 2048, 7, 7>(); // OutPadding of 0 is because a 1x1 kernel is coming next
             convBlockAddIdentity(image_1_1, kernel_1_2, batchNorm_1_2, image_0_2, image_1_2);
 
             auto kernel_2_0 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 512, 2048, 1, 1>(getWeight<T>(weightIndex::layer4_2_conv1_weight));
-            auto batchNorm_2_0 = ImageInference::types::BatchNorm<T, 512>(getWeight<T>(weightIndex::layer4_2_bn1_weight), getWeight<T>(weightIndex::layer4_2_bn1_bias));
+            auto batchNorm_2_0 = ImageInference::types::BatchNorm<T, 512>(
+                getWeight<T>(weightIndex::layer4_2_bn1_weight), 
+                getWeight<T>(weightIndex::layer4_2_bn1_bias),
+                getWeight<T>(weightIndex::layer4_2_bn1_running_mean),
+                getWeight<T>(weightIndex::layer4_2_bn1_running_var));
             auto image_2_0 = ImageInference::types::Image<T, 1, BlockSize, 512, 7, 7>(); // OutPadding of 1 is because a 3x3 kernel is coming next
             convBlock<1>(image_1_2, kernel_2_0, batchNorm_2_0, image_2_0);
             auto kernel_2_1 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 512, 512, 3, 3>(getWeight<T>(weightIndex::layer4_2_conv2_weight));
-            auto batchNorm_2_1 = ImageInference::types::BatchNorm<T, 512>(getWeight<T>(weightIndex::layer4_2_bn2_weight), getWeight<T>(weightIndex::layer4_2_bn2_bias));
+            auto batchNorm_2_1 = ImageInference::types::BatchNorm<T, 512>(
+                getWeight<T>(weightIndex::layer4_2_bn2_weight), 
+                getWeight<T>(weightIndex::layer4_2_bn2_bias),
+                getWeight<T>(weightIndex::layer4_2_bn2_running_mean),
+                getWeight<T>(weightIndex::layer4_2_bn2_running_var));
             auto image_2_1 = ImageInference::types::Image<T, 0, BlockSize, 512, 7, 7>(); // OutPadding of 0 is because a 1x1 kernel is coming next
             convBlock<1>(image_2_0, kernel_2_1, batchNorm_2_1, image_2_1);
             auto kernel_2_2 = ImageInference::types::Kernel<T, BlockSize, BlockSize, 2048, 512, 1, 1>(getWeight<T>(weightIndex::layer4_2_conv3_weight));
-            auto batchNorm_2_2 = ImageInference::types::BatchNorm<T, 2048>(getWeight<T>(weightIndex::layer4_2_bn3_weight), getWeight<T>(weightIndex::layer4_2_bn3_bias));
+            auto batchNorm_2_2 = ImageInference::types::BatchNorm<T, 2048>(
+                getWeight<T>(weightIndex::layer4_2_bn3_weight), 
+                getWeight<T>(weightIndex::layer4_2_bn3_bias),
+                getWeight<T>(weightIndex::layer4_2_bn3_running_mean),
+                getWeight<T>(weightIndex::layer4_2_bn3_running_var));
             convBlockAddIdentity<0>(image_2_1, kernel_2_2, batchNorm_2_2, image_1_2, output);
         }
 
@@ -751,19 +898,17 @@ namespace ImageInference
             constexpr const size_t outputHeight = ImageHeight / Stride;
             constexpr const size_t outputWidth = ImageWidth / Stride;
 
-            const auto outputPtr = output.getPointer() + output.paddingOffset; // We skip the padding as we want to start at the data section.
-            const auto meanPtr = output.getMeanPointer();                      // Count = CountBlocks x CountElements
-            const auto variancePtr = output.getBatchVariancePointer();         // Count = CountBlocks x CountElements
+            auto outputPtr = output.getPointer() + output.paddingOffset; // We skip the padding as we want to start at the data section.
 
-            const auto imagePtr = image.getPointer();          // ChannelBlocks x Height x Width x ChannelElements
-            const auto kernelPtr = kernel.getPointer();        // CountBlocks x ChannelBlocks x Height x Width x ChannelElements x CountElements
-            const auto gammaPtr = batchNorm.getGammaPointer(); // Count = CountBlocks x CountElements
-            const auto betaPtr = batchNorm.getBetaPointer();   // Count = CountBlocks x CountElements
-
-            size_t meanVarianceCount[KernelCount]{0};
+            const auto imagePtr = image.getPointer();                         // ChannelBlocks x Height x Width x ChannelElements
+            const auto kernelPtr = kernel.getPointer();                       // CountBlocks x ChannelBlocks x Height x Width x ChannelElements x CountElements
+            const auto gammaPtr = batchNorm.getGammaPointer();                // Count = CountBlocks x CountElements
+            const auto betaPtr = batchNorm.getBetaPointer();                  // Count = CountBlocks x CountElements
+            const auto meanPtr = batchNorm.getMeanPointer();                  // Count = CountBlocks x CountElements
+            const auto variancePtr = batchNorm.getProcessedVariancePointer(); // Count = CountBlocks x CountElements
 
 #ifdef USE_OMP
-#pragma omp parallel for collapse(2) private(iBCount, iHeight) reduction(+ : meanVarianceCount[ : KernelCount], meanPtr[ : KernelCount], variancePtr[ : KernelCount])
+#pragma omp parallel for collapse(2)
 #endif // USE_OMP
             for (size_t iBCount = 0; iBCount < countBlocks; iBCount++)
             {
@@ -825,39 +970,7 @@ namespace ImageInference
                     }
 
                     // At this point we completed a complete row of the output.
-                    // We will also update the mean and variance as we already loaded the data.
-                    for (size_t iWidth = 0; iWidth < outputWidth; iWidth++)
-                    {
-#ifdef USE_OMP
-#pragma omp simd
-#endif // USE_OMP
-                        for (size_t iCount = 0; iCount < BlockSizeCount; iCount++)
-                        {
-                            const size_t offsetOutput = output.getOffset(iBCount, iHeight, iWidth, iCount);
-                            const size_t offsetCount = iBCount * BlockSizeCount + iCount;
-                            output.updateMeanVariance(outputPtr[offsetOutput], offsetCount, ++meanVarianceCount[offsetCount]);
-                        }
-                    }
-                }
-            }
-
-#ifdef USE_OMP // The mean is not update during finalization.
-#pragma omp parallel for private(iBCount) reduction(+ : variancePtr[ : KernelCount])
-#endif // USE_OMP
-            for (size_t iBCount = 0; iBCount < countBlocks; iBCount++)
-            {
-#ifdef USE_OMP
-#pragma omp simd
-#endif // USE_OMP
-                for (size_t iCount = 0; iCount < BlockSizeCount; iCount++)
-                {
-                    const size_t offsetCount = iBCount * BlockSizeCount + iCount;
-                    output.finalizeMeanVariance(offsetCount, meanVarianceCount[offsetCount]);
-                }
-
-                // Now we apply the batch norm and relu.
-                for (size_t iHeight = 0; iHeight < outputHeight; iHeight++)
-                {
+                    // Now we apply the batch norm and relu.
                     for (size_t iWidth = 0; iWidth < outputWidth; iWidth++)
                     {
 #ifdef USE_OMP
@@ -904,18 +1017,17 @@ namespace ImageInference
             constexpr const size_t outputWidth = ImageWidth;
 
             auto outputPtr = output.getPointer() + output.paddingOffset; // We skip the padding as we want to start at the data section.
-            auto meanPtr = output.getMeanPointer();                      // Count = CountBlocks x CountElements
-            auto variancePtr = output.getBatchVariancePointer();         // Count = CountBlocks x CountElements
 
-            const auto imagePtr = image.getPointer();          // ChannelBlocks x Height x Width x ChannelElements
-            const auto kernelPtr = kernel.getPointer();        // CountBlocks x ChannelBlocks x Height x Width x ChannelElements x CountElements
-            const auto gammaPtr = batchNorm.getGammaPointer(); // Count = CountBlocks x CountElements
-            const auto betaPtr = batchNorm.getBetaPointer();   // Count = CountBlocks x CountElements
-            const auto shortcutPtr = shortcut.getPointer();    // ChannelBlocks x Height x Width x ChannelElements
+            const auto imagePtr = image.getPointer();                         // ChannelBlocks x Height x Width x ChannelElements
+            const auto kernelPtr = kernel.getPointer();                       // CountBlocks x ChannelBlocks x Height x Width x ChannelElements x CountElements
+            const auto gammaPtr = batchNorm.getGammaPointer();                // Count = CountBlocks x CountElements
+            const auto betaPtr = batchNorm.getBetaPointer();                  // Count = CountBlocks x CountElements
+            const auto meanPtr = batchNorm.getMeanPointer();                  // Count = CountBlocks x CountElements
+            const auto variancePtr = batchNorm.getProcessedVariancePointer(); // Count = CountBlocks x CountElements
+            const auto shortcutPtr = shortcut.getPointer();                   // ChannelBlocks x Height x Width x ChannelElements
 
-            size_t meanVarianceCount[KernelCount]{0};
 #ifdef USE_OMP
-#pragma omp parallel for collapse(2) private(iBCount, iHeight) reduction(+ : meanVarianceCount[ : KernelCount], meanPtr[ : KernelCount], variancePtr[ : KernelCount])
+#pragma omp parallel for collapse(2)
 #endif // USE_OMP
             for (size_t iBCount = 0; iBCount < countBlocks; iBCount++)
             {
@@ -967,40 +1079,8 @@ namespace ImageInference
                     }
 
                     // At this point we completed a complete row of the output.
-                    // We will also update the mean and variance as we already loaded the data.
-                    for (size_t iWidth = 0; iWidth < outputWidth; iWidth++)
-                    {
-#ifdef USE_OMP
-#pragma omp simd
-#endif // USE_OMP
-                        for (size_t iCount = 0; iCount < BlockSizeCount; iCount++)
-                        {
-                            const size_t offsetOutput = output.getOffset(iBCount, iHeight, iWidth, iCount);
-                            const size_t offsetCount = iBCount * BlockSizeCount + iCount;
-                            output.updateMeanVariance(outputPtr[offsetOutput], offsetCount, ++meanVarianceCount[offsetCount]);
-                        }
-                    }
-                }
-            }
-
-#ifdef USE_OMP
-#pragma omp parallel for private(iBCount) reduction(+ : variancePtr[ : KernelCount])
-#endif // USE_OMP
-            for (size_t iBCount = 0; iBCount < countBlocks; iBCount++)
-            {
-#ifdef USE_OMP
-#pragma omp simd
-#endif // USE_OMP
-                for (size_t iCount = 0; iCount < BlockSizeCount; iCount++)
-                {
-                    const size_t offsetCount = iBCount * BlockSizeCount + iCount;
-                    output.finalizeMeanVariance(offsetCount, meanVarianceCount[offsetCount]);
-                }
-
-                // Now we apply the batch norm and relu.
-                for (size_t iHeight = 0; iHeight < outputHeight; iHeight++)
-                {
-                    for (size_t iWidth = 0; iWidth < outputWidth; iWidth++)
+                    // Now we apply the batch norm and relu.
+                    for (size_t iWidth = 0; iWidth < ImageWidth; iWidth++)
                     {
 #ifdef USE_OMP
 #pragma omp simd
@@ -1048,24 +1128,28 @@ namespace ImageInference
             constexpr const size_t channelBlocks = ImageChannels / BlockSizeChannel;
             constexpr const size_t outputHeight = ImageHeight / Stride;
             constexpr const size_t outputWidth = ImageWidth / Stride;
+            constexpr const size_t shortcutChannelBlock = KernelCount / ShortcutDimExpand / BlockSizeCount;
+
+            ImageInference::types::Image<T, 0, BlockSizeCount, KernelCount, ImageHeight / Stride, ImageWidth / Stride> projection;
+            auto projectionPtr = projection.getPointer() + projection.paddingOffset; // We skip the padding as we want to start at the data section.
 
             auto outputPtr = output.getPointer() + output.paddingOffset; // We skip the padding as we want to start at the data section.
-            auto meanPtr = output.getMeanPointer();                      // Count = CountBlocks x CountElements
-            auto variancePtr = output.getBatchVariancePointer();         // Count = CountBlocks x CountElements
 
-            const auto imagePtr = image.getPointer();                              // ChannelBlocks x Height x Width x ChannelElements
-            const auto kernelPtr = kernel.getPointer();                            // CountBlocks x ChannelBlocks x Height x Width x ChannelElements x CountElements
-            const auto gammaPtr = batchNorm.getGammaPointer();                     // Count = CountBlocks x CountElements
-            const auto betaPtr = batchNorm.getBetaPointer();                       // Count = CountBlocks x CountElements
-            const auto shortcutPtr = shortcut.getPointer();                        // ChannelBlocks x Height x Width x ChannelElements
-            const auto projectionKernelPtr = projectionKernel.getPointer();        // CountBlocks x CountBlocks x 1 x 1 x CountElements x CountElements
-            const auto projectionGammaPtr = projectionBatchNorm.getGammaPointer(); // Count = CountBlocks x CountElements
-            const auto projectionBetaPtr = projectionBatchNorm.getBetaPointer();   // Count = CountBlocks x CountElements
-
-            size_t meanVarianceCount[KernelCount]{0};
+            const auto imagePtr = image.getPointer();                                             // ChannelBlocks x Height x Width x ChannelElements
+            const auto kernelPtr = kernel.getPointer();                                           // CountBlocks x ChannelBlocks x Height x Width x ChannelElements x CountElements
+            const auto gammaPtr = batchNorm.getGammaPointer();                                    // Count = CountBlocks x CountElements
+            const auto betaPtr = batchNorm.getBetaPointer();                                      // Count = CountBlocks x CountElements
+            const auto meanPtr = batchNorm.getMeanPointer();                                      // Count = CountBlocks x CountElements
+            const auto variancePtr = batchNorm.getProcessedVariancePointer();                     // Count = CountBlocks x CountElements
+            const auto shortcutPtr = shortcut.getPointer();                                       // ChannelBlocks x Height x Width x ChannelElements
+            const auto projectionKernelPtr = projectionKernel.getPointer();                       // CountBlocks x CountBlocks x 1 x 1 x CountElements x CountElements
+            const auto projectionGammaPtr = projectionBatchNorm.getGammaPointer();                // Count = CountBlocks x CountElements
+            const auto projectionBetaPtr = projectionBatchNorm.getBetaPointer();                  // Count = CountBlocks x CountElements
+            const auto projectionMeanPtr = projectionBatchNorm.getMeanPointer();                  // Count = CountBlocks x CountElements
+            const auto projectionVariancePtr = projectionBatchNorm.getProcessedVariancePointer(); // Count = CountBlocks x CountElements
 
 #ifdef USE_OMP
-#pragma omp parallel for collapse(2) private(iBCount, iHeight) reduction(+ : meanVarianceCount[ : KernelCount], meanPtr[ : KernelCount], variancePtr[ : KernelCount])
+#pragma omp parallel for collapse(2)
 #endif // USE_OMP
             for (size_t iBCount = 0; iBCount < countBlocks; iBCount++)
             {
@@ -1117,44 +1201,7 @@ namespace ImageInference
                         }
                     }
 
-                    // At this point we completed a complete row of the output.
-                    // We will also update the mean and variance as we already loaded the data.
-                    for (size_t iWidth = 0; iWidth < outputWidth; iWidth++)
-                    {
-#ifdef USE_OMP
-#pragma omp simd
-#endif // USE_OMP
-                        for (size_t iCount = 0; iCount < BlockSizeCount; iCount++)
-                        {
-                            const size_t offsetOutput = output.getOffset(iBCount, iHeight, iWidth, iCount);
-                            const size_t offsetCount = iBCount * BlockSizeCount + iCount;
-                            output.updateMeanVariance(outputPtr[offsetOutput], offsetCount, ++meanVarianceCount[offsetCount]);
-                        }
-                    }
-                }
-            }
-
-            // Calculate the shortcut projection
-            constexpr const size_t shortcutChannelBlock = KernelCount / ShortcutDimExpand / BlockSizeCount;
-
-            constexpr const size_t projectionHeight = ImageHeight / Stride;
-            constexpr const size_t projectionWidth = ImageWidth / Stride;
-
-            ImageInference::types::Image<T, 0, BlockSizeCount, KernelCount, ImageHeight / Stride, ImageWidth / Stride> projection;
-            auto projectionPtr = projection.getPointer() + projection.paddingOffset; // We skip the padding as we want to start at the data section.
-            auto projectionMeanPtr = projection.getMeanPointer();                    // Count = CountBlocks x CountElements
-            auto projectionVariancePtr = projection.getBatchVariancePointer();       // Count = CountBlocks x CountElements
-
-            size_t meanVarianceCountProjection[KernelCount]{0};
-
-#ifdef USE_OMP
-#pragma omp parallel for collapse(2) private(iBCount, iHeight) reduction(+ : meanVarianceCountProjection[ : KernelCount], projectionMeanPtr[ : KernelCount], projectionVariancePtr[ : KernelCount])
-#endif // USE_OMP
-            for (size_t iBCount = 0; iBCount < countBlocks; iBCount++)
-            {
-                for (size_t iHeight = 0; iHeight < projectionHeight; iHeight++)
-                {
-                    // Do the projection
+                    // Calculate the shortcut projection
                     for (size_t iBChannel = 0; iBChannel < shortcutChannelBlock; iBChannel++)
                     {
                         const size_t offsetShortcut = shortcut.getOffset(iBChannel, iHeight * Stride, 0, 0);
@@ -1163,12 +1210,12 @@ namespace ImageInference
 
                         // Kernel of shape BlockSizeChannel x BlockSizeCount
                         // Input of shape ImageWidth x BlockSizeChannel
-                        // Output of shape projectionWidth x BlockSizeCount === ImageWidth / Stride x BlockSizeCount
+                        // Output of shape outputWidth x BlockSizeCount === ImageWidth / Stride x BlockSizeCount
 
                         // If we use libxsmm directly we don't need to do add separately!
                         // If we use the leading dimension on the image we can use it as stride.
                         // With the leading dimension we skip the next blocks as they should be skipped by the stride.
-                        constexpr const int MM = projectionWidth;
+                        constexpr const int MM = outputWidth;
                         constexpr const int KK = BlockSizeChannel;
                         constexpr const int NN = BlockSizeCount;
                         constexpr const int ldImage = KK * Stride;
@@ -1195,78 +1242,8 @@ namespace ImageInference
                         );
                     }
 
-                    // At this point we completed a complete row of the output.
-                    // We will also update the mean and variance as we already loaded the data.
-                    for (size_t iWidth = 0; iWidth < projectionWidth; iWidth++)
-                    {
-#ifdef USE_OMP
-#pragma omp simd
-#endif // USE_OMP
-                        for (size_t iCount = 0; iCount < BlockSizeCount; iCount++)
-                        {
-                            const size_t offsetProjection = projection.getOffset(iBCount, iHeight, iWidth, iCount);
-                            const size_t offsetCount = iBCount * BlockSizeCount + iCount;
-                            projection.updateMeanVariance(projectionPtr[offsetProjection], offsetCount, ++meanVarianceCountProjection[offsetCount]);
-                        }
-                    }
-                }
-            }
-
-#ifdef USE_OMP
-#pragma omp parallel for private(iBCount) reduction(+ : projectionVariancePtr[ : KernelCount])
-#endif // USE_OMP
-            for (size_t iBCount = 0; iBCount < countBlocks; iBCount++)
-            {
-#ifdef USE_OMP
-#pragma omp simd
-#endif // USE_OMP
-                for (size_t iCount = 0; iCount < BlockSizeCount; iCount++)
-                {
-                    const size_t offsetCount = iBCount * BlockSizeCount + iCount;
-                    projection.finalizeMeanVariance(offsetCount, meanVarianceCountProjection[offsetCount]);
-                }
-
-                // Now we apply the batch norm to the projection.
-                for (size_t iHeight = 0; iHeight < projectionHeight; iHeight++)
-                {
-                    for (size_t iWidth = 0; iWidth < projectionWidth; iWidth++)
-                    {
-#ifdef USE_OMP
-#pragma omp simd
-#endif // USE_OMP
-                        for (size_t iCount = 0; iCount < BlockSizeCount; iCount++)
-                        {
-                            const size_t offsetProject = projection.getOffset(iBCount, iHeight, iWidth, iCount);
-                            const size_t offsetCount = iBCount * BlockSizeCount + iCount;
-                            projectionPtr[offsetProject] = ResNet50::batchNorm<T>(
-                                projectionPtr[offsetProject],
-                                projectionGammaPtr[offsetCount],
-                                projectionBetaPtr[offsetCount],
-                                projectionMeanPtr[offsetCount],
-                                projectionVariancePtr[offsetCount]);
-                        }
-                    }
-                }
-            }
-
-// Continue with processing the actual input.
-#ifdef USE_OMP
-#pragma omp parallel for private(iBCount) reduction(+ : variancePtr[ : KernelCount])
-#endif // USE_OMP
-            for (size_t iBCount = 0; iBCount < countBlocks; iBCount++)
-            {
-#ifdef USE_OMP
-#pragma omp simd
-#endif // USE_OMP
-                for (size_t iCount = 0; iCount < BlockSizeCount; iCount++)
-                {
-                    const size_t offsetCount = iBCount * BlockSizeCount + iCount;
-                    output.finalizeMeanVariance(offsetCount, meanVarianceCount[offsetCount]);
-                }
-
-                // Now we apply the batch norm and relu.
-                for (size_t iHeight = 0; iHeight < outputHeight; iHeight++)
-                {
+                    // At this point we completed a complete row of the projection.
+                    // Now we apply the batch norm.
                     for (size_t iWidth = 0; iWidth < outputWidth; iWidth++)
                     {
 #ifdef USE_OMP
@@ -1274,8 +1251,10 @@ namespace ImageInference
 #endif // USE_OMP
                         for (size_t iCount = 0; iCount < BlockSizeCount; iCount++)
                         {
+                            const size_t offsetProject = projection.getOffset(iBCount, iHeight, iWidth, iCount);
                             const size_t offsetOutput = output.getOffset(iBCount, iHeight, iWidth, iCount);
                             const size_t offsetCount = iBCount * BlockSizeCount + iCount;
+
                             const T batchNormValue = ResNet50::batchNorm<T>(
                                 outputPtr[offsetOutput],
                                 gammaPtr[offsetCount],
@@ -1283,8 +1262,13 @@ namespace ImageInference
                                 meanPtr[offsetCount],
                                 variancePtr[offsetCount]);
 
-                            const size_t projectionOffset = projection.getOffset(iBCount, iHeight, iWidth, iCount);
-                            const T projectedValue = projectionPtr[projectionOffset];
+                            const T projectedValue = ResNet50::batchNorm<T>(
+                                projectionPtr[offsetProject],
+                                projectionGammaPtr[offsetCount],
+                                projectionBetaPtr[offsetCount],
+                                projectionMeanPtr[offsetCount],
+                                projectionVariancePtr[offsetCount]);
+
                             outputPtr[offsetOutput] = relu<T>(batchNormValue + projectedValue);
                         }
                     }
@@ -1316,7 +1300,7 @@ namespace ImageInference
 
 // 3x3 Stencil that gets the max value
 #ifdef USE_OMP // We can parallelize the channel blocks as they are independent of each other for this max operation.
-#pragma omp parallel for collapse(2) private(iBChannel, iHeight)
+#pragma omp parallel for
 #endif // USE_OMP
             for (size_t iBChannel = 0; iBChannel < channelBlocks; iBChannel++)
             {
@@ -1372,7 +1356,7 @@ namespace ImageInference
 // The channel are larger (2048). Therefore we have many blocks to parallelize on.
 // Otherwise the loops should be split and collapsed.
 #ifdef USE_OMP
-#pragma omp parallel for private(iBChannel) reduction(+ : outputPtr[ : ImageChannels])
+#pragma omp parallel for reduction(+ : outputPtr[ : ImageChannels])
 #endif // USE_OMP
             for (size_t iBChannel = 0; iBChannel < channelBlocks; iBChannel++)
             {
@@ -1410,7 +1394,6 @@ namespace ImageInference
             ImageInference::types::Array<T, Columns> &biasAccumulator)
         {
             constexpr const size_t ColumnsBlocks = Columns / BlockSize;
-            constexpr const size_t RowsBlocks = Rows / BlockSize;
             constexpr const size_t processableColumns = ColumnsBlocks * BlockSize;
             constexpr const size_t remainderColumns = Columns % BlockSize;
 
@@ -1418,8 +1401,8 @@ namespace ImageInference
             auto weightPtr = weight.getPointer();
             auto biasPtr = biasAccumulator.getPointer();
 
-#ifdef USE_OMP
-#pragma omp parallel for private(iBColumn)
+#ifdef USE_OMP // The accumulation on biasMap are independent of each other.
+#pragma omp parallel for
 #endif // USE_OMP
             for (size_t iBColumn = 0; iBColumn < processableColumns; iBColumn += BlockSize)
             {
@@ -1461,9 +1444,9 @@ namespace ImageInference
 #pragma omp declare simd
 #endif // USE_OMP
         template <typename T>
-        inline T ResNet50::batchNorm(const T value, const T gamma, const T beta, const T mean, const T batchVariance)
+        inline T ResNet50::batchNorm(const T value, const T gamma, const T beta, const T mean, const T processedVariance)
         {
-            return gamma * (value - mean) * batchVariance + beta;
+            return gamma * (value - mean) * processedVariance + beta;
         }
     } // namespace model
 } // namespace ImageInference

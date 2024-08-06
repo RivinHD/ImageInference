@@ -19,6 +19,7 @@
 #define IMAGEINFERENCE_BATCH_NORM_H
 
 #include <stddef.h>
+#include "Macros.h"
 
 namespace ImageInference
 {
@@ -30,27 +31,41 @@ namespace ImageInference
         private:
             const T *gamma;
             const T *beta;
+            const T *mean;
+
+            T *processedVariance;
 
         public:
             /// @brief Initialize a batch normalization container.
             /// @param gamma The value gamma that is used in batch normalization.
             /// @param beta The value beta that is used in batch normalization.
-            BatchNorm(const void *gamma, const void *beta);
+            BatchNorm(const void *gamma, const void *beta, const void *mean, const void *variance);
             ~BatchNorm();
 
             const T *getGammaPointer();
             const T *getBetaPointer();
+            const T *getMeanPointer();
+            const T *getProcessedVariancePointer();
         };
 
         template <typename T, size_t TChannels>
-        inline BatchNorm<T, TChannels>::BatchNorm(const void *gamma, const void *beta)
-            : gamma(static_cast<const T *>(gamma)), beta(static_cast<const T *>(beta))
+        inline BatchNorm<T, TChannels>::BatchNorm(const void *gamma, const void *beta, const void *mean, const void *variance)
+            : gamma(static_cast<const T *>(gamma)), beta(static_cast<const T *>(beta)),
+              mean(static_cast<const T *>(mean))
         {
+            const T *inVariance = static_cast<const T *>(variance);
+
+            processedVariance = new (std::align_val_t(PAGE_CACHE_ALIGN(T, TChannels))) T[TChannels];
+            for (size_t iChannel = 0; iChannel < TChannels; iChannel++)
+            {
+                processedVariance[iChannel] = 1.0 / std::sqrt(inVariance[iChannel] + 1e-5);
+            }
         }
 
         template <typename T, size_t TChannels>
         inline BatchNorm<T, TChannels>::~BatchNorm()
         {
+            operator delete[](processedVariance, std::align_val_t(PAGE_CACHE_ALIGN(T, TChannels)));
         }
 
         template <typename T, size_t TChannels>
@@ -63,6 +78,18 @@ namespace ImageInference
         inline const T *BatchNorm<T, TChannels>::getBetaPointer()
         {
             return beta;
+        }
+
+        template <typename T, size_t TChannels>
+        inline const T *BatchNorm<T, TChannels>::getMeanPointer()
+        {
+            return mean;
+        }
+
+        template <typename T, size_t TChannels>
+        inline const T *BatchNorm<T, TChannels>::getProcessedVariancePointer()
+        {
+            return processedVariance;
         }
     } // namespace types
 } // namespace ImageInference

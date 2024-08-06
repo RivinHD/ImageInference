@@ -1,4 +1,5 @@
 #include "Reader.h"
+#include <numeric>
 
 ImageInference::test::utils::Reader::Reader(std::string filepath)
 {
@@ -9,10 +10,10 @@ ImageInference::test::utils::Reader::Reader(std::string filepath)
 ImageInference::test::utils::Reader::~Reader()
 {
     fileStream.close();
-    
-    for (auto tensor : readTensors)
+
+    for (auto array : readFloatData)
     {
-        delete tensor;
+        delete[] array;
     }
 }
 
@@ -21,7 +22,7 @@ bool ImageInference::test::utils::Reader::hasNext()
     return fileStream.peek() != EOF;
 }
 
-at::Tensor ImageInference::test::utils::Reader::getNextTensor()
+float *ImageInference::test::utils::Reader::getNextTensor(std::vector<int64_t> &outSizes)
 {
     if (!hasNext())
     {
@@ -40,12 +41,14 @@ at::Tensor ImageInference::test::utils::Reader::getNextTensor()
     int64_t countSizes;
     fileStream.read(reinterpret_cast<char *>(&countSizes), sizeof(int64_t));
 
-    std::vector<int64_t> sizes(countSizes);
-    fileStream.read(reinterpret_cast<char *>(sizes.data()), countSizes * sizeof(int64_t));
-    
-    at::Tensor* tensor = new at::Tensor(at::empty(sizes));
-    fileStream.read(reinterpret_cast<char *>(tensor->mutable_data_ptr()), tensor->numel() * sizeof(float));
-    readTensors.push_back(tensor);
+    outSizes.clear();
+    outSizes.resize(countSizes);
+    fileStream.read(reinterpret_cast<char *>(outSizes.data()), countSizes * sizeof(int64_t));
 
-    return *tensor;
+    int64_t size = std::accumulate(outSizes.begin(), outSizes.end(), 1, std::multiplies<int64_t>());
+    float *tensor = new float[size];
+    fileStream.read(reinterpret_cast<char *>(tensor), size * sizeof(float));
+    readFloatData.push_back(tensor);
+
+    return tensor;
 }

@@ -5,6 +5,10 @@ from torchvision.models import ResNet50_Weights
 import os
 import numpy as np
 import io
+import sys
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from backend.baremetal.export_utils import getResnet50Weights
 
 
 def writeTensor(file: io.BufferedWriter, tensor: torch.Tensor):
@@ -31,7 +35,7 @@ def writeTensor(file: io.BufferedWriter, tensor: torch.Tensor):
 
 if __name__ == "__main__":
 
-    torch.manual_seed(123)
+    torch.manual_seed(0)
     resnet50 = models.resnet50(weights=ResNet50_Weights.IMAGENET1K_V2).eval()
 
     base_directory = os.path.dirname(os.path.dirname(__file__))
@@ -39,7 +43,7 @@ if __name__ == "__main__":
     filePath = os.path.join(base_directory, directory, "resnet50_weights_v2.bin")
     os.makedirs(os.path.dirname(filePath), exist_ok=True)
     with open(filePath, "wb") as f:
-        for name, param in resnet50.named_parameters():
+        for name, param in getResnet50Weights(ResNet50_Weights.IMAGENET1K_V2).items():
             writeTensor(f, param)
 
     for i in range(10):
@@ -78,6 +82,13 @@ if __name__ == "__main__":
             writeTensor(f, testBlock3)
             writeTensor(f, output)
 
+        testBatchNorm = torch.rand(1, 64, 1, 1)
+        output = resnet50.bn1(testBatchNorm)
+        filePath = os.path.join(base_directory, directory, f"resnet50_batchNorm1_test{i}.bin")
+        with open(filePath, "wb") as f:
+            writeTensor(f, testBatchNorm)
+            writeTensor(f, output)
+
     testImage = torch.ones(1, 3, 224, 224)
     output: torch.Tensor = resnet50(testImage)
     filePath = os.path.join(base_directory, directory, "resnet50_test_ones.bin")
@@ -111,4 +122,20 @@ if __name__ == "__main__":
     filePath = os.path.join(base_directory, directory, "resnet50_block3_test_ones.bin")
     with open(filePath, "wb") as f:
         writeTensor(f, testBlock3)
+        writeTensor(f, output)
+
+    testconv7x7 = torch.ones(1, 3, 224, 224)
+    output = resnet50.conv1(testconv7x7)
+    output = resnet50.bn1(output)
+    output = resnet50.relu(output)
+    filePath = os.path.join(base_directory, directory, "resnet50_conv7x7_ones.bin")
+    with open(filePath, "wb") as f:
+        writeTensor(f, testconv7x7)
+        writeTensor(f, output)
+
+    testBatchNorm = torch.ones(1, 64, 1, 1)
+    output = resnet50.bn1(testBatchNorm)
+    filePath = os.path.join(base_directory, directory, "resnet50_batchNorm1_ones.bin")
+    with open(filePath, "wb") as f:
+        writeTensor(f, testBatchNorm)
         writeTensor(f, output)

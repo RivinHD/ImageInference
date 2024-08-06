@@ -99,30 +99,6 @@ namespace ImageInference
                 REQUIRE(at::allclose(out, expected));
             }
 
-            TEST_CASE("test_types_image_initialization_batch_norm", "[types][image][batchNorm]")
-            {
-                constexpr size_t padding = 3;
-                constexpr size_t blockSize = 16;
-                constexpr size_t channels = 16;
-                constexpr size_t height = 10;
-                constexpr size_t width = 10;
-
-                Tensor input = at::randn({channels, height, width});
-                Image<float, padding, blockSize, channels, height, width> image(input.const_data_ptr<float>());
-                image.calculateMeanVariance();
-                Tensor outMean = at::from_blob(image.getMeanPointer(), {channels});
-                Tensor outBatchVar = at::from_blob(image.getBatchVariancePointer(), {channels});
-
-                Tensor expectedMean = at::mean(input, {1, 2});
-                Tensor expectedBatchVar =  1 / at::sqrt(at::var(input, {1, 2}, false) + 1e-5);
-
-                // Evaluating with values that of constexpr require additional brackets
-                REQUIRE((image.size == (channels * (height + 2 * padding) * (width + 2 * padding))));
-
-                REQUIRE(at::allclose(outMean, expectedMean, 1e-5, 1e-7));
-                REQUIRE(at::allclose(outBatchVar, expectedBatchVar, 1e-5, 1e-7));
-            }
-
             TEST_CASE("test_types_image_correct_padding", "[types][image][padding]")
             {
                 constexpr size_t padding = 3;
@@ -198,53 +174,6 @@ namespace ImageInference
                 REQUIRE((flatten.size == (channels * height * width)));
 
                 REQUIRE(at::allclose(out, expected));
-            }
-
-            TEST_CASE("test_types_image_correct_batch_norm", "[types][image][batchNorm]")
-            {
-                constexpr size_t padding = 3;
-                constexpr size_t blockSize = 16;
-                constexpr size_t channels = 16;
-                constexpr size_t height = 10;
-                constexpr size_t width = 10;
-
-                Tensor input = at::randn({channels, height, width});
-                Image<float, padding, blockSize, channels, height, width> transfer(input.const_data_ptr<float>());
-                Image<float, padding, blockSize, channels, height, width> image;
-
-                auto transferPrt = transfer.getPointer() + transfer.paddingOffset;
-                auto imagePrt = image.getPointer() + image.paddingOffset;
-
-                for (size_t iBChannel = 0; iBChannel < channels / blockSize; iBChannel++)
-                {
-                    for (size_t iHeight = 0; iHeight < height; iHeight++)
-                    {
-                        for (size_t iWidth = 0; iWidth < width; iWidth++)
-                        {
-                            for (size_t iChannel = 0; iChannel < blockSize; iChannel++)
-                            {
-                                size_t offset = image.getOffset(iBChannel, iHeight, iWidth, iChannel);
-                                size_t transferOffset = transfer.getOffset(iBChannel, iHeight, iWidth, iChannel);
-                                imagePrt[offset] = transferPrt[transferOffset];
-                            }
-                        }
-                    }
-                }
-
-                // Calculate mean and variance separately
-                image.calculateMeanVariance();
-
-                Tensor outMean = at::from_blob(image.getMeanPointer(), {channels});
-                Tensor outBatchVar = at::from_blob(image.getBatchVariancePointer(), {channels});
-
-                Tensor expectedMean = at::mean(input, {1, 2});
-                Tensor expectedBatchVar =  1 / at::sqrt(at::var(input, {1, 2}, false) + 1e-5);
-
-                // Evaluating with values that of constexpr require additional brackets
-                REQUIRE((image.size == (channels * (height + 2 * padding) * (width + 2 * padding))));
-
-                REQUIRE(at::allclose(outMean, expectedMean, 1e-5, 1e-7));
-                REQUIRE(at::allclose(outBatchVar, expectedBatchVar));
             }
         }
     }

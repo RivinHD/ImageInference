@@ -24,6 +24,7 @@ from torchvision.models import ResNet50_Weights
 from torchvision.models._api import WeightsEnum
 from executorch.examples.portable.utils import export_to_exec_prog
 from executorch.exir import EdgeCompileConfig
+from . import export_utils
 
 
 class custom_resnet50(torch.nn.Module):
@@ -31,7 +32,7 @@ class custom_resnet50(torch.nn.Module):
         super(custom_resnet50, self).__init__()
 
         self._torch_model = models.resnet50(weights=weights)
-        self._parameters = self._torch_model._parameters
+        self._parameters = export_utils.getResnet50Weights(weights)
         self.weight_list = [weight.data for weight in self.parameters()]
 
     def forward(self, a):

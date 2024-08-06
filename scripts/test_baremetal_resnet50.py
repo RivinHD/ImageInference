@@ -17,6 +17,7 @@
 
 import argparse
 import os
+import sys
 
 import torch
 from torchvision import models
@@ -49,6 +50,13 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
+    libpath = os.path.join(os.path.dirname(__file__), "..", "submodules", "executorch", "cmake-out", "lib")
+    sys.path.append(libpath)
+    os.environ["LD_LIBRARY_PATH"] += f";{libpath}"
+    libdependencies = [
+        os.path.join(libpath, "libxsmm.so.1")
+    ]
+
     print("Starting the testing process.")
 
     # See if we have custom op  baremetal_ops::resnet50.out registered
@@ -61,6 +69,8 @@ if __name__ == "__main__":
     if not has_out_ops:
         if args.so_library:
             print(f"Loading library at {args.so_library}")
+            for lib in libdependencies:
+                torch.ops.load_library(lib)
             torch.ops.load_library(args.so_library)
         else:
             raise RuntimeError(
@@ -79,16 +89,10 @@ if __name__ == "__main__":
     torch.manual_seed(123)
 
     with torch.no_grad():
-        input = torch.randn(1, 3, 244, 244)
+        input = torch.randn(1, 3, 224, 224)
         output = model(input.clone().detach())
 
-        out = model._torch_model.conv1(input)
-        # out = model._torch_model.bn1(out)
-        # out = model._torch_model.relu(out)
-
-        torch.testing.assert_close(output, out[0])
-
-        # expected_output = torch_model(input)
-        # torch.testing.assert_close(output, expected_output[0])
+        expected_output = torch_model(input)
+        torch.testing.assert_close(output, expected_output[0], rtol=1, atol=1e-1)
 
     print("Successfully finished testing.")

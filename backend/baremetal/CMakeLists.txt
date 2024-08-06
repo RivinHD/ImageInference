@@ -78,7 +78,6 @@ target_include_directories(executorch INTERFACE ${_common_include_directories})
 # Include Fastor with libxsmm backend for matrix matrix multiplication.
 add_library(Fastor_HEADER_ONLY INTERFACE)
 target_include_directories(Fastor_HEADER_ONLY INTERFACE ${FASTOR_ROOT})
-#add_compile_definitions(FASTOR_USE_LIBXSMM)
 
 add_library(libxsmm SHARED IMPORTED)
 target_include_directories(libxsmm INTERFACE ${LIBXSMM_ROOT}/include)

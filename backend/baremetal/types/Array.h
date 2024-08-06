@@ -66,7 +66,7 @@ namespace ImageInference
             constexpr const size_t processableBlocks = iterBlockSize * iterBlocks;
 
 #ifdef USE_OMP
-#pragma omp parallel for private(i)
+#pragma omp parallel for
 #endif // USE_OMP
             for (size_t i = 0; i < processableBlocks; i += iterBlockSize)
             {
