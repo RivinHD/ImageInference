@@ -255,7 +255,7 @@ python "${BasePath}/ImageInference/scripts/export_resnet50_for_test.py"
 
 cd "${BasePath}/ImageInference/submodules/executorch"
 cd "$BUILD_DIR"
-ctest -j "${CMAKE_JOBS}" --output-on-failure -C Release
+ctest --output-on-failure -C Release
 
 python "${BasePath}/ImageInference/scripts/copy_imagenet_2012.py"
 
