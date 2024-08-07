@@ -71,7 +71,7 @@ set(_common_include_directories ${EXECUTORCH_ROOT}/..)
 
 find_package(executorch CONFIG REQUIRED)
 find_package(OpenMP REQUIRED)
-#add_compile_definitions(USE_OMP) # Enable OpenMP usage in the Project.
+add_compile_definitions(USE_OMP) # Enable OpenMP usage in the Project.
 
 target_include_directories(executorch INTERFACE ${_common_include_directories})
 
