@@ -31,21 +31,21 @@ ImageInference::model::ResNet50::~ResNet50()
     libxsmm_finalize();
 }
 
-void ImageInference::model::ResNet50::inference(const float *input, float* output)
+void ImageInference::model::ResNet50::inference(const float *input, float *output)
 {
     // For a 7x7 kernel we need to add padding of 3.
     auto image = ImageInference::types::Image<float, 3, 3, 3, 224, 224>(input);
 
     auto kernel0 = ImageInference::types::Kernel<float, RESNET50_BLOCK_SIZE, 3, 64, 3, 7, 7>(getWeight<float>(weightIndex::conv1_weight));
     auto batchNorm0 = ImageInference::types::BatchNorm<float, 64>(
-        getWeight<float>(weightIndex::bn1_weight), 
+        getWeight<float>(weightIndex::bn1_weight),
         getWeight<float>(weightIndex::bn1_bias),
         getWeight<float>(weightIndex::bn1_running_mean),
         getWeight<float>(weightIndex::bn1_running_var));
     // For Max Pooling we need padding of 1 as it applies a 3x3 kernel.
     auto imagePreConv = ImageInference::types::Image<float, 1, RESNET50_BLOCK_SIZE, 64, 112, 112>();
     convBlock<2>(image, kernel0, batchNorm0, imagePreConv);
-    
+
     // Next is a 1x1 Kernel. Therefore no padding required.
     auto imageMax0 = ImageInference::types::Image<float, 0, RESNET50_BLOCK_SIZE, 64, 56, 56>();
     maxPool<2>(imagePreConv, imageMax0);
