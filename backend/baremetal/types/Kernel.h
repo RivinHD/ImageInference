@@ -18,13 +18,10 @@
 #ifndef IMAGEINFERENCE_KERNEL_H
 #define IMAGEINFERENCE_KERNEL_H
 
-#ifdef IMAGEINFERENCE_TESTING
-#include <iostream>
-#endif // IMAGEINFERENCE_TESTING
-
 #include "Macros.h"
 #include <stddef.h>
 #include <stdexcept>
+#include <iostream>
 
 namespace ImageInference
 {

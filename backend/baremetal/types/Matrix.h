@@ -18,14 +18,11 @@
 #ifndef IMAGEINFERENCE_MATRIX_H
 #define IMAGEINFERENCE_MATRIX_H
 
-#ifdef IMAGEINFERENCE_TESTING
-#include <iostream>
-#endif // IMAGEINFERENCE_TESTING
-
 #include "Macros.h"
 #include <stddef.h>
 #include <algorithm>
 #include <stdexcept>
+#include <iostream>
 
 namespace ImageInference
 {
@@ -125,7 +122,7 @@ namespace ImageInference
             }
 #endif // IMAGEINFERENCE_TESTING
 
-            return iColumn * strideColumn + iRow * strideRow;
+            return offset;
         }
     } // namespace types
 } // namespace ImageInference

@@ -143,8 +143,6 @@ gen_operators_lib(
 install(TARGETS imageinference_baremetal_kernels baremetal_ops_lib DESTINATION lib)
 
 if(NOT ANDROID)
-    add_compile_definitions(IMAGEINFERENCE_TESTING)
-
     find_package(Torch CONFIG REQUIRED)
 
     # C++ library to register custom ops into PyTorch.

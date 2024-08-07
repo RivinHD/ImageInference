@@ -23,6 +23,7 @@
 #include <algorithm>
 #include <new>
 #include <execution>
+#include <iostream>
 
 namespace ImageInference
 {
@@ -117,7 +118,7 @@ namespace ImageInference
             }
 #endif // IMAGEINFERENCE_TESTING
 
-            return iRow;
+            return offset;
         }
     } // namespace types
 } // namespace ImageInference

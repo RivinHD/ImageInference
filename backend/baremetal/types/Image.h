@@ -18,16 +18,13 @@
 #ifndef IMAGEINFERENCE_IMAGE_H
 #define IMAGEINFERENCE_IMAGE_H
 
-#ifdef IMAGEINFERENCE_TESTING
-#include <iostream>
-#endif // IMAGEINFERENCE_TESTING
-
 #include "Macros.h"
 #include <stddef.h>
 #include <cmath>
 #include "Array.h"
 #include <new>
 #include <stdexcept>
+#include <iostream>
 
 namespace ImageInference
 {
