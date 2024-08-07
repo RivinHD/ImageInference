@@ -30,11 +30,14 @@
 #include <omp.h>
 #include <iostream>
 #include <stdexcept>
+#include <type_traits>
 #include <Fastor/Fastor.h>
 #ifdef LIBXSMM_AS_HEADER_ONLY
 #include <libxsmm_source.h>
 #else
 #include <libxsmm.h>
+#include <libxsmm_gemm.h>
+#include <libxsmm_typedefs.h>
 #endif // LIBXSMM_AS_HEADER_ONLY
 
 #define MAX_RESNET50_SIZE 122 * 122 * 64 * 2 * 2 // 967936 additional 2x for zero padding
@@ -58,7 +61,6 @@ namespace ImageInference
             std::vector<void *> modelWeights;
             ImageInference::types::ScalarType type;
             // TODO Libxsmm kernels with code dispatch see https://github.com/libxsmm/libxsmm/blob/main/documentation/libxsmm_mm.md#manual-code-dispatch
-            // TODO add zones { <code> } inside the block, so that no more needed kernels, images, batchNorms get deleted.
             // All the blocks start with a 1x1 kernel. Therefore no padding is required.
 
             template <typename T, size_t BlockSize>
@@ -944,6 +946,58 @@ namespace ImageInference
             const auto meanPtr = batchNorm.getMeanPointer();                  // Count = CountBlocks x CountElements
             const auto variancePtr = batchNorm.getProcessedVariancePointer(); // Count = CountBlocks x CountElements
 
+            // Kernel of shape BlockSizeChannel x BlockSizeCount
+            // Input of shape ImageWidth x BlockSizeChannel
+            // Output of shape outputWidth x BlockSizeCount === ImageWidth / Stride x BlockSizeCount
+
+            // If we use libxsmm directly we don't need to do add separately!
+            // If we use the leading dimension on the image we can use it as stride.
+            // With the leading dimension we skip the next blocks as they should be skipped by the stride.
+            constexpr int MM = outputWidth;
+            constexpr int KK = BlockSizeChannel;
+            constexpr int NN = BlockSizeCount;
+            constexpr int ldImage = KK * Stride;
+
+            constexpr char transa = 'N';
+            constexpr char transb = 'N';
+
+            libxsmm_datatype datatype;
+            if constexpr (std::is_same<T, float>::value)
+            {
+                datatype = LIBXSMM_DATATYPE(float);
+            }
+            else
+            {
+                std::cerr << "ResNet50::convBlock: type is currently not supported! Supported are float." << std::endl;
+                throw std::runtime_error("ResNet50::convBlock: type is currently not supported!");
+            }
+
+            const libxsmm_gemm_shape shape = libxsmm_create_gemm_shape(
+                NN /*required*/,
+                MM /*required*/,
+                KK /*required*/,
+                NN /*lda*/,
+                ldImage /*ldb*/,
+                NN /*ldc*/,
+                datatype, // input type
+                datatype, // input type
+                datatype, // output type
+                datatype  // outputtype
+            );
+            const libxsmm_bitfield flags = LIBXSMM_GEMM_FLAGS(transa, transb);
+
+            const libxsmm_gemmfunction gemmFunc = libxsmm_dispatch_gemm(
+                shape,
+                flags,
+                (libxsmm_bitfield)(LIBXSMM_PREFETCH) // Default from libxsmm_sgemm
+            );
+
+            if (gemmFunc == NULL)
+            {
+                std::cerr << "ResNet50::convBlock: libxsmm_dispatch_gemm failed!" << std::endl;
+                throw std::runtime_error("ResNet50::convBlock: libxsmm_dispatch_gemm failed!");
+            }
+
 #ifdef USE_OMP
 #pragma omp parallel for collapse(2)
 #endif // USE_OMP
@@ -970,38 +1024,20 @@ namespace ImageInference
                                 output.getOffset(iBCount, iHeight, outputWidth - 1, BlockSizeCount - 1 + output.paddingOffset);
 #endif // IMAGEINFERENCE_TESTING
 
-                                // Kernel of shape BlockSizeChannel x BlockSizeCount
-                                // Input of shape ImageWidth x BlockSizeChannel
-                                // Output of shape outputWidth x BlockSizeCount === ImageWidth / Stride x BlockSizeCount
+                                libxsmm_gemm_param param;
+                                param.a.primary = kernelPtr + kernelOffset;
+                                param.b.primary = imagePtr + imageOffset;
+                                param.c.primary = outputPtr + outputOffset;
 
-                                // If we use libxsmm directly we don't need to do add separately!
-                                // If we use the leading dimension on the image we can use it as stride.
-                                // With the leading dimension we skip the next blocks as they should be skipped by the stride.
-                                constexpr int MM = outputWidth;
-                                constexpr int KK = BlockSizeChannel;
-                                constexpr int NN = BlockSizeCount;
-                                constexpr int ldImage = KK * Stride;
-                                constexpr float alpha = 1.0;
-                                constexpr float beta = 1.0;
+                                LIBXSMM_XGEMM_PREFETCH(
+                                    datatype,
+                                    datatype,
+                                    NN,
+                                    MM,
+                                    KK,
+                                    param);
 
-                                constexpr char transa = 'N';
-                                constexpr char transb = 'N';
-
-                                libxsmm_sgemm(
-                                    &transa /*transa*/,
-                                    &transb /*transb*/,
-                                    &NN /*required*/,
-                                    &MM /*required*/,
-                                    &KK /*required*/,
-                                    &alpha /*alpha*/,
-                                    kernelPtr + kernelOffset /*required*/,
-                                    &NN /*lda*/,
-                                    imagePtr + imageOffset /*required*/,
-                                    &ldImage /*ldb*/,
-                                    &beta /*beta*/,
-                                    outputPtr + outputOffset /*required*/,
-                                    &NN /*ldc*/
-                                );
+                                gemmFunc(&param);
                             }
                         }
                     }
@@ -1063,6 +1099,52 @@ namespace ImageInference
             const auto variancePtr = batchNorm.getProcessedVariancePointer(); // Count = CountBlocks x CountElements
             const auto shortcutPtr = shortcut.getPointer();                   // ChannelBlocks x Height x Width x ChannelElements
 
+            // If we use libxsmm directly we don't need to do add separately!
+            constexpr const int MM = outputWidth;
+            constexpr const int KK = BlockSizeChannel;
+            constexpr const int NN = BlockSizeCount;
+            constexpr const int ldImage = KK;
+
+            constexpr const char transa = 'N';
+            constexpr const char transb = 'N';
+
+            libxsmm_datatype datatype;
+            if constexpr (std::is_same<T, float>::value)
+            {
+                datatype = LIBXSMM_DATATYPE(float);
+            }
+            else
+            {
+                std::cerr << "ResNet50::convBlock: type is currently not supported! Supported are float." << std::endl;
+                throw std::runtime_error("ResNet50::convBlock: type is currently not supported!");
+            }
+
+            const libxsmm_gemm_shape shape = libxsmm_create_gemm_shape(
+                NN /*required*/,
+                MM /*required*/,
+                KK /*required*/,
+                NN /*lda*/,
+                ldImage /*ldb*/,
+                NN /*ldc*/,
+                datatype, // input type
+                datatype, // input type
+                datatype, // output type
+                datatype  // outputtype
+            );
+            const libxsmm_bitfield flags = LIBXSMM_GEMM_FLAGS(transa, transb);
+
+            const libxsmm_gemmfunction gemmFunc = libxsmm_dispatch_gemm(
+                shape,
+                flags,
+                (libxsmm_bitfield)(LIBXSMM_PREFETCH) // Default from libxsmm_sgemm
+            );
+
+            if (gemmFunc == NULL)
+            {
+                std::cerr << "ResNet50::convBlock: libxsmm_dispatch_gemm failed!" << std::endl;
+                throw std::runtime_error("ResNet50::convBlock: libxsmm_dispatch_gemm failed!");
+            }
+
 #ifdef USE_OMP
 #pragma omp parallel for collapse(2)
 #endif // USE_OMP
@@ -1085,32 +1167,20 @@ namespace ImageInference
                                 // Input of shape ImageWidth x BlockSizeChannel
                                 // Output of shape outputWidth x BlockSizeCount === ImageWidth x BlockSizeCount
 
-                                // If we use libxsmm directly we don't need to do add separately!
-                                constexpr const int MM = outputWidth;
-                                constexpr const int KK = BlockSizeChannel;
-                                constexpr const int NN = BlockSizeCount;
-                                constexpr const int ldImage = KK;
-                                constexpr const float alpha = 1.0;
-                                constexpr const float beta = 1.0;
+                                libxsmm_gemm_param param;
+                                param.a.primary = kernelPtr + kernelOffset;
+                                param.b.primary = imagePtr + imageOffset;
+                                param.c.primary = outputPtr + outputOffset;
 
-                                constexpr const char transa = 'N';
-                                constexpr const char transb = 'N';
+                                LIBXSMM_XGEMM_PREFETCH(
+                                    datatype,
+                                    datatype,
+                                    NN,
+                                    MM,
+                                    KK,
+                                    param);
 
-                                libxsmm_sgemm(
-                                    &transa /*transa*/,
-                                    &transb /*transb*/,
-                                    &NN /*required*/,
-                                    &MM /*required*/,
-                                    &KK /*required*/,
-                                    &alpha /*alpha*/,
-                                    kernelPtr + kernelOffset /*required*/,
-                                    &NN /*lda*/,
-                                    imagePtr + imageOffset /*required*/,
-                                    &ldImage /*ldb*/,
-                                    &beta /*beta*/,
-                                    outputPtr + outputOffset /*required*/,
-                                    &NN /*ldc*/
-                                );
+                                gemmFunc(&param);
                             }
                         }
                     }
@@ -1185,6 +1255,92 @@ namespace ImageInference
             const auto projectionMeanPtr = projectionBatchNorm.getMeanPointer();                  // Count = CountBlocks x CountElements
             const auto projectionVariancePtr = projectionBatchNorm.getProcessedVariancePointer(); // Count = CountBlocks x CountElements
 
+            // If we use libxsmm directly we don't need to do add separately!
+            // Both input and output have the same stride therefore we can do a norma matrix multiplication.
+            constexpr const int MM = outputWidth;
+            constexpr const int KK = BlockSizeChannel;
+            constexpr const int NN = BlockSizeCount;
+            constexpr const int ldImage = KK;
+
+            constexpr const char transa = 'N';
+            constexpr const char transb = 'N';
+
+            libxsmm_datatype datatype;
+            if constexpr (std::is_same<T, float>::value)
+            {
+                datatype = LIBXSMM_DATATYPE(float);
+            }
+            else
+            {
+                std::cerr << "ResNet50::convBlock: type is currently not supported! Supported are float." << std::endl;
+                throw std::runtime_error("ResNet50::convBlock: type is currently not supported!");
+            }
+
+            const libxsmm_gemm_shape shape = libxsmm_create_gemm_shape(
+                NN /*required*/,
+                MM /*required*/,
+                KK /*required*/,
+                NN /*lda*/,
+                ldImage /*ldb*/,
+                NN /*ldc*/,
+                datatype, // input type
+                datatype, // input type
+                datatype, // output type
+                datatype  // output type
+            );
+            const libxsmm_bitfield flags = LIBXSMM_GEMM_FLAGS(transa, transb);
+
+            const libxsmm_gemmfunction gemmFunc = libxsmm_dispatch_gemm(
+                shape,
+                flags,
+                (libxsmm_bitfield)(LIBXSMM_PREFETCH) // Default from libxsmm_sgemm
+            );
+
+            if (gemmFunc == NULL)
+            {
+                std::cerr << "ResNet50::convBlock: libxsmm_dispatch_gemm failed!" << std::endl;
+                throw std::runtime_error("ResNet50::convBlock: libxsmm_dispatch_gemm failed!");
+            }
+
+            // Gemm setup for projection
+
+            // If we use libxsmm directly we don't need to do add separately!
+            // If we use the leading dimension on the image we can use it as stride.
+            // With the leading dimension we skip the next blocks as they should be skipped by the stride.
+            constexpr const int pMM = outputWidth;
+            constexpr const int pKK = BlockSizeChannel;
+            constexpr const int pNN = BlockSizeCount;
+            constexpr const int pLdImage = KK * Stride;
+
+            constexpr const char pTransa = 'N';
+            constexpr const char pTransb = 'N';
+
+            const libxsmm_gemm_shape pShape = libxsmm_create_gemm_shape(
+                pNN /*required*/,
+                pMM /*required*/,
+                pKK /*required*/,
+                pNN /*lda*/,
+                pLdImage /*ldb*/,
+                pNN /*ldc*/,
+                datatype, // input type
+                datatype, // input type
+                datatype, // output type
+                datatype  // output type
+            );
+            const libxsmm_bitfield pFlags = LIBXSMM_GEMM_FLAGS(pTransa, pTransb);
+
+            const libxsmm_gemmfunction pGemmFunc = libxsmm_dispatch_gemm(
+                pShape,
+                pFlags,
+                (libxsmm_bitfield)(LIBXSMM_PREFETCH) // Default from libxsmm_sgemm
+            );
+
+            if (pGemmFunc == NULL)
+            {
+                std::cerr << "ResNet50::convBlock: libxsmm_dispatch_gemm for projection failed!" << std::endl;
+                throw std::runtime_error("ResNet50::convBlock: libxsmm_dispatch_gemm for projection failed!");
+            }
+
 #ifdef USE_OMP
 #pragma omp parallel for collapse(2)
 #endif // USE_OMP
@@ -1207,33 +1363,20 @@ namespace ImageInference
                                 // Input of shape ImageWidth x BlockSizeChannel
                                 // Output of shape outputWidth x BlockSizeCount === ImageWidth / Stride x BlockSizeCount
 
-                                // If we use libxsmm directly we don't need to do add separately!
-                                // Both input and output have the same stride therefore we can do a norma matrix multiplication.
-                                constexpr const int MM = outputWidth;
-                                constexpr const int KK = BlockSizeChannel;
-                                constexpr const int NN = BlockSizeCount;
-                                constexpr const int ldImage = KK;
-                                constexpr const float alpha = 1.0;
-                                constexpr const float beta = 1.0;
+                                libxsmm_gemm_param param;
+                                param.a.primary = kernelPtr + kernelOffset;
+                                param.b.primary = imagePtr + imageOffset;
+                                param.c.primary = outputPtr + outputOffset;
 
-                                constexpr const char transa = 'N';
-                                constexpr const char transb = 'N';
+                                LIBXSMM_XGEMM_PREFETCH(
+                                    datatype,
+                                    datatype,
+                                    NN,
+                                    MM,
+                                    KK,
+                                    param);
 
-                                libxsmm_sgemm(
-                                    &transa /*transa*/,
-                                    &transb /*transb*/,
-                                    &NN /*required*/,
-                                    &MM /*required*/,
-                                    &KK /*required*/,
-                                    &alpha /*alpha*/,
-                                    kernelPtr + kernelOffset /*required*/,
-                                    &NN /*lda*/,
-                                    imagePtr + imageOffset /*required*/,
-                                    &ldImage /*ldb*/,
-                                    &beta /*beta*/,
-                                    outputPtr + outputOffset /*required*/,
-                                    &NN /*ldc*/
-                                );
+                                gemmFunc(&param);
                             }
                         }
                     }
@@ -1249,34 +1392,20 @@ namespace ImageInference
                         // Input of shape ImageWidth x BlockSizeChannel
                         // Output of shape outputWidth x BlockSizeCount === ImageWidth / Stride x BlockSizeCount
 
-                        // If we use libxsmm directly we don't need to do add separately!
-                        // If we use the leading dimension on the image we can use it as stride.
-                        // With the leading dimension we skip the next blocks as they should be skipped by the stride.
-                        constexpr const int MM = outputWidth;
-                        constexpr const int KK = BlockSizeChannel;
-                        constexpr const int NN = BlockSizeCount;
-                        constexpr const int ldImage = KK * Stride;
-                        constexpr const float alpha = 1.0;
-                        constexpr const float beta = 0.0;
+                        libxsmm_gemm_param pParam;
+                        pParam.a.primary = projectionKernelPtr + offsetProjectionKernel;
+                        pParam.b.primary = shortcutPtr + offsetShortcut;
+                        pParam.c.primary = projectionPtr + offsetProjection;
 
-                        constexpr const char transa = 'N';
-                        constexpr const char transb = 'N';
+                        LIBXSMM_XGEMM_PREFETCH(
+                            datatype,
+                            datatype,
+                            pNN,
+                            pMM,
+                            pKK,
+                            pParam);
 
-                        libxsmm_sgemm(
-                            &transa /*transa*/,
-                            &transb /*transb*/,
-                            &NN /*required*/,
-                            &MM /*required*/,
-                            &KK /*required*/,
-                            &alpha /*alpha*/,
-                            projectionKernelPtr + offsetProjectionKernel /*required*/,
-                            &NN /*lda*/,
-                            shortcutPtr + offsetShortcut /*required*/,
-                            &ldImage /*ldb*/,
-                            &beta /*beta*/,
-                            projectionPtr + offsetProjection /*required*/,
-                            &NN /*ldc*/
-                        );
+                        pGemmFunc(&pParam);
                     }
 
                     // At this point we completed a complete row of the projection.
