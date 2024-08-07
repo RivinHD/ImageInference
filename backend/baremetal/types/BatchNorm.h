@@ -29,11 +29,11 @@ namespace ImageInference
         class BatchNorm
         {
         private:
-            const T *gamma;
             const T *beta;
             const T *mean;
 
-            T *processedVariance;
+            /// @brief Combination of gamma and variance.
+            T *gammaVariance;
 
         public:
             /// @brief Initialize a batch normalization container.
@@ -42,36 +42,57 @@ namespace ImageInference
             BatchNorm(const void *gamma, const void *beta, const void *mean, const void *variance);
             ~BatchNorm();
 
-            const T *getGammaPointer();
+            const T *getGammaVariancePointer();
             const T *getBetaPointer();
             const T *getMeanPointer();
-            const T *getProcessedVariancePointer();
         };
 
         template <typename T, size_t TChannels>
         inline BatchNorm<T, TChannels>::BatchNorm(const void *gamma, const void *beta, const void *mean, const void *variance)
-            : gamma(static_cast<const T *>(gamma)), beta(static_cast<const T *>(beta)),
-              mean(static_cast<const T *>(mean))
+            : beta(static_cast<const T *>(beta)), mean(static_cast<const T *>(mean))
         {
             const T *inVariance = static_cast<const T *>(variance);
+            const T *inGamma = static_cast<const T *>(gamma);
 
-            processedVariance = new (std::align_val_t(PAGE_CACHE_ALIGN(T, TChannels))) T[TChannels];
-            for (size_t iChannel = 0; iChannel < TChannels; iChannel++)
+            gammaVariance = new (std::align_val_t(PAGE_CACHE_ALIGN(T, TChannels))) T[TChannels];
+
+            constexpr const size_t iterBlockSize = 64;
+            constexpr const size_t iterBlocks = TChannels / iterBlockSize;
+            constexpr const size_t processableBlocks = iterBlockSize * iterBlocks;
+
+#ifdef USE_OMP
+#pragma omp parallel for
+#endif // USE_OMP
+            for (size_t i = 0; i < processableBlocks; i += iterBlockSize)
             {
-                processedVariance[iChannel] = 1.0 / std::sqrt(inVariance[iChannel] + 1e-5);
+#ifdef USE_OMP
+#pragma omp simd
+#endif // USE_OMP
+                for (size_t j = 0; j < iterBlockSize; j++)
+                {
+                    gammaVariance[i + j] = inGamma[i + j] / std::sqrt(inVariance[i + j] + 1e-5);
+                }
+            }
+
+#ifdef USE_OMP
+#pragma omp simd
+#endif // USE_OMP
+            for (size_t i = processableBlocks; i < TChannels; i++)
+            {
+                gammaVariance[i] = inGamma[i] / std::sqrt(inVariance[i] + 1e-5);
             }
         }
 
         template <typename T, size_t TChannels>
         inline BatchNorm<T, TChannels>::~BatchNorm()
         {
-            operator delete[](processedVariance, std::align_val_t(PAGE_CACHE_ALIGN(T, TChannels)));
+            operator delete[](gammaVariance, std::align_val_t(PAGE_CACHE_ALIGN(T, TChannels)));
         }
 
         template <typename T, size_t TChannels>
-        inline const T *BatchNorm<T, TChannels>::getGammaPointer()
+        inline const T *BatchNorm<T, TChannels>::getGammaVariancePointer()
         {
-            return gamma;
+            return gammaVariance;
         }
 
         template <typename T, size_t TChannels>
@@ -84,12 +105,6 @@ namespace ImageInference
         inline const T *BatchNorm<T, TChannels>::getMeanPointer()
         {
             return mean;
-        }
-
-        template <typename T, size_t TChannels>
-        inline const T *BatchNorm<T, TChannels>::getProcessedVariancePointer()
-        {
-            return processedVariance;
         }
     } // namespace types
 } // namespace ImageInference

@@ -939,13 +939,12 @@ namespace ImageInference
                 {
                     for (size_t k = 0; k < 16; k++)
                     {
-                        float batchVar = 1 / std::sqrt(var[i].item<float>() + 1e-05);
+                        float gammaVar = gamma[i].item<float>() / std::sqrt(var[i].item<float>() + 1e-05);
                         out[0][i][j][k] = ImageInference::model::test::ResNet50Test::batchNorm(
                             in[0][i][j][k].item<float>(),
-                            gamma[i].item<float>(),
+                            gammaVar,
                             beta[i].item<float>(),
-                            mean[i].item<float>(),
-                            batchVar);
+                            mean[i].item<float>());
                     }
                 }
             }
@@ -1811,10 +1810,9 @@ namespace ImageInference
                             size_t channelOffset = iBChannel * blockSize + iChannel;
                             outputPtr[outOffset] = ImageInference::model::test::ResNet50Test::batchNorm(
                                 imagePtr[imageOffset],
-                                batchNorm.getGammaPointer()[channelOffset],
+                                batchNorm.getGammaVariancePointer()[channelOffset],
                                 batchNorm.getBetaPointer()[channelOffset],
-                                batchNorm.getMeanPointer()[channelOffset],
-                                batchNorm.getProcessedVariancePointer()[channelOffset]);
+                                batchNorm.getMeanPointer()[channelOffset]);
                             std::cerr << "Image: " << imagePtr[imageOffset] << " Gamma: " << gammaPtr[channelOffset] << " Beta: " << betaPtr[channelOffset] << " Mean: " << meanPtr[channelOffset] << " Var: " << varPtr[channelOffset] << " Output: " << outputPtr[outOffset] << std::endl
                                       << "Indices: " << iBChannel << " " << iHeight << " " << iWidth << " " << iChannel << std::endl;
                             // outputPtr[outOffset] = imagePtr[imageOffset] * gammaPtr[channelOffset] + betaPtr[channelOffset];

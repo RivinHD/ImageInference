@@ -144,7 +144,7 @@ namespace ImageInference
             static T relu(T value);
 
             template <typename T>
-            static T batchNorm(T value, T gamma, T beta, T mean, T batchVariance);
+            static T batchNorm(T value, T gammaVariance, T beta, T mean);
 
         public:
             /// @brief Initialize the model with the weights
@@ -939,12 +939,11 @@ namespace ImageInference
 
             auto outputPtr = output.getPointer() + output.paddingOffset; // We skip the padding as we want to start at the data section.
 
-            const auto imagePtr = image.getPointer();                         // ChannelBlocks x Height x Width x ChannelElements
-            const auto kernelPtr = kernel.getPointer();                       // CountBlocks x ChannelBlocks x Height x Width x ChannelElements x CountElements
-            const auto gammaPtr = batchNorm.getGammaPointer();                // Count = CountBlocks x CountElements
-            const auto betaPtr = batchNorm.getBetaPointer();                  // Count = CountBlocks x CountElements
-            const auto meanPtr = batchNorm.getMeanPointer();                  // Count = CountBlocks x CountElements
-            const auto variancePtr = batchNorm.getProcessedVariancePointer(); // Count = CountBlocks x CountElements
+            const auto imagePtr = image.getPointer();                          // ChannelBlocks x Height x Width x ChannelElements
+            const auto kernelPtr = kernel.getPointer();                        // CountBlocks x ChannelBlocks x Height x Width x ChannelElements x CountElements
+            const auto gammaVariancePtr = batchNorm.getGammaVariancePointer(); // Count = CountBlocks x CountElements
+            const auto betaPtr = batchNorm.getBetaPointer();                   // Count = CountBlocks x CountElements
+            const auto meanPtr = batchNorm.getMeanPointer();                   // Count = CountBlocks x CountElements
 
             // Kernel of shape BlockSizeChannel x BlockSizeCount
             // Input of shape ImageWidth x BlockSizeChannel
@@ -1055,10 +1054,9 @@ namespace ImageInference
                             const size_t offsetCount = iBCount * BlockSizeCount + iCount;
                             outputPtr[offsetOutput] = relu<T>(ResNet50::batchNorm<T>(
                                 outputPtr[offsetOutput],
-                                gammaPtr[offsetCount],
+                                gammaVariancePtr[offsetCount],
                                 betaPtr[offsetCount],
-                                meanPtr[offsetCount],
-                                variancePtr[offsetCount]));
+                                meanPtr[offsetCount]));
                         }
                     }
                 }
@@ -1091,13 +1089,12 @@ namespace ImageInference
 
             auto outputPtr = output.getPointer() + output.paddingOffset; // We skip the padding as we want to start at the data section.
 
-            const auto imagePtr = image.getPointer();                         // ChannelBlocks x Height x Width x ChannelElements
-            const auto kernelPtr = kernel.getPointer();                       // CountBlocks x ChannelBlocks x Height x Width x ChannelElements x CountElements
-            const auto gammaPtr = batchNorm.getGammaPointer();                // Count = CountBlocks x CountElements
-            const auto betaPtr = batchNorm.getBetaPointer();                  // Count = CountBlocks x CountElements
-            const auto meanPtr = batchNorm.getMeanPointer();                  // Count = CountBlocks x CountElements
-            const auto variancePtr = batchNorm.getProcessedVariancePointer(); // Count = CountBlocks x CountElements
-            const auto shortcutPtr = shortcut.getPointer();                   // ChannelBlocks x Height x Width x ChannelElements
+            const auto imagePtr = image.getPointer();                          // ChannelBlocks x Height x Width x ChannelElements
+            const auto kernelPtr = kernel.getPointer();                        // CountBlocks x ChannelBlocks x Height x Width x ChannelElements x CountElements
+            const auto gammaVariancePtr = batchNorm.getGammaVariancePointer(); // Count = CountBlocks x CountElements
+            const auto betaPtr = batchNorm.getBetaPointer();                   // Count = CountBlocks x CountElements
+            const auto meanPtr = batchNorm.getMeanPointer();                   // Count = CountBlocks x CountElements
+            const auto shortcutPtr = shortcut.getPointer();                    // ChannelBlocks x Height x Width x ChannelElements
 
             // If we use libxsmm directly we don't need to do add separately!
             constexpr const int MM = outputWidth;
@@ -1199,10 +1196,9 @@ namespace ImageInference
                             const size_t offsetCount = iBCount * BlockSizeCount + iCount;
                             T batchNormValue = ResNet50::batchNorm<T>(
                                 outputPtr[offsetOutput],
-                                gammaPtr[offsetCount],
+                                gammaVariancePtr[offsetCount],
                                 betaPtr[offsetCount],
-                                meanPtr[offsetCount],
-                                variancePtr[offsetCount]);
+                                meanPtr[offsetCount]);
                             outputPtr[offsetOutput] = relu<T>(batchNormValue + shortcutPtr[offsetShortcut]);
                         }
                     }
@@ -1242,18 +1238,16 @@ namespace ImageInference
 
             auto outputPtr = output.getPointer() + output.paddingOffset; // We skip the padding as we want to start at the data section.
 
-            const auto imagePtr = image.getPointer();                                             // ChannelBlocks x Height x Width x ChannelElements
-            const auto kernelPtr = kernel.getPointer();                                           // CountBlocks x ChannelBlocks x Height x Width x ChannelElements x CountElements
-            const auto gammaPtr = batchNorm.getGammaPointer();                                    // Count = CountBlocks x CountElements
-            const auto betaPtr = batchNorm.getBetaPointer();                                      // Count = CountBlocks x CountElements
-            const auto meanPtr = batchNorm.getMeanPointer();                                      // Count = CountBlocks x CountElements
-            const auto variancePtr = batchNorm.getProcessedVariancePointer();                     // Count = CountBlocks x CountElements
-            const auto shortcutPtr = shortcut.getPointer();                                       // ChannelBlocks x Height x Width x ChannelElements
-            const auto projectionKernelPtr = projectionKernel.getPointer();                       // CountBlocks x CountBlocks x 1 x 1 x CountElements x CountElements
-            const auto projectionGammaPtr = projectionBatchNorm.getGammaPointer();                // Count = CountBlocks x CountElements
-            const auto projectionBetaPtr = projectionBatchNorm.getBetaPointer();                  // Count = CountBlocks x CountElements
-            const auto projectionMeanPtr = projectionBatchNorm.getMeanPointer();                  // Count = CountBlocks x CountElements
-            const auto projectionVariancePtr = projectionBatchNorm.getProcessedVariancePointer(); // Count = CountBlocks x CountElements
+            const auto imagePtr = image.getPointer();                                              // ChannelBlocks x Height x Width x ChannelElements
+            const auto kernelPtr = kernel.getPointer();                                            // CountBlocks x ChannelBlocks x Height x Width x ChannelElements x CountElements
+            const auto gammaVariancePtr = batchNorm.getGammaVariancePointer();                     // Count = CountBlocks x CountElements
+            const auto betaPtr = batchNorm.getBetaPointer();                                       // Count = CountBlocks x CountElements
+            const auto meanPtr = batchNorm.getMeanPointer();                                       // Count = CountBlocks x CountElements
+            const auto shortcutPtr = shortcut.getPointer();                                        // ChannelBlocks x Height x Width x ChannelElements
+            const auto projectionKernelPtr = projectionKernel.getPointer();                        // CountBlocks x CountBlocks x 1 x 1 x CountElements x CountElements
+            const auto projectionGammaVariancePtr = projectionBatchNorm.getGammaVariancePointer(); // Count = CountBlocks x CountElements
+            const auto projectionBetaPtr = projectionBatchNorm.getBetaPointer();                   // Count = CountBlocks x CountElements
+            const auto projectionMeanPtr = projectionBatchNorm.getMeanPointer();                   // Count = CountBlocks x CountElements
 
             // If we use libxsmm directly we don't need to do add separately!
             // Both input and output have the same stride therefore we can do a norma matrix multiplication.
@@ -1423,17 +1417,15 @@ namespace ImageInference
 
                             const T batchNormValue = ResNet50::batchNorm<T>(
                                 outputPtr[offsetOutput],
-                                gammaPtr[offsetCount],
+                                gammaVariancePtr[offsetCount],
                                 betaPtr[offsetCount],
-                                meanPtr[offsetCount],
-                                variancePtr[offsetCount]);
+                                meanPtr[offsetCount]);
 
                             const T projectedValue = ResNet50::batchNorm<T>(
                                 projectionPtr[offsetProject],
-                                projectionGammaPtr[offsetCount],
+                                projectionGammaVariancePtr[offsetCount],
                                 projectionBetaPtr[offsetCount],
-                                projectionMeanPtr[offsetCount],
-                                projectionVariancePtr[offsetCount]);
+                                projectionMeanPtr[offsetCount]);
 
                             outputPtr[offsetOutput] = relu<T>(batchNormValue + projectedValue);
                         }
@@ -1610,9 +1602,9 @@ namespace ImageInference
 #pragma omp declare simd
 #endif // USE_OMP
         template <typename T>
-        inline T ResNet50::batchNorm(const T value, const T gamma, const T beta, const T mean, const T processedVariance)
+        inline T ResNet50::batchNorm(const T value, const T gammaVariance, const T beta, const T mean)
         {
-            return gamma * (value - mean) * processedVariance + beta;
+            return gammaVariance * (value - mean) + beta;
         }
     } // namespace model
 } // namespace ImageInference

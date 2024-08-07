@@ -49,9 +49,9 @@ float ImageInference::model::test::ResNet50Test::relu(float input)
     return ImageInference::model::ResNet50::relu<float>(input);
 }
 
-float ImageInference::model::test::ResNet50Test::batchNorm(float input, float gamma, float beta, float mean, float variance)
+float ImageInference::model::test::ResNet50Test::batchNorm(float input, float gammaVariance, float beta, float mean)
 {
-    return ImageInference::model::ResNet50::batchNorm<float>(input, gamma, beta, mean, variance);
+    return ImageInference::model::ResNet50::batchNorm<float>(input, gammaVariance, beta, mean);
 }
 
 float *ImageInference::model::test::ResNet50Test::getWeight(ImageInference::model::ResNet50 resnet50, size_t index)
