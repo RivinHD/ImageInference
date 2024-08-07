@@ -31,7 +31,11 @@
 #include <iostream>
 #include <stdexcept>
 #include <Fastor/Fastor.h>
+#ifdef LIBXSMM_AS_HEADER_ONLY
+#include <libxsmm_source.h>
+#else
 #include <libxsmm.h>
+#endif // LIBXSMM_AS_HEADER_ONLY
 
 #define MAX_RESNET50_SIZE 122 * 122 * 64 * 2 * 2 // 967936 additional 2x for zero padding
 #define RESNET50_BLOCK_SIZE 32

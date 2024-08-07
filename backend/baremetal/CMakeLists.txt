@@ -64,7 +64,7 @@ if(NOT PYTHON_EXECUTABLE)
     resolve_python_executable()
 endif()
 
-set(_common_compile_options -Wno-deprecated-declarations -fPIC -fopenmp -lxsmm -lblas -ldl -Wall -Wextra -Wpedantic -Wdangling-pointer=2)
+set(_common_compile_options -Wno-deprecated-declarations -fPIC -fopenmp -lxsmm -lblas -ldl -Wall -Wextra -Wpedantic)
 
 # Let files say "include <executorch/path/to/header.h>".
 set(_common_include_directories ${EXECUTORCH_ROOT}/..)
@@ -79,6 +79,8 @@ target_include_directories(executorch INTERFACE ${_common_include_directories})
 add_library(Fastor_HEADER_ONLY INTERFACE)
 target_include_directories(Fastor_HEADER_ONLY INTERFACE ${FASTOR_ROOT})
 
+add_library(libxsmm_HEADER_ONLY INTERFACE)
+target_include_directories(libxsmm_HEADER_ONLY INTERFACE ${LIBXSMM_ROOT}/include)
 add_library(libxsmm SHARED IMPORTED)
 target_include_directories(libxsmm INTERFACE ${LIBXSMM_ROOT}/include)
 file(REAL_PATH ${LIBXSMM_ROOT}/lib/libxsmm.so LIBXSMM_LIB_PATH)
@@ -164,7 +166,8 @@ if(NOT ANDROID)
     target_link_libraries(baremetal_ops_aot_lib PUBLIC torch)
     target_link_libraries(baremetal_ops_aot_lib PUBLIC OpenMP::OpenMP_CXX)
     target_link_libraries(baremetal_ops_aot_lib PUBLIC Fastor_HEADER_ONLY)
-    target_link_libraries(baremetal_ops_aot_lib PUBLIC libxsmm)
+    target_link_libraries(baremetal_ops_aot_lib PUBLIC libxsmm_HEADER_ONLY)
+    target_compile_definitions(baremetal_ops_aot_lib PRIVATE LIBXSMM_AS_HEADER_ONLY)
     target_include_directories(
         baremetal_ops_aot_lib PUBLIC ${_common_include_directories}
     )

@@ -31,7 +31,6 @@ class custom_resnet50(torch.nn.Module):
     def __init__(self, weights: WeightsEnum):
         super(custom_resnet50, self).__init__()
 
-        self._torch_model = models.resnet50(weights=weights)
         self._parameters = export_utils.getResnet50Weights(weights)
         self.weight_list = [weight.data for weight in self.parameters()]
 
