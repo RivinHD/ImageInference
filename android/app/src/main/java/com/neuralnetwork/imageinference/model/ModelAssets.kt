@@ -94,6 +94,9 @@ class ModelAssets(assets: AssetManager, applicationInfo: ApplicationInfo) {
         Model("resnet50v15_xnnpack_int8.pte",
             "Resnet50v1.5 (CPU, Int8)",
             ModelType.RESNET50v15),
+        Model("resnet50v15_custom_fp32.pte",
+            "Resnet50v1.5 (Custom, FP32)",
+            ModelType.RESNET50v15),
     )
 
     /**
