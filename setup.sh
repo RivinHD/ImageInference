@@ -39,7 +39,7 @@ git submodule sync
 git submodule update --init --recursive
 
 # Enable conda environment
-eval "$(conda shell.bash hook)"
+eval "$(${BasePath}/miniconda3/bin/conda shell.bash hook)"
 conda activate imageinfernce
 
 # Setup the configuartion

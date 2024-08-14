@@ -43,16 +43,9 @@ namespace custom
         using ImageInference::model::ResNet50;
         using torch::executor::RuntimeContext;
 
-        namespace
-        {
-            std::string to_string(ARRAY_REF shape);
-            void check_preconditions(const Tensor &in, TensorList weights, Tensor &out);
-            void check_weights(TensorList weights);
-        } // namespace
+        Tensor &resnet50_out_impl(const Tensor &in, const Tensor &weights, Tensor &out);
 
-        Tensor &resnet50_out_impl(const Tensor &in, TensorList weights, Tensor &out);
-
-        Tensor &resnet50_out_impl(RuntimeContext &ctx, const Tensor &in, TensorList weights, Tensor &out);
+        Tensor &resnet50_out_impl(RuntimeContext &ctx, const Tensor &in, const Tensor &weights, Tensor &out);
     } // namespace native
 } // namespace custom
 

@@ -66,11 +66,13 @@ def quantize(model, param_bw, output_bw, quantType: QuantizationDataType) -> tor
 
     print(f"Quantizing the model with {param_bw} bits for parameters" +
           f"and {output_bw} bits for output of type {quantType}")
+    sys.stdout.flush()
 
     sim.compute_encodings(forward_pass_callback=calibrate,
                           forward_pass_callback_args=None)
 
     print("Finished quantizing the model")
+    sys.stdout.flush()
 
     return sim.model
 
@@ -100,6 +102,7 @@ if __name__ == "__main__":
             print(f"Processing model {quantType}")
             for size in image_sizes:
                 print(f"Processing image size {size} x {size}")
+                sys.stdout.flush()
                 input_tensor = torch.rand(1, 3, size, size)
                 data[quantType][size]["average"] = 0
                 data[quantType][size]["min"] = float("inf")
@@ -113,9 +116,7 @@ if __name__ == "__main__":
                     data[quantType][size]["average"] += delta_time
                     data[quantType][size]["min"] = min(data[quantType][size]["min"], delta_time)
                     data[quantType][size]["max"] = max(data[quantType][size]["max"], delta_time)
-                    if i % 100 == 0:
-                        print(f"Progress: {i}/{EVALUATE_REPETITIONS}")
                 data[quantType][size]["average"] /= EVALUATE_REPETITIONS
 
-    with open("results.json", "w") as file:
-        json.dump(data, file, indent=4)
+                with open("results.json", "w") as file:
+                    json.dump(data, file, indent=4)

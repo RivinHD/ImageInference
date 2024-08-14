@@ -56,8 +56,8 @@ MODELS_TO_AOT_LIB = {
 }
 
 BACKEND_TO_DIRECTORY = {
-    "CPU (XNNPACK)": "execu_python.xnnpack",
-    "GPU (VULKAN)": "execu_python.vulkan",
+    "XNNPACK (CPU)": "execu_python.xnnpack",
+    "VULKAN (GPU)": "execu_python.vulkan",
     HTP_QUALCOMM: "execu_python.htp",
     CUSTOM: "baremetal",
 }

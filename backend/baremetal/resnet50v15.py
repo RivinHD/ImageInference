@@ -24,18 +24,8 @@ from torchvision.models import ResNet50_Weights
 from torchvision.models._api import WeightsEnum
 from executorch.examples.portable.utils import export_to_exec_prog
 from executorch.exir import EdgeCompileConfig
+from .resnet50v15_module import custom_resnet50
 from . import export_utils
-
-
-class custom_resnet50(torch.nn.Module):
-    def __init__(self, weights: WeightsEnum):
-        super(custom_resnet50, self).__init__()
-
-        self._parameters = export_utils.getResnet50Weights(weights)
-        self.weight_list = [weight.data for weight in self.parameters()]
-
-    def forward(self, a):
-        return torch.ops.baremetal_ops.resnet50.default(a, self.weight_list)
 
 
 if __name__ == "__main__":
@@ -84,13 +74,15 @@ if __name__ == "__main__":
         return torch.zeros([1000])
 
     # Lowering the Model with Executorch
-    model = custom_resnet50(weights=ResNet50_Weights.IMAGENET1K_V2)
+    parameters = export_utils.getResnet50Weights(ResNet50_Weights.IMAGENET1K_V2)
+    model = custom_resnet50(export_utils.compressParameters(parameters))
     sample_input = (torch.randn(1, 3, 224, 224),)
     exec_program = export_to_exec_prog(
         model,
         sample_input,
         edge_compile_config=EdgeCompileConfig(_check_ir_validity=False)
     )
+    exec_program.dump_executorch_program()
 
     quantize_tag = args.quantize if args.quantize != "false" else "fp32"
     os.makedirs("models-out", exist_ok=True)

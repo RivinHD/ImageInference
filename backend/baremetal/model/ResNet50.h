@@ -49,6 +49,9 @@ namespace ImageInference::model::test
     class ResNet50Test;
 }
 #endif // IMAGEINFERENCE_TESTING
+#ifdef DEBUG
+
+#endif // DEBUG
 
 namespace ImageInference
 {
@@ -83,6 +86,9 @@ namespace ImageInference
                 ImageInference::types::Image<T, 0, BlockSize, 1024, 14, 14> &input,
                 ImageInference::types::Image<T, 0, BlockSize, 2048, 7, 7> &output);
 
+#ifdef IMAGEINFERENCE_BENCHMARK
+        public:
+#endif // IMAGEINFERENCE_BENCHMARK
             template <size_t Stride, size_t OutPadding, size_t InPadding,
                       typename T, size_t BlockSizeCount, size_t BlockSizeChannel,
                       size_t ImageChannels, size_t ImageHeight, size_t ImageWidth,

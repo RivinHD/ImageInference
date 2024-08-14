@@ -45,3 +45,25 @@ def getResnet50Weights(weights: WeightsEnum) -> Dict[str, Optional[Parameter]]:
     parameters.update(getBottleneckMeanAndVar(resnet50.layer4[2], "layer4.2"))
 
     return parameters
+
+
+def compressParameters(parameters: Dict[str, Optional[Parameter]]) -> Dict[str, Optional[Parameter]]:
+    """
+    Compress all parameters into a single parameter with the key 'weight'
+
+    Args:
+        parameters (Dict[str, Optional[Parameter]]): The parameters to compress.
+
+    Returns:
+        Dict[str, Optional[Parameter]]: The compressed parameters with key 'weight'.
+    """
+
+    total_length = sum(param.numel() for param in parameters.values())
+    weightCompressed = torch.empty(total_length, dtype=torch.float32)
+    offset = 0
+    for param in parameters.values():
+        numel = param.numel()
+        weightCompressed[offset: offset + numel] = param.data.view([param.numel()])
+        offset += numel
+
+    return {"weight": Parameter(weightCompressed)}

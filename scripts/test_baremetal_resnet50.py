@@ -25,18 +25,12 @@ from torchvision.models import ResNet50_Weights
 from torchvision.models._api import WeightsEnum
 from executorch.examples.portable.utils import export_to_exec_prog
 from executorch.exir import EdgeCompileConfig
+from typing import Dict, Optional
+from torch.nn.parameter import Parameter
 
-
-class custom_resnet50(torch.nn.Module):
-    def __init__(self, weights: WeightsEnum):
-        super(custom_resnet50, self).__init__()
-
-        self._torch_model = models.resnet50(weights=weights)
-        self._parameters = self._torch_model._parameters
-        self.weight_list = [weight.data for weight in self.parameters()]
-
-    def forward(self, a):
-        return torch.ops.baremetal_ops.resnet50.default(a, self.weight_list)
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from backend.baremetal.export_utils import getResnet50Weights, compressParameters
+from backend.baremetal.resnet50v15_module import custom_resnet50
 
 
 if __name__ == "__main__":
@@ -50,13 +44,6 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    libpath = os.path.join(os.path.dirname(__file__), "..", "submodules", "executorch", "cmake-out", "lib")
-    sys.path.append(libpath)
-    os.environ["LD_LIBRARY_PATH"] += f";{libpath}"
-    libdependencies = [
-        os.path.join(libpath, "libxsmm.so.1")
-    ]
-
     print("Starting the testing process.")
 
     # See if we have custom op  baremetal_ops::resnet50.out registered
@@ -69,8 +56,6 @@ if __name__ == "__main__":
     if not has_out_ops:
         if args.so_library:
             print(f"Loading library at {args.so_library}")
-            for lib in libdependencies:
-                torch.ops.load_library(lib)
             torch.ops.load_library(args.so_library)
         else:
             raise RuntimeError(
@@ -80,19 +65,19 @@ if __name__ == "__main__":
                 "libcustom_ops_aot_lib.[so|dylib]."
             )
 
-    op = torch.ops.baremetal_ops.test_resnet50_conv3x3_channels16x16.default
-
     # Lowering the Model with Executorch
-    model = custom_resnet50(weights=ResNet50_Weights.IMAGENET1K_V2).eval()
-    torch_model = model._torch_model.eval()
+    parameters = getResnet50Weights(ResNet50_Weights.IMAGENET1K_V2)
+    model = custom_resnet50(compressParameters(parameters)).eval()
+    torch_model = models.resnet50(weights=ResNet50_Weights.IMAGENET1K_V2).eval()
 
     torch.manual_seed(123)
 
-    with torch.no_grad():
-        input = torch.randn(1, 3, 224, 224)
-        output = model(input.clone().detach())
+    for i in range(100):
+        with torch.no_grad():
+            input = torch.randn(1, 3, 224, 224)
+            output = model(input.clone().detach())
 
-        expected_output = torch_model(input)
-        torch.testing.assert_close(output, expected_output[0], rtol=1, atol=1e-1)
+            expected_output = torch_model(input)
+            torch.testing.assert_close(output, expected_output[0])
 
     print("Successfully finished testing.")

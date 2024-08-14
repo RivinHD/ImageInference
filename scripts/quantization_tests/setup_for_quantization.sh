@@ -34,8 +34,17 @@ BasePath="$(dirname -- "$BasePath")" # go up one directory
 BasePath="$(dirname -- "$BasePath")" # go up one directory
 echo "Setup the project with BasePath at $BasePath"
 
+# Installing Miniconda
+cd "${BasePath}"
+if [ ! -d "${BasePath}/miniconda3" ]; then
+    wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+    bash Miniconda3-latest-Linux-x86_64.sh -b -f
+    rm Miniconda3-latest-Linux-x86_64.sh
+fi
+
+# Create conda environment
+eval "$(${BasePath}/miniconda3/bin/conda shell.bash hook)"
 conda create -yn imageinfernceAimetQuantize python=3.10.0
-eval "$(conda shell.bash hook)"
 conda activate imageinfernceAimetQuantize
 
 pip install aimet-torch

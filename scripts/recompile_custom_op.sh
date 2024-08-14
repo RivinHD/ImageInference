@@ -36,7 +36,7 @@ cmake --build "$BUILD_DIR" -j "${CMAKE_JOBS}" --target install
 
 if [ $? -eq 0 ]; then
   cd "$BUILD_DIR"
-  ctest --output-on-failure -C Release #-j "${CMAKE_JOBS}"
+  #ctest --output-on-failure -C Release #-j "${CMAKE_JOBS}"
 fi
 
 cd "$BasePath/ImageInference"

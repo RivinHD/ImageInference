@@ -48,8 +48,8 @@ git submodule update --init --recursive
 
 
 # Create conda environment
+eval "$(${BasePath}/miniconda3/bin/conda shell.bash hook)"
 conda create -yn imageinfernce python=3.10.0
-eval "$(conda shell.bash hook)"
 conda activate imageinfernce
 cd submodules/executorch
 if [ -f "pip-out/temp.linux-x86_64-cpython-310/cmake-out/buck2-bin/buck2-3bbde7daa94987db468d021ad625bc93dc62ba7fcb16945cb09b64aab077f284" ]; then
@@ -91,7 +91,7 @@ if [ ! -d "${BasePath}/android/ndk/android-ndk-r26d" ]; then
 fi
 
 # Initalize the config variables needed for the rest of the installation
-cd ImageInference
+cd "${BasePath}/ImageInference"
 source config.sh
 
 # Number of available processors
@@ -103,13 +103,45 @@ fi
 
 # Install libxsmm
 cd "${BasePath}/ImageInference/submodules/libxsmm"
-make -j "${CMAKE_JOBS}" STATIC=0
+make -j "${CMAKE_JOBS}" STATIC=0 \
+  BLAS=0\
+  LIBXSMM_NO_BLAS=1
+
+# Cross compile for aarch64 -> does not work for andoird :(
+# Empty target to build with compiler default
+# cd "${BasePath}/ImageInference/submodules/libxsmm"
+# make -j "${CMAKE_JOBS}" STATIC=0 \
+#   BLDDIR=obj_aarch64 \
+#   OUTDIR=lib_aarch64 \
+#   BINDIR=bin_aarch64 \
+#   CC=aarch64-linux-gnu-gcc \
+#   AR=aarch64-linux-gnu-ar \
+#   CXX=aarch64-linux-gnu-g++ \
+#   FORTRAN=0 \
+#   TARGET=\
+#   BLAS=0\
+#   LIBXSMM_NO_BLAS=1
+  
 
 # Install catch2
 cd "${BasePath}/ImageInference/submodules/catch2"
 cmake . \
   -DCMAKE_INSTALL_PREFIX=.build \
   -DCMAKE_BUILD_TYPE=Release \
+  -DBUILD_TESTING=OFF \
+  -B.build 
+cmake --build .build -j "${CMAKE_JOBS}" --target install
+
+# Install benchmark
+cd "${BasePath}/ImageInference/submodules/benchmark"
+if ! grep -q 'add_compile_definitions(_GLIBCXX_USE_CXX11_ABI=0)' CMakeLists.txt; then
+  sed -i '/if (MSVC)/i add_compile_definitions(_GLIBCXX_USE_CXX11_ABI=0)' CMakeLists.txt
+fi
+cmake . \
+  -DCMAKE_INSTALL_PREFIX=.build \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DBENCHMARK_DOWNLOAD_DEPENDENCIES=ON \
+  -DCMAKE_CXX_STANDARD=17 \
   -B.build 
 cmake --build .build -j "${CMAKE_JOBS}" --target install
 
@@ -185,21 +217,35 @@ if ! grep -q 'if(EXECUTORCH_BUILD_IMAGEINFERENCE_BAREMETAL)' extension/android/C
     sed -i '/add_library(executorch_jni SHARED jni\/jni_layer.cpp)/i \
 option(EXECUTORCH_BUILD_IMAGEINFERENCE_BAREMETAL "Include the imageinference baremetal custome kernels" OFF)\
 if(EXECUTORCH_BUILD_IMAGEINFERENCE_BAREMETAL)\
+  if(NOT FASTOR_ROOT)\
+    set(FASTOR_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../../../fastor)\
+  endif()\
+  if(NOT LIBXSMM_ROOT)\
+    set(LIBXSMM_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../../../libxsmm)\
+  endif()\
   list(APPEND link_libraries baremetal_ops_lib imageinference_baremetal_kernels)\
   target_link_options_shared_lib(baremetal_ops_lib)\
-  find_package(OpenMP REQUIRED) \
+  find_package(OpenMP REQUIRED)\
   list(APPEND link_libraries -static-openmp -fopenmp)\
   add_library(Fastor_HEADER_ONLY INTERFACE)\
   target_include_directories(Fastor_HEADER_ONLY INTERFACE ${FASTOR_ROOT})\
-  add_compile_definitions(FASTOR_USE_LIBXSMM)\
-  add_library(libxsmm SHARED IMPORTED)\
-  target_include_directories(libxsmm INTERFACE ${LIBXSMM_ROOT}/include)\
-  set_target_properties(libxsmm PROPERTIES IMPORTED_LOCATION ${LIBXSMM_ROOT}/lib/libxsmm.so)\
-  target_link_libraries(Fastor_HEADER_ONLY INTERFACE libxsmm)\
-  list(APPEND link_libraries Fastor_HEADER_ONLY libxsmm)\
-  list(APPEND _common_compile_options -lxsmm -lblas -ldl)\
+  add_library(libxsmm_HEADER_ONLY INTERFACE)
+  target_include_directories(libxsmm_HEADER_ONLY INTERFACE ${LIBXSMM_ROOT}/include)\
+  target_include_directories(libxsmm_HEADER_ONLY INTERFACE ${LIBXSMM_ROOT}/src)\
+  list(APPEND link_libraries Fastor_HEADER_ONLY libxsmm_HEADER_ONLY)\
 endif()\n' extension/android/CMakeLists.txt
 fi
+
+# We cannot use the linux librarise on android -> dlopen failed: cannot find verneed/verdef for version index=32770 referenced by symbol "_res" at "/data/app/com.neuralnetwork.imageinference-bgb37vNahwYgSDwBwYZy-A==/lib/arm64/libc6.so"
+# Register dependencies into the android app
+# if ! grep -q 'NativeLoader.loadLibrary("xsmm")' extension/android/src/main/java/org/pytorch/executorch/NativePeer.java; then
+#     sed -i '/\/\/ Loads libexecutorch.so from jniLibs/i \
+#     // Load dependencies of libexecutorch.so\
+#     NativeLoader.loadLibrary("m");\
+#     NativeLoader.loadLibrary("c");\
+#     NativeLoader.loadLibrary("ld-linux-aarch64");\
+#     NativeLoader.loadLibrary("xsmm");\n' extension/android/src/main/java/org/pytorch/executorch/NativePeer.java
+# fi
 
 # Build the android extension
 cmake extension/android \
@@ -219,8 +265,15 @@ yes | cp "cmake-android-out/extension/android/libexecutorch_jni.so" \
     "${BasePath}/ImageInference/android/app/src/main/jniLibs/${ANDROID_ABI}/libexecutorch.so"
 yes | cp "cmake-android-out/lib/libqnn_executorch_backend.so" \
    "${BasePath}/ImageInference/android/app/src/main/jniLibs/${ANDROID_ABI}"
-yes | cp "cmake-android-out/lib/libxsmm.so*" \
-   "${BasePath}/ImageInference/android/app/src/main/jniLibs/${ANDROID_ABI}"
+# We cannot use the linux librarise on android -> dlopen failed: cannot find verneed/verdef for version index=32770 referenced by symbol "_res" at "/data/app/com.neuralnetwork.imageinference-bgb37vNahwYgSDwBwYZy-A==/lib/arm64/libc6.so"
+# yes | cp "cmake-android-out/lib/libxsmm.so"* \
+#    "${BasePath}/ImageInference/android/app/src/main/jniLibs/${ANDROID_ABI}"
+# yes | cp "cmake-android-out/lib/libm.so"* \
+#    "${BasePath}/ImageInference/android/app/src/main/jniLibs/${ANDROID_ABI}"
+# yes | cp "cmake-android-out/lib/libc.so"* \
+#    "${BasePath}/ImageInference/android/app/src/main/jniLibs/${ANDROID_ABI}"
+# for f in "cmake-android-out/lib/ld-linux-aarch64.so"*; do yes | cp "$f" \
+#    "${BasePath}/ImageInference/android/app/src/main/jniLibs/${ANDROID_ABI}/lib$f"; done
 yes | cp "${QNN_SDK_ROOT}/lib/aarch64-android/libQnnHtp.so" \
     "${QNN_SDK_ROOT}/lib/aarch64-android/libQnnSystem.so" \
     "${QNN_SDK_ROOT}/lib/aarch64-android/libQnnHtpV69Stub.so" \

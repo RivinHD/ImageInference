@@ -65,6 +65,7 @@ if __name__ == "__main__":
     edge = edge.to_backend(XnnpackPartitioner())
 
     exec_program = edge.to_executorch()
+    exec_program.dump_executorch_program()
 
     quantize_tag = args.quantize if args.quantize != "false" else "fp32"
     os.makedirs("models-out", exist_ok=True)

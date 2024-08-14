@@ -36,6 +36,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 if(NOT CMAKE_CXX_STANDARD OR CMAKE_CXX_STANDARD LESS 17)
     set(CMAKE_CXX_STANDARD 17)
 endif()
+
 set(CMAKE_CXX_STANDARD_REQUIRED on)
 
 set(CMAKE_VERBOSE_MAKEFILE off)
@@ -57,6 +58,14 @@ if(NOT CATCH2_ROOT)
     set(CATCH2_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../../submodules/catch2)
 endif()
 
+if(NOT BENCHMARK_ROOT)
+    set(BENCHMARK_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../../submodules/benchmark)
+endif()
+
+if(NOT LIBTORCH_ROOT)
+    set(LIBTORCH_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../../libs/libtorch)
+endif()
+
 include(${EXECUTORCH_ROOT}/build/Utils.cmake)
 include(${EXECUTORCH_ROOT}/build/Codegen.cmake)
 
@@ -64,7 +73,7 @@ if(NOT PYTHON_EXECUTABLE)
     resolve_python_executable()
 endif()
 
-set(_common_compile_options -Wno-deprecated-declarations -fPIC -fopenmp -lxsmm -lblas -ldl -Wall -Wextra -Wpedantic)
+set(_common_compile_options -Wno-deprecated-declarations -fPIC -fopenmp -Wall -Wextra -Wpedantic -D_GLIBCXX_USE_CXX11_ABI=0)
 
 # Let files say "include <executorch/path/to/header.h>".
 set(_common_include_directories ${EXECUTORCH_ROOT}/..)
@@ -83,12 +92,25 @@ add_library(libxsmm_HEADER_ONLY INTERFACE)
 target_include_directories(libxsmm_HEADER_ONLY INTERFACE ${LIBXSMM_ROOT}/include)
 target_include_directories(libxsmm_HEADER_ONLY INTERFACE ${LIBXSMM_ROOT}/src)
 add_library(libxsmm SHARED IMPORTED)
+add_compile_definitions(LIBXSMM_NOFORTRAN)
 target_include_directories(libxsmm INTERFACE ${LIBXSMM_ROOT}/include)
 target_include_directories(libxsmm INTERFACE ${LIBXSMM_ROOT}/src)
 file(REAL_PATH ${LIBXSMM_ROOT}/lib/libxsmm.so LIBXSMM_LIB_PATH)
 set_target_properties(libxsmm PROPERTIES IMPORTED_LOCATION ${LIBXSMM_LIB_PATH})
-target_link_libraries(Fastor_HEADER_ONLY INTERFACE libxsmm)
-file(GLOB LIBXSMM_LIBS_VERSIONS_PATHS ${LIBXSMM_ROOT}/lib/libxsmm.so*)
+
+if(ANDROID)
+# We cannot use the library from linux on android -> dlopen failed: cannot find verneed/verdef for version index=32770 referenced by symbol "_res" at "/data/app/com.neuralnetwork.imageinference-bgb37vNahwYgSDwBwYZy-A==/lib/arm64/libc6.so"
+# Therefore we should use the header only library on android.
+# file(GLOB LIBXSMM_LIBS_VERSIONS_PATHS ${LIBXSMM_ROOT}/lib_aarch64/libxsmm.so*)
+# file(GLOB LIBXSMM_DEPENDENCIES
+# /usr/aarch64-linux-gnu/lib/libc.so.6
+# /usr/aarch64-linux-gnu/lib/libm.so.6
+# /usr/aarch64-linux-gnu/lib/ld-linux-aarch64.so*)
+# install(FILES ${LIBXSMM_DEPENDENCIES} DESTINATION lib)
+else()
+    file(GLOB LIBXSMM_LIBS_VERSIONS_PATHS ${LIBXSMM_ROOT}/lib/libxsmm.so*)
+endif()
+
 install(FILES ${LIBXSMM_LIBS_VERSIONS_PATHS} DESTINATION lib)
 
 #
@@ -135,7 +157,7 @@ if(OpenMP_CXX_FOUND AND ANDROID)
 endif()
 
 target_link_libraries(imageinference_baremetal_kernels PUBLIC Fastor_HEADER_ONLY)
-target_link_libraries(imageinference_baremetal_kernels PUBLIC libxsmm)
+target_link_libraries(imageinference_baremetal_kernels PUBLIC libxsmm_HEADER_ONLY)
 target_compile_options(imageinference_baremetal_kernels PUBLIC ${_common_compile_options})
 
 gen_operators_lib(
@@ -145,8 +167,6 @@ gen_operators_lib(
 install(TARGETS imageinference_baremetal_kernels baremetal_ops_lib DESTINATION lib)
 
 if(NOT ANDROID)
-    find_package(Torch CONFIG REQUIRED)
-
     # C++ library to register custom ops into PyTorch.
     gen_selected_ops(LIB_NAME "baremetal_ops_aot_lib" ROOT_OPS "baremetal_ops::resnet50.out")
     generate_bindings_for_kernels(
@@ -179,9 +199,9 @@ if(NOT ANDROID)
     # ################################
     # ######## Setup Testing #########
     # ################################
-    find_package(Catch2 REQUIRED PATHS ${CATCH2_ROOT}/.build/lib/cmake)
-    list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
-    
+    find_package(Catch2 REQUIRED PATHS ${CATCH2_ROOT}/.build/lib/cmake/Catch2)
+    find_package(benchmark REQUIRED PATHS ${BENCHMARK_ROOT}/.build/lib/cmake/benchmark)
+
     set(CURRENT_TEST_DIR ${CMAKE_CURRENT_LIST_DIR}/test)
 
     file(GLOB shared_test_source
@@ -217,6 +237,26 @@ if(NOT ANDROID)
     target_link_libraries(tests_valgrind PRIVATE Catch2::Catch2WithMain)
     target_compile_definitions(tests_valgrind PRIVATE IMAGEINFERENCE_TESTING)
     target_compile_options(tests_valgrind PUBLIC ${_common_compile_options})
+
+    file(GLOB BENCHMARK_FILES
+        ${CURRENT_TEST_DIR}/benchmarks/*.cpp
+    )
+
+    list(APPEND BENCHMARK_FILES ${shared_source})
+
+    add_executable(benchmarks ${BENCHMARK_FILES})
+    target_compile_options(tests PRIVATE -g)
+    target_link_options(tests PRIVATE -g)
+    target_link_libraries(benchmarks PUBLIC benchmark::benchmark)
+    target_link_libraries(benchmarks PUBLIC benchmark::benchmark_main)
+    target_link_libraries(benchmarks PUBLIC torch)
+    target_link_libraries(benchmarks PUBLIC OpenMP::OpenMP_CXX)
+    target_link_libraries(benchmarks PUBLIC Fastor_HEADER_ONLY)
+    target_link_libraries(benchmarks PUBLIC libxsmm)
+    target_compile_definitions(benchmarks PRIVATE IMAGEINFERENCE_BENCHMARK)
+    target_compile_options(benchmarks PUBLIC ${_common_compile_options})
+    target_link_libraries(benchmarks PUBLIC benchmark::benchmark)
+    target_link_libraries(benchmarks PUBLIC benchmark::benchmark_main)
 
     include(CTest)
     include(Catch)

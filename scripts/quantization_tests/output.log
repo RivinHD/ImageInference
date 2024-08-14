@@ -1,0 +1,191 @@
+2024-08-11 12:00:22,641 - root - INFO - AIMET
+2024-08-11 12:00:26,312 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer1.0.module_relu_1} 
+2024-08-11 12:00:26,312 - ModelPreparer - INFO - Functional         : Adding new module for node: {layer1.0.module_add} 
+2024-08-11 12:00:26,312 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer1.0.module_relu_2} 
+2024-08-11 12:00:26,312 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer1.1.module_relu_1} 
+2024-08-11 12:00:26,312 - ModelPreparer - INFO - Functional         : Adding new module for node: {layer1.1.module_add_1} 
+2024-08-11 12:00:26,313 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer1.1.module_relu_2} 
+2024-08-11 12:00:26,313 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer1.2.module_relu_1} 
+2024-08-11 12:00:26,313 - ModelPreparer - INFO - Functional         : Adding new module for node: {layer1.2.module_add_2} 
+2024-08-11 12:00:26,313 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer1.2.module_relu_2} 
+2024-08-11 12:00:26,313 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer2.0.module_relu_1} 
+2024-08-11 12:00:26,313 - ModelPreparer - INFO - Functional         : Adding new module for node: {layer2.0.module_add_3} 
+2024-08-11 12:00:26,313 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer2.0.module_relu_2} 
+2024-08-11 12:00:26,313 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer2.1.module_relu_1} 
+2024-08-11 12:00:26,313 - ModelPreparer - INFO - Functional         : Adding new module for node: {layer2.1.module_add_4} 
+2024-08-11 12:00:26,313 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer2.1.module_relu_2} 
+2024-08-11 12:00:26,314 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer2.2.module_relu_1} 
+2024-08-11 12:00:26,314 - ModelPreparer - INFO - Functional         : Adding new module for node: {layer2.2.module_add_5} 
+2024-08-11 12:00:26,314 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer2.2.module_relu_2} 
+2024-08-11 12:00:26,314 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer2.3.module_relu_1} 
+2024-08-11 12:00:26,314 - ModelPreparer - INFO - Functional         : Adding new module for node: {layer2.3.module_add_6} 
+2024-08-11 12:00:26,314 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer2.3.module_relu_2} 
+2024-08-11 12:00:26,314 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer3.0.module_relu_1} 
+2024-08-11 12:00:26,314 - ModelPreparer - INFO - Functional         : Adding new module for node: {layer3.0.module_add_7} 
+2024-08-11 12:00:26,314 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer3.0.module_relu_2} 
+2024-08-11 12:00:26,315 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer3.1.module_relu_1} 
+2024-08-11 12:00:26,315 - ModelPreparer - INFO - Functional         : Adding new module for node: {layer3.1.module_add_8} 
+2024-08-11 12:00:26,315 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer3.1.module_relu_2} 
+2024-08-11 12:00:26,315 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer3.2.module_relu_1} 
+2024-08-11 12:00:26,315 - ModelPreparer - INFO - Functional         : Adding new module for node: {layer3.2.module_add_9} 
+2024-08-11 12:00:26,315 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer3.2.module_relu_2} 
+2024-08-11 12:00:26,315 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer3.3.module_relu_1} 
+2024-08-11 12:00:26,315 - ModelPreparer - INFO - Functional         : Adding new module for node: {layer3.3.module_add_10} 
+2024-08-11 12:00:26,315 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer3.3.module_relu_2} 
+2024-08-11 12:00:26,315 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer3.4.module_relu_1} 
+2024-08-11 12:00:26,316 - ModelPreparer - INFO - Functional         : Adding new module for node: {layer3.4.module_add_11} 
+2024-08-11 12:00:26,316 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer3.4.module_relu_2} 
+2024-08-11 12:00:26,316 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer3.5.module_relu_1} 
+2024-08-11 12:00:26,316 - ModelPreparer - INFO - Functional         : Adding new module for node: {layer3.5.module_add_12} 
+2024-08-11 12:00:26,316 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer3.5.module_relu_2} 
+2024-08-11 12:00:26,316 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer4.0.module_relu_1} 
+2024-08-11 12:00:26,316 - ModelPreparer - INFO - Functional         : Adding new module for node: {layer4.0.module_add_13} 
+2024-08-11 12:00:26,316 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer4.0.module_relu_2} 
+2024-08-11 12:00:26,316 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer4.1.module_relu_1} 
+2024-08-11 12:00:26,317 - ModelPreparer - INFO - Functional         : Adding new module for node: {layer4.1.module_add_14} 
+2024-08-11 12:00:26,317 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer4.1.module_relu_2} 
+2024-08-11 12:00:26,317 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer4.2.module_relu_1} 
+2024-08-11 12:00:26,317 - ModelPreparer - INFO - Functional         : Adding new module for node: {layer4.2.module_add_15} 
+2024-08-11 12:00:26,317 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer4.2.module_relu_2} 
+2024-08-11 12:00:27,025 - Quant - INFO - Unsupported op type Squeeze
+2024-08-11 12:00:27,026 - Quant - INFO - Unsupported op type Mean
+2024-08-11 12:00:27,029 - Quant - INFO - Selecting DefaultOpInstanceConfigGenerator to compute the specialized config. hw_version:default
+Quantizing the model with 16 bits for parametersand 16 bits for output of type QuantizationDataType.float
+IMAGENET_DATASET_2012=/home/vincent/data/imagenet/ilsvrc_2012
+Finished quantizing the model
+2024-08-11 12:03:30,717 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer1.0.module_relu_1} 
+2024-08-11 12:03:30,717 - ModelPreparer - INFO - Functional         : Adding new module for node: {layer1.0.module_add} 
+2024-08-11 12:03:30,717 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer1.0.module_relu_2} 
+2024-08-11 12:03:30,717 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer1.1.module_relu_1} 
+2024-08-11 12:03:30,717 - ModelPreparer - INFO - Functional         : Adding new module for node: {layer1.1.module_add_1} 
+2024-08-11 12:03:30,717 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer1.1.module_relu_2} 
+2024-08-11 12:03:30,717 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer1.2.module_relu_1} 
+2024-08-11 12:03:30,717 - ModelPreparer - INFO - Functional         : Adding new module for node: {layer1.2.module_add_2} 
+2024-08-11 12:03:30,718 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer1.2.module_relu_2} 
+2024-08-11 12:03:30,718 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer2.0.module_relu_1} 
+2024-08-11 12:03:30,718 - ModelPreparer - INFO - Functional         : Adding new module for node: {layer2.0.module_add_3} 
+2024-08-11 12:03:30,718 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer2.0.module_relu_2} 
+2024-08-11 12:03:30,718 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer2.1.module_relu_1} 
+2024-08-11 12:03:30,718 - ModelPreparer - INFO - Functional         : Adding new module for node: {layer2.1.module_add_4} 
+2024-08-11 12:03:30,718 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer2.1.module_relu_2} 
+2024-08-11 12:03:30,718 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer2.2.module_relu_1} 
+2024-08-11 12:03:30,718 - ModelPreparer - INFO - Functional         : Adding new module for node: {layer2.2.module_add_5} 
+2024-08-11 12:03:30,719 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer2.2.module_relu_2} 
+2024-08-11 12:03:30,719 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer2.3.module_relu_1} 
+2024-08-11 12:03:30,719 - ModelPreparer - INFO - Functional         : Adding new module for node: {layer2.3.module_add_6} 
+2024-08-11 12:03:30,719 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer2.3.module_relu_2} 
+2024-08-11 12:03:30,719 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer3.0.module_relu_1} 
+2024-08-11 12:03:30,719 - ModelPreparer - INFO - Functional         : Adding new module for node: {layer3.0.module_add_7} 
+2024-08-11 12:03:30,719 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer3.0.module_relu_2} 
+2024-08-11 12:03:30,719 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer3.1.module_relu_1} 
+2024-08-11 12:03:30,719 - ModelPreparer - INFO - Functional         : Adding new module for node: {layer3.1.module_add_8} 
+2024-08-11 12:03:30,720 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer3.1.module_relu_2} 
+2024-08-11 12:03:30,720 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer3.2.module_relu_1} 
+2024-08-11 12:03:30,720 - ModelPreparer - INFO - Functional         : Adding new module for node: {layer3.2.module_add_9} 
+2024-08-11 12:03:30,720 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer3.2.module_relu_2} 
+2024-08-11 12:03:30,720 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer3.3.module_relu_1} 
+2024-08-11 12:03:30,720 - ModelPreparer - INFO - Functional         : Adding new module for node: {layer3.3.module_add_10} 
+2024-08-11 12:03:30,720 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer3.3.module_relu_2} 
+2024-08-11 12:03:30,720 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer3.4.module_relu_1} 
+2024-08-11 12:03:30,720 - ModelPreparer - INFO - Functional         : Adding new module for node: {layer3.4.module_add_11} 
+2024-08-11 12:03:30,721 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer3.4.module_relu_2} 
+2024-08-11 12:03:30,721 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer3.5.module_relu_1} 
+2024-08-11 12:03:30,721 - ModelPreparer - INFO - Functional         : Adding new module for node: {layer3.5.module_add_12} 
+2024-08-11 12:03:30,721 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer3.5.module_relu_2} 
+2024-08-11 12:03:30,721 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer4.0.module_relu_1} 
+2024-08-11 12:03:30,721 - ModelPreparer - INFO - Functional         : Adding new module for node: {layer4.0.module_add_13} 
+2024-08-11 12:03:30,721 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer4.0.module_relu_2} 
+2024-08-11 12:03:30,721 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer4.1.module_relu_1} 
+2024-08-11 12:03:30,721 - ModelPreparer - INFO - Functional         : Adding new module for node: {layer4.1.module_add_14} 
+2024-08-11 12:03:30,722 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer4.1.module_relu_2} 
+2024-08-11 12:03:30,722 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer4.2.module_relu_1} 
+2024-08-11 12:03:30,722 - ModelPreparer - INFO - Functional         : Adding new module for node: {layer4.2.module_add_15} 
+2024-08-11 12:03:30,722 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer4.2.module_relu_2} 
+2024-08-11 12:03:31,353 - Quant - INFO - Unsupported op type Squeeze
+2024-08-11 12:03:31,353 - Quant - INFO - Unsupported op type Mean
+2024-08-11 12:03:31,357 - Quant - INFO - Selecting DefaultOpInstanceConfigGenerator to compute the specialized config. hw_version:default
+Quantizing the model with 8 bits for parametersand 8 bits for output of type QuantizationDataType.int
+IMAGENET_DATASET_2012=/home/vincent/data/imagenet/ilsvrc_2012
+Finished quantizing the model
+2024-08-11 12:19:31,335 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer1.0.module_relu_1} 
+2024-08-11 12:19:31,335 - ModelPreparer - INFO - Functional         : Adding new module for node: {layer1.0.module_add} 
+2024-08-11 12:19:31,335 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer1.0.module_relu_2} 
+2024-08-11 12:19:31,335 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer1.1.module_relu_1} 
+2024-08-11 12:19:31,335 - ModelPreparer - INFO - Functional         : Adding new module for node: {layer1.1.module_add_1} 
+2024-08-11 12:19:31,335 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer1.1.module_relu_2} 
+2024-08-11 12:19:31,336 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer1.2.module_relu_1} 
+2024-08-11 12:19:31,336 - ModelPreparer - INFO - Functional         : Adding new module for node: {layer1.2.module_add_2} 
+2024-08-11 12:19:31,336 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer1.2.module_relu_2} 
+2024-08-11 12:19:31,336 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer2.0.module_relu_1} 
+2024-08-11 12:19:31,336 - ModelPreparer - INFO - Functional         : Adding new module for node: {layer2.0.module_add_3} 
+2024-08-11 12:19:31,336 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer2.0.module_relu_2} 
+2024-08-11 12:19:31,336 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer2.1.module_relu_1} 
+2024-08-11 12:19:31,336 - ModelPreparer - INFO - Functional         : Adding new module for node: {layer2.1.module_add_4} 
+2024-08-11 12:19:31,336 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer2.1.module_relu_2} 
+2024-08-11 12:19:31,336 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer2.2.module_relu_1} 
+2024-08-11 12:19:31,337 - ModelPreparer - INFO - Functional         : Adding new module for node: {layer2.2.module_add_5} 
+2024-08-11 12:19:31,337 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer2.2.module_relu_2} 
+2024-08-11 12:19:31,337 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer2.3.module_relu_1} 
+2024-08-11 12:19:31,337 - ModelPreparer - INFO - Functional         : Adding new module for node: {layer2.3.module_add_6} 
+2024-08-11 12:19:31,337 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer2.3.module_relu_2} 
+2024-08-11 12:19:31,337 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer3.0.module_relu_1} 
+2024-08-11 12:19:31,337 - ModelPreparer - INFO - Functional         : Adding new module for node: {layer3.0.module_add_7} 
+2024-08-11 12:19:31,337 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer3.0.module_relu_2} 
+2024-08-11 12:19:31,337 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer3.1.module_relu_1} 
+2024-08-11 12:19:31,338 - ModelPreparer - INFO - Functional         : Adding new module for node: {layer3.1.module_add_8} 
+2024-08-11 12:19:31,338 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer3.1.module_relu_2} 
+2024-08-11 12:19:31,338 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer3.2.module_relu_1} 
+2024-08-11 12:19:31,338 - ModelPreparer - INFO - Functional         : Adding new module for node: {layer3.2.module_add_9} 
+2024-08-11 12:19:31,338 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer3.2.module_relu_2} 
+2024-08-11 12:19:31,338 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer3.3.module_relu_1} 
+2024-08-11 12:19:31,338 - ModelPreparer - INFO - Functional         : Adding new module for node: {layer3.3.module_add_10} 
+2024-08-11 12:19:31,338 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer3.3.module_relu_2} 
+2024-08-11 12:19:31,338 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer3.4.module_relu_1} 
+2024-08-11 12:19:31,338 - ModelPreparer - INFO - Functional         : Adding new module for node: {layer3.4.module_add_11} 
+2024-08-11 12:19:31,339 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer3.4.module_relu_2} 
+2024-08-11 12:19:31,339 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer3.5.module_relu_1} 
+2024-08-11 12:19:31,339 - ModelPreparer - INFO - Functional         : Adding new module for node: {layer3.5.module_add_12} 
+2024-08-11 12:19:31,339 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer3.5.module_relu_2} 
+2024-08-11 12:19:31,339 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer4.0.module_relu_1} 
+2024-08-11 12:19:31,339 - ModelPreparer - INFO - Functional         : Adding new module for node: {layer4.0.module_add_13} 
+2024-08-11 12:19:31,339 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer4.0.module_relu_2} 
+2024-08-11 12:19:31,339 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer4.1.module_relu_1} 
+2024-08-11 12:19:31,339 - ModelPreparer - INFO - Functional         : Adding new module for node: {layer4.1.module_add_14} 
+2024-08-11 12:19:31,340 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer4.1.module_relu_2} 
+2024-08-11 12:19:31,340 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer4.2.module_relu_1} 
+2024-08-11 12:19:31,340 - ModelPreparer - INFO - Functional         : Adding new module for node: {layer4.2.module_add_15} 
+2024-08-11 12:19:31,340 - ModelPreparer - INFO - Reused/Duplicate   : Adding new module for node: {layer4.2.module_relu_2} 
+2024-08-11 12:19:31,971 - Quant - INFO - Unsupported op type Squeeze
+2024-08-11 12:19:31,971 - Quant - INFO - Unsupported op type Mean
+2024-08-11 12:19:31,975 - Quant - INFO - Selecting DefaultOpInstanceConfigGenerator to compute the specialized config. hw_version:default
+Quantizing the model with 16 bits for parametersand 16 bits for output of type QuantizationDataType.int
+IMAGENET_DATASET_2012=/home/vincent/data/imagenet/ilsvrc_2012
+Finished quantizing the model
+Processing model fp32
+Processing image size 224 x 224
+Processing image size 256 x 256
+Processing image size 448 x 448
+Processing image size 512 x 512
+Processing image size 672 x 672
+Processing image size 720 x 720
+Processing model fp16
+Processing image size 224 x 224
+Processing image size 256 x 256
+Processing image size 448 x 448
+Processing image size 512 x 512
+Processing image size 672 x 672
+Processing image size 720 x 720
+Processing model int8
+Processing image size 224 x 224
+Processing image size 256 x 256
+Processing image size 448 x 448
+Processing image size 512 x 512
+Processing image size 672 x 672
+Processing image size 720 x 720
+Processing model int16
+Processing image size 224 x 224
+Processing image size 256 x 256
+Processing image size 448 x 448
+Processing image size 512 x 512
+Processing image size 672 x 672
+Processing image size 720 x 720
