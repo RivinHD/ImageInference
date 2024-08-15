@@ -11,6 +11,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.lifecycleScope
+import androidx.preference.PreferenceManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.MaterialAutoCompleteTextView
 import com.neuralnetwork.imageinference.MainActivity
@@ -384,13 +385,16 @@ class BenchmarkActivity : AppCompatActivity() {
             }
         }
 
+        val preferences = PreferenceManager.getDefaultSharedPreferences(this)
+        val warmupCount = preferences.getInt(getString(R.string.warmup_samples_count), 25)
+
         _modelState.value = ModelState.RUNNING
         binding.modelSelector.isEnabled = false
         binding.collectionSelector.isEnabled = false
         Log.d("Benchmark", "Running the model.")
         _benchmarkJob = lifecycleScope.launch {
             withContext(Dispatchers.Default) {
-                for (i in 0..25) {
+                for (i in 0..warmupCount) {
                     val warmupImage = fixedCollection.imageList.first()
                     val warmupDetails = ModelDetails(ModelInputType.IMAGE)
                     val warmupBitmap = warmupImage.getBitmap(contentResolver)

@@ -93,4 +93,6 @@
     <string name="top_1_accuracy">Top 1 Accuracy</string>
     <string name="top_5_accuracy">Top 5 Accuracy</string>
     <string name="processed_images">Processed Images</string>
+    <string name="warmup_samples_count">Warmup Samples Count</string>
+    <string name="warmup_preference_summary">How many samples should be used for warmup?</string>
 </resources>
