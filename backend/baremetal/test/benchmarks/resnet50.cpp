@@ -47,7 +47,6 @@ namespace ImageInference
             float *batchVarPtr;
 
             ImageInference::types::Image<float, inPadding, blockSize, inChannels, height, width> *inputImage;
-            ImageInference::types::BatchNorm<float, outChannels> *batchNorm;
             ImageInference::types::Image<float, 0, blockSize, outChannels, height / stride, width / stride> *outputImage;
 
             void SetUp(::benchmark::State &state)
@@ -67,14 +66,12 @@ namespace ImageInference
                 batchVarPtr = batchVar.mutable_data_ptr<float>();
 
                 inputImage = new ImageInference::types::Image<float, inPadding, blockSize, inChannels, height, width>(inPtr);
-                batchNorm = new ImageInference::types::BatchNorm<float, outChannels>(batchGammaPtr, batchBetaPtr, batchMeanPtr, batchVarPtr);
                 outputImage = new ImageInference::types::Image<float, 0, blockSize, outChannels, height / stride, width / stride>();
             }
 
             void TearDown(::benchmark::State &state)
             {
                 delete inputImage;
-                delete batchNorm;
                 delete outputImage;
             }
         };
@@ -112,7 +109,6 @@ namespace ImageInference
             float *shortcutPtr;
 
             ImageInference::types::Image<float, inPadding, blockSize, inChannels, height, width> *inputImage;
-            ImageInference::types::BatchNorm<float, outChannels> *batchNorm;
             ImageInference::types::Image<float, 0, blockSize, outChannels, height, width> *shortcutImage;
             ImageInference::types::Image<float, 0, blockSize, outChannels, height, width> *outputImage;
 
@@ -136,7 +132,6 @@ namespace ImageInference
                 shortcutPtr = shortcut.mutable_data_ptr<float>();
 
                 inputImage = new ImageInference::types::Image<float, inPadding, blockSize, inChannels, height, width>(inPtr);
-                batchNorm = new ImageInference::types::BatchNorm<float, outChannels>(batchGammaPtr, batchBetaPtr, batchMeanPtr, batchVarPtr);
                 shortcutImage = new ImageInference::types::Image<float, 0, blockSize, outChannels, height, width>(shortcutPtr);
                 outputImage = new ImageInference::types::Image<float, 0, blockSize, outChannels, height, width>();
             }
@@ -144,7 +139,6 @@ namespace ImageInference
             void TearDown(::benchmark::State &state)
             {
                 delete inputImage;
-                delete batchNorm;
                 delete shortcutImage;
                 delete outputImage;
             }
@@ -196,9 +190,7 @@ namespace ImageInference
             float *projectionBatchVarPtr;
 
             ImageInference::types::Image<float, inPadding, blockSize, inChannels, height / stride, width / stride> *inputImage;
-            ImageInference::types::BatchNorm<float, outChannels> *batchNorm;
             ImageInference::types::Image<float, 0, blockSize, outChannels / shortcutDimExpand, height, width> *shortcutImage;
-            ImageInference::types::BatchNorm<float, outChannels> *projectionBatchNorm;
             ImageInference::types::Image<float, 0, blockSize, outChannels, height / stride, width / stride> *outputImage;
 
             void SetUp(::benchmark::State &state)
@@ -230,18 +222,14 @@ namespace ImageInference
                 projectionBatchVarPtr = projectionBatchVar.mutable_data_ptr<float>();
 
                 inputImage = new ImageInference::types::Image<float, inPadding, blockSize, inChannels, height / stride, width / stride>(inPtr);
-                batchNorm = new ImageInference::types::BatchNorm<float, outChannels>(batchGammaPtr, batchBetaPtr, batchMeanPtr, batchVarPtr);
                 shortcutImage = new ImageInference::types::Image<float, 0, blockSize, outChannels / shortcutDimExpand, height, width>(shortcutPtr);
-                projectionBatchNorm = new ImageInference::types::BatchNorm<float, outChannels>(projectionBatchGammaPtr, projectionBatchBetaPtr, projectionBatchMeanPtr, projectionBatchVarPtr);
                 outputImage = new ImageInference::types::Image<float, 0, blockSize, outChannels, height / stride, width / stride>();
             }
 
             void TearDown(::benchmark::State &state)
             {
                 delete inputImage;
-                delete batchNorm;
                 delete shortcutImage;
-                delete projectionBatchNorm;
                 delete outputImage;
             }
         };
@@ -340,7 +328,6 @@ namespace ImageInference
             float *outPtr;
 
             ImageInference::types::Array<float, inDim> *inputVector;
-            ImageInference::types::Matrix<float, outDim, inDim> *weightMatrix;
             ImageInference::types::Array<float, outDim> *biasAccumulator;
 
             void SetUp(::benchmark::State &state) override
@@ -354,14 +341,12 @@ namespace ImageInference
                 biasPtr = bias.mutable_data_ptr<float>();
 
                 inputVector = new ImageInference::types::Array<float, inDim>(inPtr);
-                weightMatrix = new ImageInference::types::Matrix<float, outDim, inDim>(weightPtr);
                 biasAccumulator = new ImageInference::types::Array<float, outDim>(biasPtr);
             }
 
             void TearDown(::benchmark::State &state) override
             {
                 delete inputVector;
-                delete weightMatrix;
                 delete biasAccumulator;
             }
         };
@@ -373,7 +358,8 @@ namespace ImageInference
             for (auto _ : st)
             {
                 ImageInference::types::Kernel<float, blockSize, blockSize, outChannels, inChannels, kernelHeight, kernelWidth> inputKernel(weightPtr);
-                ImageInference::model::ResNet50::convBlock<stride, 0>(*inputImage, inputKernel, *batchNorm, *outputImage);
+                ImageInference::types::BatchNorm<float, outChannels> batchNorm(batchGammaPtr, batchBetaPtr, batchMeanPtr, batchVarPtr);
+                ImageInference::model::ResNet50::convBlock<stride, 0>(*inputImage, inputKernel, batchNorm, *outputImage);
             }
         };
 
@@ -396,7 +382,8 @@ namespace ImageInference
             for (auto _ : st)
             {
                 ImageInference::types::Kernel<float, blockSize, blockSize, outChannels, inChannels, kernelHeight, kernelWidth> inputKernel(weightPtr);
-                ImageInference::model::ResNet50::convBlockAddIdentity<0>(*inputImage, inputKernel, *batchNorm, *shortcutImage, *outputImage);
+                ImageInference::types::BatchNorm<float, outChannels> batchNorm(batchGammaPtr, batchBetaPtr, batchMeanPtr, batchVarPtr);
+                ImageInference::model::ResNet50::convBlockAddIdentity<0>(*inputImage, inputKernel, batchNorm, *shortcutImage, *outputImage);
             }
         };
 
@@ -420,9 +407,11 @@ namespace ImageInference
             for (auto _ : st)
             {
                 ImageInference::types::Kernel<float, blockSize, blockSize, outChannels, inChannels, kernelHeight, kernelWidth> inputKernel(weightPtr);
+                ImageInference::types::BatchNorm<float, outChannels> batchNorm(batchGammaPtr, batchBetaPtr, batchMeanPtr, batchVarPtr);
                 ImageInference::types::Kernel<float, blockSize, blockSize, outChannels, outChannels / shortcutDimExpand, 1, 1> projectionKernel(projectionWeightPtr);
+                ImageInference::types::BatchNorm<float, outChannels> projectionBatchNorm(projectionBatchGammaPtr, projectionBatchBetaPtr, projectionBatchMeanPtr, projectionBatchVarPtr);
 
-                ImageInference::model::ResNet50::convBlockAddProjection<stride, shortcutDimExpand>(*inputImage, inputKernel, *batchNorm, *shortcutImage, projectionKernel, *projectionBatchNorm, *outputImage);
+                ImageInference::model::ResNet50::convBlockAddProjection<stride, shortcutDimExpand>(*inputImage, inputKernel, batchNorm, *shortcutImage, projectionKernel, projectionBatchNorm, *outputImage);
             }
         };
 
@@ -486,7 +475,8 @@ namespace ImageInference
         {
             for (auto _ : st)
             {
-                ImageInference::model::ResNet50::fullyConnectedLayer<32>(*inputVector, *weightMatrix, *biasAccumulator);
+                ImageInference::types::Matrix<float, outDim, inDim> weightMatrix(weightPtr);
+                ImageInference::model::ResNet50::fullyConnectedLayer<32>(*inputVector, weightMatrix, *biasAccumulator);
             }
         };
 

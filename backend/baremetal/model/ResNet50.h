@@ -63,7 +63,6 @@ namespace ImageInference
         private:
             std::vector<void *> modelWeights;
             ImageInference::types::ScalarType type;
-            // TODO Libxsmm kernels with code dispatch see https://github.com/libxsmm/libxsmm/blob/main/documentation/libxsmm_mm.md#manual-code-dispatch
             // All the blocks start with a 1x1 kernel. Therefore no padding is required.
 
             template <typename T, size_t BlockSize>
@@ -1464,7 +1463,7 @@ namespace ImageInference
 
 // 3x3 Stencil that gets the max value
 #ifdef USE_OMP // We can parallelize the channel blocks as they are independent of each other for this max operation.
-#pragma omp parallel for
+#pragma omp parallel for collapse(2)
 #endif // USE_OMP
             for (size_t iBChannel = 0; iBChannel < channelBlocks; iBChannel++)
             {
