@@ -14,3 +14,6 @@
 [submodule "submodules/benchmark"]
 	path = submodules/benchmark
 	url = https://github.com/google/benchmark.git
+[submodule "submodules/libxsmm_android"]
+	path = submodules/libxsmm_android
+	url = https://github.com/libxsmm/libxsmm.git
