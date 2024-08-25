@@ -1519,7 +1519,7 @@ namespace ImageInference
 // The channel are larger (2048). Therefore we have many blocks to parallelize on.
 // Otherwise the loops should be split and collapsed.
 #ifdef USE_OMP
-#pragma omp parallel for reduction(+ : outputPtr[ : ImageChannels])
+#pragma omp parallel for collapse(2) reduction(+ : outputPtr[ : ImageChannels])
 #endif // USE_OMP
             for (size_t iBChannel = 0; iBChannel < channelBlocks; iBChannel++)
             {
@@ -1534,18 +1534,9 @@ namespace ImageInference
                         {
                             const size_t offsetOutput = output.getOffset(iBChannel, 0, 0, iChannel);
                             const size_t offsetImage = image.getOffset(iBChannel, iHeight, iWidth, iChannel);
-                            outputPtr[offsetOutput] += imagePtr[offsetImage];
+                            outputPtr[offsetOutput] += static_cast<T>(imagePtr[offsetImage] * scale);
                         }
                     }
-                }
-
-#ifdef USE_OMP // We can apply simd because the elements are independent of each other.
-#pragma omp simd
-#endif // USE_OMP
-                for (size_t iChannel = 0; iChannel < BlockSize; iChannel++)
-                {
-                    const size_t offsetOutput = output.getOffset(iBChannel, 0, 0, iChannel);
-                    outputPtr[offsetOutput] = static_cast<T>(outputPtr[offsetOutput] * scale);
                 }
             }
         }
