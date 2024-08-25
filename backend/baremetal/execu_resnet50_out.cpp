@@ -378,8 +378,6 @@ namespace custom
 
         Tensor &resnet50_out_impl(const Tensor &in, const Tensor &weights, Tensor &out)
         {
-            return out;
-            
             std::vector<void *> raw_weights = std::vector<void *>(weightsCount);
 
             ImageInference::types::ScalarType type = ImageInference::types::ScalarType::Undefined;

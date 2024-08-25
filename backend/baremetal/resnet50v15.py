@@ -18,17 +18,22 @@
 import argparse
 import os
 
+import logging
 import torch
 from torchvision import models
 from torchvision.models import ResNet50_Weights
 from torchvision.models._api import WeightsEnum
-from executorch.examples.portable.utils import export_to_exec_prog
+from executorch.examples.portable.utils import export_to_exec_prog, _core_aten_to_edge, _to_core_aten
 from executorch.exir import EdgeCompileConfig
 from .resnet50v15_module import custom_resnet50
 from . import export_utils
+from torch._export import capture_pre_autograd_graph
+from torch.export import export, ExportedProgram
 
 
 if __name__ == "__main__":
+
+    logging.basicConfig(level=logging.DEBUG)
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -77,6 +82,7 @@ if __name__ == "__main__":
     parameters = export_utils.getResnet50Weights(ResNet50_Weights.IMAGENET1K_V2)
     model = custom_resnet50(export_utils.compressParameters(parameters))
     sample_input = (torch.randn(1, 3, 224, 224),)
+
     exec_program = export_to_exec_prog(
         model,
         sample_input,

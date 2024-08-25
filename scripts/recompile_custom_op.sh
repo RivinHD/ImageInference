@@ -39,4 +39,7 @@ if [ $? -eq 0 ]; then
   #ctest --output-on-failure -C Release #-j "${CMAKE_JOBS}"
 fi
 
+# Testing with Execut Runner
+/home/vincent/ImageInference/submodules/executorch/cmake-out/portable/custom_ops/baremetal_ops_executor_runner --model_path="$BasePath/ImageInference/models-out/resnet50v15_custom_fp32.pte"
+
 cd "$BasePath/ImageInference"
