@@ -245,6 +245,7 @@ if ! grep -q 'if(EXECUTORCH_BUILD_IMAGEINFERENCE_BAREMETAL)' extension/android/C
     sed -i '/add_library(executorch_jni SHARED jni\/jni_layer.cpp)/i \
 option(EXECUTORCH_BUILD_IMAGEINFERENCE_BAREMETAL "Include the imageinference baremetal custome kernels" OFF)\
 if(EXECUTORCH_BUILD_IMAGEINFERENCE_BAREMETAL)\
+  message(STATUS "Register imageinference baremetal kernels")\
   if(NOT FASTOR_ROOT)\
     set(FASTOR_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../../../fastor)\
   endif()\
@@ -260,7 +261,7 @@ if(EXECUTORCH_BUILD_IMAGEINFERENCE_BAREMETAL)\
   add_library(libxsmm SHARED IMPORTED)\
   add_compile_definitions(LIBXSMM_NOFORTRAN)\
   target_include_directories(libxsmm_HEADER_ONLY INTERFACE ${LIBXSMM_ROOT}/include INTERFACE ${LIBXSMM_ROOT}/src)\
-  set_target_properties(libxsmm PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_BINARY_DIR}/lib/libxsmm.so)
+  set_target_properties(libxsmm PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_BINARY_DIR}/lib/libxsmm.so)\
   target_link_options_shared_lib(libxsmm)\
   list(APPEND link_libraries Fastor_HEADER_ONLY libxsmm)\
 endif()\n' extension/android/CMakeLists.txt
