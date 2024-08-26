@@ -271,8 +271,8 @@ fi
 if ! grep -q 'NativeLoader.loadLibrary("xsmm")' extension/android/src/main/java/org/pytorch/executorch/NativePeer.java; then
     sed -i '/\/\/ Loads libexecutorch.so from jniLibs/i \
     // Load dependencies of libexecutorch.so\
-    NativeLoader.loadLibrary("m");\
     NativeLoader.loadLibrary("c");\
+    NativeLoader.loadLibrary("m");\
     NativeLoader.loadLibrary("dl");\
     NativeLoader.loadLibrary("c++_shared");\
     NativeLoader.loadLibrary("xsmm");\n' extension/android/src/main/java/org/pytorch/executorch/NativePeer.java
