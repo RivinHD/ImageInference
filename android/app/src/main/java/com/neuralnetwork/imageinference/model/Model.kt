@@ -9,7 +9,7 @@ package com.neuralnetwork.imageinference.model
 import android.content.Context
 import android.graphics.Bitmap
 import com.neuralnetwork.imageinference.MainActivity
-import com.neuralnetwork.imageinference.model.input.Image256244Normalized
+import com.neuralnetwork.imageinference.model.input.Image256224Normalized
 import com.neuralnetwork.imageinference.model.output.ImageNet1000AppliedSoftmax
 import com.neuralnetwork.imageinference.ui.details.containers.ModelResult
 import org.pytorch.executorch.EValue
@@ -100,7 +100,7 @@ data class Model(
                         "Input is not a Bitmap to transform with Image_256_244_Normalized"
                     )
                 }
-                Image256244Normalized.transform(input)
+                Image256224Normalized.transform(input)
             }
         }
     }

@@ -19,7 +19,7 @@ import org.pytorch.executorch.Tensor
  *
  * @constructor Do not initialize this class.
  */
-internal class Image256244Normalized {
+internal class Image256224Normalized {
     companion object {
 
         /**
