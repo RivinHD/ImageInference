@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: © 2024 Vincent Gerlach
+//
+// SPDX-License-Identifier: MIT
+
 #ifndef USE_ATEN_LIB
 #define USE_ATEN_LIB
 #endif // !USE_ATEN_LIB

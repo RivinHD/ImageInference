@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: © 2024 Vincent Gerlach
+#
+# SPDX-License-Identifier: MIT
+
 import torch
 from torch import Tensor
 from typing import Dict, Optional

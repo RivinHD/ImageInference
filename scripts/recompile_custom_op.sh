@@ -1,3 +1,9 @@
+#!/bin/bash
+
+# SPDX-FileCopyrightText: © 2024 Vincent Gerlach
+#
+# SPDX-License-Identifier: MIT
+
 BasePath="$(dirname -- "${BASH_SOURCE[0]:-$0}")"  # relative
 BasePath="$(cd -- "$BasePath" &> /dev/null && pwd 2> /dev/null)"  # absolutized and normalized
 BasePath="$(dirname -- "$BasePath")" # go up one directory > ImageInference

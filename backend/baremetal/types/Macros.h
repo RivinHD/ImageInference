@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: © 2024 Vincent Gerlach
+//
+// SPDX-License-Identifier: MIT
+
 #ifndef IMAGEINFERENCE_MACROS_H
 #define IMAGEINFERENCE_MACROS_H
 

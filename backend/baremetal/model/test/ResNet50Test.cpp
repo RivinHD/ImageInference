@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: © 2024 Vincent Gerlach
+//
+// SPDX-License-Identifier: MIT
+
 #include "ResNet50Test.h"
 
 ImageInference::model::test::ResNet50Test::ResNet50Test()

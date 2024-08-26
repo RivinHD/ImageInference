@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: © 2024 Vincent Gerlach
+//
+// SPDX-License-Identifier: MIT
+
 #ifndef IMAGEINFERENCE_RESNET50TEST_H
 #define IMAGEINFERENCE_RESNET50TEST_H
 
