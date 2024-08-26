@@ -284,18 +284,6 @@ namespace custom
 
         namespace
         {
-            std::string to_string(ARRAY_REF shape)
-            {
-                std::stringstream ss;
-                ss << "[" << *shape.begin();
-                for (auto iter = shape.begin() + 1; iter < shape.end(); iter++)
-                {
-                    ss << ", " << *iter;
-                }
-                ss << "]";
-                return ss.str();
-            }
-
             void check_preconditions(const Tensor &in, const Tensor &weights, Tensor &out)
             {
                 // Type checks
@@ -342,13 +330,13 @@ namespace custom
 
                 // Check Output Shape
                 ET_CHECK_MSG(
-                    out.dim() == 1,
-                    "Expected out tensor to have 1 dimension (Classes), but got %d instead",
+                    out.dim() == 2,
+                    "Expected out tensor to have 1 dimension (Batch, Classes), but got %d instead",
                     out.dim());
                 ET_CHECK_MSG(
-                    out.size(0) == 1000,
+                    out.size(1) == 1000,
                     "Expected out tensor to have 1000 classes, but got %d instead",
-                    out.size(0));
+                    out.size(1));
             }
 
             template <typename T>

@@ -97,7 +97,7 @@ data class Model(
             ModelType.RESNET50v15 -> {
                 if (input !is Bitmap) {
                     throw IllegalArgumentException(
-                        "Input is not a Bitmap to transform with Image_256_244_Normalized"
+                        "Input is not a Bitmap to transform with Image_256_224_Normalized"
                     )
                 }
                 Image256224Normalized.transform(input)

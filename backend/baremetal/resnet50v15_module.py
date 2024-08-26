@@ -18,5 +18,8 @@ class custom_resnet50(torch.nn.Module):
         self._parameters = compressedParameters
         self.weight = self.get_parameter("weight")
 
-    def forward(self, a):
-        return torch.ops.baremetal_ops.resnet50.default(a, self.weight)
+    def _forward_impl(self, x: Tensor) -> Tensor:
+        return torch.ops.baremetal_ops.resnet50.default(x, self.weight)
+
+    def forward(self, x: Tensor) -> Tensor:
+        return self._forward_impl(x)

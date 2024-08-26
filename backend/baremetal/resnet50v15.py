@@ -62,8 +62,8 @@ if __name__ == "__main__":
 
     # Registering a opaque operator for the custom implementation to not trace into it
     @torch.library.register_fake("baremetal_ops::resnet50")
-    def _(input: torch.Tensor, weights: list[torch.Tensor]) -> torch.Tensor:
-        return torch.zeros([1000])
+    def _(input: torch.Tensor, weights: torch.Tensor) -> torch.Tensor:
+        return torch.zeros([1, 1000])
 
     # Lowering the Model with Executorch
     parameters = export_utils.getResnet50Weights(ResNet50_Weights.IMAGENET1K_V2)

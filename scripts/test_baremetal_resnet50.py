@@ -65,6 +65,6 @@ if __name__ == "__main__":
             output = model(input.clone().detach())
 
             expected_output = torch_model(input)
-            torch.testing.assert_close(output, expected_output[0])
+            torch.testing.assert_close(output[0], expected_output[0])
 
     print("Successfully finished testing.")

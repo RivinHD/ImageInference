@@ -231,15 +231,6 @@ cmake \
 
 cmake --build "$BUILD_DIR" -j "${CMAKE_JOBS}" --target install
 
-# Register the libarary in the executorch-config.cmake
-if ! grep -q 'if(EXECUTORCH_BUILD_IMAGEINFERENCE_BAREMETAL)' cmake-android-out/lib/cmake/ExecuTorch/executorch-config.cmake; then
-    sed -i '/foreach(lib ${lib_list})/i \
-option(EXECUTORCH_BUILD_IMAGEINFERENCE_BAREMETAL "Include the imageinference baremetal custome kernels" OFF)\
-if(EXECUTORCH_BUILD_IMAGEINFERENCE_BAREMETAL)\
-  list(APPEND lib_list baremetal_ops_lib imageinference_baremetal_kernels)\
-endif()\n' cmake-android-out/lib/cmake/ExecuTorch/executorch-config.cmake
-fi
-
 # Register the custome operater into the android CMakeLists.txt
 if ! grep -q 'if(EXECUTORCH_BUILD_IMAGEINFERENCE_BAREMETAL)' extension/android/CMakeLists.txt; then
     sed -i '/add_library(executorch_jni SHARED jni\/jni_layer.cpp)/i \
@@ -252,18 +243,19 @@ if(EXECUTORCH_BUILD_IMAGEINFERENCE_BAREMETAL)\
   if(NOT LIBXSMM_ROOT)\
     set(LIBXSMM_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../../../libxsmm_android)\
   endif()\
-  list(APPEND link_libraries baremetal_ops_lib imageinference_baremetal_kernels)\
-  target_link_options_shared_lib(baremetal_ops_lib)\
+  add_library(imageinference_baremetal_kernels STATIC IMPORTED)\
+  set_property(TARGET imageinference_baremetal_kernels PROPERTY IMPORTED_LOCATION ${CMAKE_CURRENT_BINARY_DIR}/../../lib/libimageinference_baremetal_kernels.a)\
+  add_library(baremetal_ops_lib STATIC IMPORTED)\
+  set_property(TARGET baremetal_ops_lib PROPERTY IMPORTED_LOCATION ${CMAKE_CURRENT_BINARY_DIR}/../../lib/libbaremetal_ops_lib.a)\
   find_package(OpenMP REQUIRED)\
-  list(APPEND link_libraries -static-openmp -fopenmp)\
   add_library(Fastor_HEADER_ONLY INTERFACE)\
   target_include_directories(Fastor_HEADER_ONLY INTERFACE ${FASTOR_ROOT})\
   add_library(libxsmm SHARED IMPORTED)\
   add_compile_definitions(LIBXSMM_NOFORTRAN)\
-  target_include_directories(libxsmm_HEADER_ONLY INTERFACE ${LIBXSMM_ROOT}/include INTERFACE ${LIBXSMM_ROOT}/src)\
-  set_target_properties(libxsmm PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_BINARY_DIR}/lib/libxsmm.so)\
-  target_link_options_shared_lib(libxsmm)\
-  list(APPEND link_libraries Fastor_HEADER_ONLY libxsmm)\
+  target_include_directories(libxsmm INTERFACE ${LIBXSMM_ROOT}/include INTERFACE ${LIBXSMM_ROOT}/src)\
+  set_target_properties(libxsmm PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_BINARY_DIR}/../../lib/libxsmm.so)\
+  list(APPEND link_libraries baremetal_ops_lib imageinference_baremetal_kernels -static-openmp -fopenmp Fastor_HEADER_ONLY libxsmm)\
+  target_link_options_shared_lib(baremetal_ops_lib)\
 endif()\n' extension/android/CMakeLists.txt
 fi
 

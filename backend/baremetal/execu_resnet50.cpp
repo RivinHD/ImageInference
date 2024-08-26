@@ -15,7 +15,7 @@ namespace custom
     {
         Tensor resnet50_impl(const Tensor &in, const Tensor &weights)
         {
-            Tensor out = at::zeros({1000});
+            Tensor out = at::zeros({1, 1000});
             resnet50_out_impl(in, weights, out);
             return out;
         }

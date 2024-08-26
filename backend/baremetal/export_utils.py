@@ -70,4 +70,6 @@ def compressParameters(parameters: Dict[str, Optional[Parameter]]) -> Dict[str, 
         weightCompressed[offset: offset + numel] = param.data.view([param.numel()])
         offset += numel
 
+    weightCompressed = weightCompressed.contiguous().clone().detach()
+
     return {"weight": Parameter(weightCompressed)}
