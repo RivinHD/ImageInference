@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: © 2024 Vincent Gerlach
+ *
+ * SPDX-License-Identifier: MIT
+ */
+
 package com.neuralnetwork.imageinference.ui.menu.options
 
 import android.os.Bundle
