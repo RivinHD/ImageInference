@@ -66,6 +66,10 @@ if(NOT LIBTORCH_ROOT)
     set(LIBTORCH_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../../libs/libtorch)
 endif()
 
+if(ANDROID)
+    set(LIBXSMM_ROOT ${LIBXSMM_ROOT}_android)
+endif()
+
 include(${EXECUTORCH_ROOT}/build/Utils.cmake)
 include(${EXECUTORCH_ROOT}/build/Codegen.cmake)
 
@@ -89,28 +93,15 @@ add_library(Fastor_HEADER_ONLY INTERFACE)
 target_include_directories(Fastor_HEADER_ONLY INTERFACE ${FASTOR_ROOT})
 
 add_library(libxsmm_HEADER_ONLY INTERFACE)
-target_include_directories(libxsmm_HEADER_ONLY INTERFACE ${LIBXSMM_ROOT}/include)
-target_include_directories(libxsmm_HEADER_ONLY INTERFACE ${LIBXSMM_ROOT}/src)
+target_include_directories(libxsmm_HEADER_ONLY INTERFACE ${LIBXSMM_ROOT}/include INTERFACE ${LIBXSMM_ROOT}/src)
 add_library(libxsmm SHARED IMPORTED)
 add_compile_definitions(LIBXSMM_NOFORTRAN)
-target_include_directories(libxsmm INTERFACE ${LIBXSMM_ROOT}/include)
-target_include_directories(libxsmm INTERFACE ${LIBXSMM_ROOT}/src)
+target_include_directories(libxsmm INTERFACE ${LIBXSMM_ROOT}/include INTERFACE ${LIBXSMM_ROOT}/src)
 file(REAL_PATH ${LIBXSMM_ROOT}/lib/libxsmm.so LIBXSMM_LIB_PATH)
 set_target_properties(libxsmm PROPERTIES IMPORTED_LOCATION ${LIBXSMM_LIB_PATH})
 
-if(ANDROID)
-# We cannot use the library from linux on android -> dlopen failed: cannot find verneed/verdef for version index=32770 referenced by symbol "_res" at "/data/app/com.neuralnetwork.imageinference-bgb37vNahwYgSDwBwYZy-A==/lib/arm64/libc6.so"
-# Therefore we should use the header only library on android.
-# file(GLOB LIBXSMM_LIBS_VERSIONS_PATHS ${LIBXSMM_ROOT}/lib_aarch64/libxsmm.so*)
-# file(GLOB LIBXSMM_DEPENDENCIES
-# /usr/aarch64-linux-gnu/lib/libc.so.6
-# /usr/aarch64-linux-gnu/lib/libm.so.6
-# /usr/aarch64-linux-gnu/lib/ld-linux-aarch64.so*)
-# install(FILES ${LIBXSMM_DEPENDENCIES} DESTINATION lib)
-else()
-    file(GLOB LIBXSMM_LIBS_VERSIONS_PATHS ${LIBXSMM_ROOT}/lib/libxsmm.so*)
-endif()
 
+file(GLOB LIBXSMM_LIBS_VERSIONS_PATHS ${LIBXSMM_ROOT}/lib/libxsmm.so*)
 install(FILES ${LIBXSMM_LIBS_VERSIONS_PATHS} DESTINATION lib)
 
 #
@@ -157,7 +148,8 @@ if(OpenMP_CXX_FOUND AND ANDROID)
 endif()
 
 target_link_libraries(imageinference_baremetal_kernels PUBLIC Fastor_HEADER_ONLY)
-target_link_libraries(imageinference_baremetal_kernels PUBLIC libxsmm_HEADER_ONLY)
+target_link_libraries(imageinference_baremetal_kernels PUBLIC libxsmm)
+#target_compile_definitions(imageinference_baremetal_kernels PRIVATE LIBXSMM_AS_HEADER_ONLY)
 target_compile_options(imageinference_baremetal_kernels PUBLIC ${_common_compile_options})
 
 gen_operators_lib(
@@ -167,6 +159,10 @@ gen_operators_lib(
 install(TARGETS imageinference_baremetal_kernels baremetal_ops_lib DESTINATION lib)
 
 if(NOT ANDROID)
+    find_package(
+        gflags REQUIRED PATHS ${CMAKE_CURRENT_BINARY_DIR}/../../third-party
+    )
+
     # C++ library to register custom ops into PyTorch.
     gen_selected_ops(LIB_NAME "baremetal_ops_aot_lib" ROOT_OPS "baremetal_ops::resnet50.out")
     generate_bindings_for_kernels(
@@ -194,7 +190,26 @@ if(NOT ANDROID)
 
     target_compile_options(baremetal_ops_aot_lib PUBLIC ${_common_compile_options})
 
+    list(TRANSFORM _executor_runner__srcs PREPEND "${EXECUTORCH_ROOT}/")
+
+    add_executable(baremetal_ops_executor_runner ${_executor_runner__srcs})
+    target_link_libraries(baremetal_ops_executor_runner PUBLIC OpenMP::OpenMP_CXX)
+    target_link_libraries(baremetal_ops_executor_runner PUBLIC Fastor_HEADER_ONLY)
+    target_link_libraries(baremetal_ops_executor_runner PUBLIC libxsmm)
+    target_link_libraries(baremetal_ops_executor_runner PUBLIC baremetal_ops_lib)
+    target_link_libraries(baremetal_ops_executor_runner PUBLIC executorch)
+    target_link_libraries(baremetal_ops_executor_runner PUBLIC gflags)
+    #target_compile_definitions(baremetal_ops_executor_runner PRIVATE LIBXSMM_AS_HEADER_ONLY)
+    target_compile_options(
+        baremetal_ops_executor_runner PUBLIC ${_common_compile_options}
+    )
+    target_include_directories(baremetal_ops_executor_runner
+        PUBLIC ${CMAKE_SOURCE_DIR}/model
+        PUBLIC ${CMAKE_SOURCE_DIR}/types
+    )
+
     install(TARGETS baremetal_ops_aot_lib DESTINATION lib)
+    install(TARGETS baremetal_ops_executor_runner DESTINATION bin)
 
     # ################################
     # ######## Setup Testing #########

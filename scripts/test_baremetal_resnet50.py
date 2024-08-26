@@ -29,8 +29,8 @@ from typing import Dict, Optional
 from torch.nn.parameter import Parameter
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from backend.baremetal.export_utils import getResnet50Weights, compressParameters
 from backend.baremetal.resnet50v15_module import custom_resnet50
+from backend.baremetal.export_utils import getResnet50Weights, compressParameters
 
 
 if __name__ == "__main__":

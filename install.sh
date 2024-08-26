@@ -32,6 +32,18 @@ BasePath="$(cd -- "$BasePath" &> /dev/null && pwd 2> /dev/null)"  # absolutized 
 BasePath="$(dirname -- "$BasePath")" # go up one directory
 echo "Installing needed software and dependencies in $BasePath"
 
+# Ask the user if they want to continue
+read -p "Do you want to continue the installation process? (y/n): " answer
+case ${answer:0:1} in
+    y|Y )
+        echo "Continuing the installation process..."
+    ;;
+    * )
+        echo "Installation process aborted."
+        return 1
+    ;;
+esac
+
 # Installing Miniconda
 cd "${BasePath}"
 if [ ! -d "${BasePath}/miniconda3" ]; then
@@ -107,20 +119,46 @@ make -j "${CMAKE_JOBS}" STATIC=0 \
   BLAS=0\
   LIBXSMM_NO_BLAS=1
 
-# Cross compile for aarch64 -> does not work for andoird :(
+# Install libxsmm for android
+cd "${BasePath}/ImageInference/submodules/libxsmm_android"
+
+sed -i 's/libxsmm_cpuid_arm.c libxsmm_cpuid_x86.c libxsmm_generator.c libxsmm_trace.c libxsmm_matrixeqn.c)/libxsmm_cpuid_arm.c libxsmm_cpuid_x86.c libxsmm_generator.c libxsmm_matrixeqn.c)/' Makefile
+sed -i 's/LIBCPP := $(call ldclib,$(LD),$(SLDFLAGS),stdc++)/LIBCPP := $(call ldclib,$(LD),$(SLDFLAGS))/' Makefile.inc
+sed -i '/^# define LIBXSMM_TRACE$/s/^/\/\//' src/libxsmm_trace.h
+
 # Empty target to build with compiler default
-# cd "${BasePath}/ImageInference/submodules/libxsmm"
-# make -j "${CMAKE_JOBS}" STATIC=0 \
-#   BLDDIR=obj_aarch64 \
-#   OUTDIR=lib_aarch64 \
-#   BINDIR=bin_aarch64 \
-#   CC=aarch64-linux-gnu-gcc \
-#   AR=aarch64-linux-gnu-ar \
-#   CXX=aarch64-linux-gnu-g++ \
-#   FORTRAN=0 \
-#   TARGET=\
-#   BLAS=0\
-#   LIBXSMM_NO_BLAS=1
+case "$ANDROID_ABI" in
+  arm64-v8a)
+    MAPPED_ABI="aarch64"
+    ;;
+  armeabi-v7a)
+    MAPPED_ABI="armv7a"
+    ;;
+  x86)
+    MAPPED_ABI="i686"
+    ;;
+  x86_64)
+    MAPPED_ABI="x86_64"
+    ;;
+  *)
+    echo "!!!!!!!!!!!!!!! Unknown architecture: ${ANDROID_ABI} !!!!!!!!!!!!!!!"
+    ;;
+esac
+
+ANDROID_COMPILER_DIR="${ANDROID_NDK}/toolchains/llvm/prebuilt/linux-x86_64/bin"
+ANDROID_COMPILER="${ANDROID_COMPILER_DIR}/${MAPPED_ABI}-linux-android${ANDROID_VERSION}-clang"
+make -j "${CMAKE_JOBS}" \
+  STATIC=0 \
+  WERROR=0 \
+  CC="${ANDROID_COMPILER}" \
+  LD="${ANDROID_COMPILER}++" \
+  CXX="${ANDROID_COMPILER}++" \
+  FORTRAN=0 \
+  BLAS=0 \
+  TRACE=0 \
+  LIBXSMM_NO_BLAS=1 \
+  TARGET= \
+  RPM_OPT_FLAGS="--target=aarch64-none-linux-android${ANDROID_VERSION} -DANDROID"
   
 
 # Install catch2
@@ -171,9 +209,11 @@ cmake . \
     -DEXECUTORCH_BUILD_KERNELS_QUANTIZED=ON \
     -DFLATC_EXECUTABLE="${FLATC_EXECUTABLE}" \
     -DCMAKE_BUILD_TYPE=Release \
+    -DEXECUTORCH_ENABLE_LOGGING=ON \
     -Bcmake-android-out
     # For now Vulkan does not work properly and therefore is disabled
     # -DEXECUTORCH_BUILD_VULKAN=ON \
+    # FIXME: Do no forget to disable logging i.e. -DEXECUTORCH_ENABLE_LOGGING=OFF
 
 cmake --build cmake-android-out -j "${CMAKE_JOBS}" --target install
 
@@ -221,7 +261,7 @@ if(EXECUTORCH_BUILD_IMAGEINFERENCE_BAREMETAL)\
     set(FASTOR_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../../../fastor)\
   endif()\
   if(NOT LIBXSMM_ROOT)\
-    set(LIBXSMM_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../../../libxsmm)\
+    set(LIBXSMM_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../../../libxsmm_android)\
   endif()\
   list(APPEND link_libraries baremetal_ops_lib imageinference_baremetal_kernels)\
   target_link_options_shared_lib(baremetal_ops_lib)\
@@ -229,23 +269,25 @@ if(EXECUTORCH_BUILD_IMAGEINFERENCE_BAREMETAL)\
   list(APPEND link_libraries -static-openmp -fopenmp)\
   add_library(Fastor_HEADER_ONLY INTERFACE)\
   target_include_directories(Fastor_HEADER_ONLY INTERFACE ${FASTOR_ROOT})\
-  add_library(libxsmm_HEADER_ONLY INTERFACE)
-  target_include_directories(libxsmm_HEADER_ONLY INTERFACE ${LIBXSMM_ROOT}/include)\
-  target_include_directories(libxsmm_HEADER_ONLY INTERFACE ${LIBXSMM_ROOT}/src)\
-  list(APPEND link_libraries Fastor_HEADER_ONLY libxsmm_HEADER_ONLY)\
+  add_library(libxsmm SHARED IMPORTED)\
+  add_compile_definitions(LIBXSMM_NOFORTRAN)\
+  target_include_directories(libxsmm_HEADER_ONLY INTERFACE ${LIBXSMM_ROOT}/include INTERFACE ${LIBXSMM_ROOT}/src)\
+  set_target_properties(libxsmm PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_BINARY_DIR}/lib/libxsmm.so)
+  target_link_options_shared_lib(libxsmm)\
+  list(APPEND link_libraries Fastor_HEADER_ONLY libxsmm)\
 endif()\n' extension/android/CMakeLists.txt
 fi
 
-# We cannot use the linux librarise on android -> dlopen failed: cannot find verneed/verdef for version index=32770 referenced by symbol "_res" at "/data/app/com.neuralnetwork.imageinference-bgb37vNahwYgSDwBwYZy-A==/lib/arm64/libc6.so"
 # Register dependencies into the android app
-# if ! grep -q 'NativeLoader.loadLibrary("xsmm")' extension/android/src/main/java/org/pytorch/executorch/NativePeer.java; then
-#     sed -i '/\/\/ Loads libexecutorch.so from jniLibs/i \
-#     // Load dependencies of libexecutorch.so\
-#     NativeLoader.loadLibrary("m");\
-#     NativeLoader.loadLibrary("c");\
-#     NativeLoader.loadLibrary("ld-linux-aarch64");\
-#     NativeLoader.loadLibrary("xsmm");\n' extension/android/src/main/java/org/pytorch/executorch/NativePeer.java
-# fi
+if ! grep -q 'NativeLoader.loadLibrary("xsmm")' extension/android/src/main/java/org/pytorch/executorch/NativePeer.java; then
+    sed -i '/\/\/ Loads libexecutorch.so from jniLibs/i \
+    // Load dependencies of libexecutorch.so\
+    NativeLoader.loadLibrary("m");\
+    NativeLoader.loadLibrary("c");\
+    NativeLoader.loadLibrary("dl");\
+    NativeLoader.loadLibrary("c++_shared");\
+    NativeLoader.loadLibrary("xsmm");\n' extension/android/src/main/java/org/pytorch/executorch/NativePeer.java
+fi
 
 # Build the android extension
 cmake extension/android \
@@ -265,15 +307,12 @@ yes | cp "cmake-android-out/extension/android/libexecutorch_jni.so" \
     "${BasePath}/ImageInference/android/app/src/main/jniLibs/${ANDROID_ABI}/libexecutorch.so"
 yes | cp "cmake-android-out/lib/libqnn_executorch_backend.so" \
    "${BasePath}/ImageInference/android/app/src/main/jniLibs/${ANDROID_ABI}"
-# We cannot use the linux librarise on android -> dlopen failed: cannot find verneed/verdef for version index=32770 referenced by symbol "_res" at "/data/app/com.neuralnetwork.imageinference-bgb37vNahwYgSDwBwYZy-A==/lib/arm64/libc6.so"
-# yes | cp "cmake-android-out/lib/libxsmm.so"* \
-#    "${BasePath}/ImageInference/android/app/src/main/jniLibs/${ANDROID_ABI}"
+yes | cp "cmake-android-out/lib/libxsmm.so" \
+   "${BasePath}/ImageInference/android/app/src/main/jniLibs/${ANDROID_ABI}/libxsmm.so"
 # yes | cp "cmake-android-out/lib/libm.so"* \
 #    "${BasePath}/ImageInference/android/app/src/main/jniLibs/${ANDROID_ABI}"
 # yes | cp "cmake-android-out/lib/libc.so"* \
 #    "${BasePath}/ImageInference/android/app/src/main/jniLibs/${ANDROID_ABI}"
-# for f in "cmake-android-out/lib/ld-linux-aarch64.so"*; do yes | cp "$f" \
-#    "${BasePath}/ImageInference/android/app/src/main/jniLibs/${ANDROID_ABI}/lib$f"; done
 yes | cp "${QNN_SDK_ROOT}/lib/aarch64-android/libQnnHtp.so" \
     "${QNN_SDK_ROOT}/lib/aarch64-android/libQnnSystem.so" \
     "${QNN_SDK_ROOT}/lib/aarch64-android/libQnnHtpV69Stub.so" \
@@ -285,8 +324,24 @@ yes | cp "${QNN_SDK_ROOT}/lib/aarch64-android/libQnnHtp.so" \
     "${BasePath}/ImageInference/android/app/src/main/jniLibs/${ANDROID_ABI}"
 
 # Building the custome ops in backend/baremetal for the pytorch usage
-source "${BasePath}/ImageInference/submodules/executorch/.ci/scripts/utils.sh"
-cmake_install_executorch_lib
+cd "${BasePath}/ImageInference/submodules/executorch"
+
+if ! grep -q 'add_compile_definitions(_GLIBCXX_USE_CXX11_ABI=0)' CMakeLists.txt; then
+  sed -i '/option(EXECUTORCH_ENABLE_LOGGING "Build with ET_LOG_ENABLED"/i \
+if(USE_OLD_ABI)\
+  add_compile_definitions(_GLIBCXX_USE_CXX11_ABI=0)\
+endif()\n' CMakeLists.txt
+fi
+
+rm -rf cmake-out
+cmake \
+    -DCMAKE_INSTALL_PREFIX=cmake-out \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DPYTHON_EXECUTABLE="$PYTHON_EXECUTABLE" \
+    -DEXECUTORCH_ENABLE_LOGGING=ON \
+    -DUSE_OLD_ABI=ON \
+    -Bcmake-out .
+cmake --build cmake-out -j "${CMAKE_JOBS}" --target install --config Release
 
 SITE_PACKAGES="$(${PYTHON_EXECUTABLE} -c 'from distutils.sysconfig import get_python_lib; print(get_python_lib())')"
 CMAKE_INSTALL_PATH="${BasePath}/ImageInference/submodules/executorch/cmake-out"
