@@ -40,7 +40,8 @@ case ${answer:0:1} in
     ;;
     * )
         echo "Installation process aborted."
-        return 1
+        return 1 2>/dev/null # Exit bash script in source and none-source mode
+        exit 1
     ;;
 esac
 
