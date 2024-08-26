@@ -44,4 +44,4 @@ You can download the ImageNet dataset from [IMAGENET](https://image-net.org/down
 
 # Lowering Models
 To lower the implemented ResNet50 v1.5 you can run the `interactive.sh` script.
-It provides a simple commandline interface to selecte which model should be lowered and prints out the python that will be exected to lower the model.
+It provides a simple commandline interface to selecte which model should be lowered and prints out the python that will be executed to lower the model.
