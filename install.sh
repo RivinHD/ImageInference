@@ -57,10 +57,13 @@ if [ -f "pip-out/temp.linux-x86_64-cpython-310/cmake-out/buck2-bin/buck2-3bbde7d
 fi
 
 # Update the executorch install_requierements with existing pytorch versions
-sed -i 's/NIGHTLY_VERSION=dev20240507/NIGHTLY_VERSION=dev20240716/' install_requirements.sh
-sed -i 's/torch=="2.4.0.${NIGHTLY_VERSION}"/torch=="2.5.0.${NIGHTLY_VERSION}"/' install_requirements.sh
-sed -i 's/torchvision=="0.19.0.${NIGHTLY_VERSION}"/torchvision=="0.20.0.${NIGHTLY_VERSION}"/' install_requirements.sh
-sed -i 's/torchaudio=="2.2.0.${NIGHTLY_VERSION}"/torchaudio=="2.4.0.${NIGHTLY_VERSION}"/' install_requirements.sh
+# torchversion 0.19.0 does throw errors and 0.19.0+cpu requieres torch 2.4.1
+sed -i 's/torch=="2.4.0"/torch=="2.4.1"/' install_requirements.sh
+sed -i 's/torchvision=="0.19.0"/torchvision=="0.19.1"/' install_requirements.sh
+sed -i 's/torchaudio=="2.4.0"/torchaudio=="2.4.1"/' install_requirements.sh
+sed -i 's/"torch==2.4"/"torch==2.4.1"/' pyproject.toml
+sed -i 's/"torchvision==0.19.0"/"torchvision==0.19.1"/' pyproject.toml
+sed -i 's/"torchaudio==2.4"/"torchaudio==2.4.1"/' pyproject.toml
 
 # Install the requiered software for executorch
 ./install_requirements.sh
@@ -176,7 +179,7 @@ cd "${BasePath}/ImageInference/submodules/executorch"
 # Workaround for fbs files in exir/_serialize
 yes | cp schema/program.fbs exir/_serialize/program.fbs
 yes | cp schema/scalar_type.fbs exir/_serialize/scalar_type.fbs
-./backends/qualcomm/scripts/build.sh
+./backends/qualcomm/scripts/build.sh --skip_aarch64
 yes | cp backends/ "${BasePath}/miniconda3/envs/imageinfernce/lib/python3.10/site-packages/executorch/" -r &> /dev/null
 
 # Build the requiered run time liberary
