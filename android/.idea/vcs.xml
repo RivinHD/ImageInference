@@ -5,7 +5,6 @@
     <mapping directory="$PROJECT_DIR$/../submodules/executorch" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/../submodules/executorch/backends/arm/third-party/ethos-u-core-driver" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/../submodules/executorch/backends/arm/third-party/serialization_lib" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/../submodules/executorch/backends/arm/third-party/serialization_lib/third_party/flatbuffers" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/../submodules/executorch/backends/vulkan/third-party/Vulkan-Headers" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/../submodules/executorch/backends/vulkan/third-party/VulkanMemoryAllocator" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/../submodules/executorch/backends/vulkan/third-party/volk" vcs="Git" />

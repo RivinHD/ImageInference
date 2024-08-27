@@ -27,6 +27,17 @@
     </com.google.android.material.appbar.AppBarLayout>
 
     <com.google.android.material.progressindicator.LinearProgressIndicator
+        android:id="@+id/collection_progressbar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        android:indeterminate="true"
+        app:layout_constraintBottom_toTopOf="@+id/benchmark_progressbar"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/appBarLayout"/>
+
+    <com.google.android.material.progressindicator.LinearProgressIndicator
         android:id="@+id/benchmark_progressbar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -34,7 +45,7 @@
         app:layout_constraintBottom_toTopOf="@+id/scroll_view"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/appBarLayout" />
+        app:layout_constraintTop_toBottomOf="@+id/collection_progressbar" />
 
     <androidx.core.widget.NestedScrollView
         android:id="@+id/scroll_view"

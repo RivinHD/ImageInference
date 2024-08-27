@@ -101,6 +101,10 @@ class BenchmarkActivity : AppCompatActivity() {
     private val _benchmarks =
         MutableLiveData<MutableMap<String, MutableMap<String, BenchmarkDetails>>?>()
 
+    private val loadingCollections = MutableLiveData<Boolean>().apply {
+        value = true
+    }
+
     /**
      * Holds the registered save to file launcher.
      */
@@ -127,21 +131,44 @@ class BenchmarkActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         _modelAssets = ModelAssets(assets, applicationInfo)
-        _benchmarkAssets = BenchmarkCollectionAssets(this)
-        _imageCollections = _benchmarkAssets.collections
+        val context = this
+
+        lifecycleScope.launch {
+            loadingCollections.value = true
+            _benchmarkAssets = withContext(Dispatchers.IO) {
+                BenchmarkCollectionAssets(context)
+            }
+            withContext(Dispatchers.Main) {
+                _imageCollections.addAll(_benchmarkAssets.collections)
+            }
+            loadingCollections.value = false
+        }
 
         checkRunBenchmark()
         checkSaveShareBenchmark()
 
         observeModelState()
+        observeLoadingCollections()
 
         setupTopAppBar()
         setupModelSelector()
-        setupImageCollections()
         setupRunBenchmark()
         setupBenchmarkDetails()
         setupBenchmarkSave()
         setupBenchmarkShare()
+    }
+
+    private fun observeLoadingCollections() {
+        val collectionProgressbar = binding.collectionProgressbar
+        val collectionSelector = binding.collectionSelector
+        loadingCollections.observe(this) {
+            if (it == false) {
+                checkRunBenchmark()
+                checkSaveShareBenchmark()
+                setupImageCollections()
+            }
+            collectionProgressbar.visibility = if (it) View.VISIBLE else View.GONE
+        }
     }
 
     /**

@@ -180,8 +180,9 @@ class MainActivity : AppCompatActivity(), ModelConnector {
         fun getAsset(context: Context, assetName: String): String {
             val file = File(context.filesDir, assetName)
             file.parentFile?.mkdirs()
+            val updateTime = context.packageManager.getPackageInfo(context.packageName, 0).lastUpdateTime
 
-            if (file.exists() && file.length() > 0) {
+            if (file.exists() && file.length() > 0 && file.lastModified() >= updateTime) {
                 return file.absolutePath
             }
 
