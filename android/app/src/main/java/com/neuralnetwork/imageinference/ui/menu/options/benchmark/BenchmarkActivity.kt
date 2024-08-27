@@ -160,7 +160,6 @@ class BenchmarkActivity : AppCompatActivity() {
 
     private fun observeLoadingCollections() {
         val collectionProgressbar = binding.collectionProgressbar
-        val collectionSelector = binding.collectionSelector
         loadingCollections.observe(this) {
             if (it == false) {
                 checkRunBenchmark()
@@ -215,6 +214,7 @@ class BenchmarkActivity : AppCompatActivity() {
                     ModelState.FAILED -> R.string.inference_failed
                     ModelState.NO_MODEL_SELECTED -> R.string.select_a_model_to_start_inference
                     ModelState.CANCELLED -> R.string.inference_was_cancelled
+                    ModelState.WARMING_UP -> R.string.warming_up_model
                 }
             )
             progressbar.visibility = when (it) {
@@ -223,7 +223,7 @@ class BenchmarkActivity : AppCompatActivity() {
             }
             run.text = getString(
                 when (it) {
-                    ModelState.RUNNING -> R.string.cancel
+                    ModelState.RUNNING, ModelState.WARMING_UP -> R.string.cancel
                     else -> R.string.run
                 }
             )
@@ -363,6 +363,7 @@ class BenchmarkActivity : AppCompatActivity() {
         val save = binding.saveBenchmark
         val share = binding.shareBenchmark
         val enabled = (_modelState.value != ModelState.RUNNING &&
+                _modelState.value != ModelState.WARMING_UP &&
                 _collectionName != null &&
                 _benchmarks.value?.get(_collectionName)?.isNotEmpty() == true
                 )
@@ -374,7 +375,7 @@ class BenchmarkActivity : AppCompatActivity() {
      * Run the current model on the selected collection.
      */
     private fun runBenchmark() {
-        if (_modelState.value == ModelState.RUNNING) {
+        if (_modelState.value == ModelState.RUNNING || _modelState.value == ModelState.WARMING_UP) {
             Log.d("Benchmark", "The model is already running.")
             return
         }
@@ -421,7 +422,7 @@ class BenchmarkActivity : AppCompatActivity() {
         val preferences = PreferenceManager.getDefaultSharedPreferences(this)
         val warmupCount = preferences.getInt(getString(R.string.warmup_samples_count), 25)
 
-        _modelState.value = ModelState.RUNNING
+        _modelState.value = ModelState.WARMING_UP
         binding.modelSelector.isEnabled = false
         binding.collectionSelector.isEnabled = false
         Log.d("Benchmark", "Running the model.")
@@ -434,6 +435,8 @@ class BenchmarkActivity : AppCompatActivity() {
                     fixedModel.run(warmupBitmap, warmupDetails)
                 }
             }
+
+            _modelState.value = ModelState.RUNNING
 
             for (image in fixedCollection.imageList) {
                 val outputDetails = withContext(Dispatchers.Default) {

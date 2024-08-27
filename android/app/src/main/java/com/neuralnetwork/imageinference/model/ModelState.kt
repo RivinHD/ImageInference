@@ -44,6 +44,11 @@ enum class ModelState {
     /**
      * The state when the model is cancelled.
      */
-    CANCELLED
+    CANCELLED,
+
+    /**
+     * The state when the model does warmup passes.
+     */
+    WARMING_UP
 
 }

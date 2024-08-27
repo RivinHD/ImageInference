@@ -82,4 +82,5 @@
     <string name="processed_images">Processed Images</string>
     <string name="warmup_samples_count">Warmup Samples Count</string>
     <string name="warmup_preference_summary">How many samples should be used for warmup?</string>
+    <string name="warming_up_model">Warming up model for stable performance.</string>
 </resources>

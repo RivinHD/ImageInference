@@ -164,6 +164,7 @@ class DetailsFragment : Fragment() {
                     ModelState.FAILED -> R.string.inference_failed
                     ModelState.NO_MODEL_SELECTED -> R.string.select_a_model_to_start_inference
                     ModelState.CANCELLED -> R.string.inference_was_cancelled
+                    ModelState.WARMING_UP -> R.string.warming_up_model
                 }
             )
 
