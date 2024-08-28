@@ -1,5 +1,5 @@
 # Requirements
-**System**: Linux (Tested on Ubuntu 23.04) with 13th Gen Intel(R) Core(TM) i7-1360P \
+**Operating System**: Linux (Tested on Ubuntu 23.04 with 13th Gen Intel(R) Core(TM) i7-1360P) \
 **Compiler**: Any compiler supporting C++17 should work (Tested with GNU 12.3.0) \
 **Cmake**: Cmake version 3.19
 
