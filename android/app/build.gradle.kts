@@ -12,11 +12,11 @@ plugins {
 }
 
 android {
-    namespace = "com.neuralnetwork.imageinference"
+    namespace = "com.neuralnetwork.visioninference"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.neuralnetwork.imageinference"
+        applicationId = "com.neuralnetwork.visioninference"
         minSdk = 29
         targetSdk = 34
         versionCode = 1

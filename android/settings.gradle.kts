@@ -25,7 +25,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "ImageInference"
+rootProject.name = "Vision Inference"
 include(":app")
 
 includeBuild("../submodules/executorch/extension/android")

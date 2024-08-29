@@ -25,7 +25,7 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.ImageInference"
+        android:theme="@style/Theme.VisionInference"
         tools:targetApi="31">
         <activity
             android:name=".ui.menu.options.benchmark.BenchmarkActivity"
@@ -94,7 +94,7 @@
 
         <provider
             android:name="androidx.core.content.FileProvider"
-            android:authorities="com.neuralnetwork.imageinference.fileprovider"
+            android:authorities="com.neuralnetwork.visioninference.fileprovider"
             android:exported="false"
             android:grantUriPermissions="true">
 

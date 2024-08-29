@@ -13,24 +13,24 @@
 
     <fragment
         android:id="@+id/navigation_photo_camera"
-        android:name="com.neuralnetwork.imageinference.ui.photoCamera.PhotoCameraFragment"
+        android:name="com.neuralnetwork.visioninference.ui.photoCamera.PhotoCameraFragment"
         android:label="@string/title_photo_camera"
         tools:layout="@layout/fragment_photo_camera" />
 
     <fragment
         android:id="@+id/navigation_video_camera"
-        android:name="com.neuralnetwork.imageinference.ui.videoCamera.VideoCameraFragment"
+        android:name="com.neuralnetwork.visioninference.ui.videoCamera.VideoCameraFragment"
         android:label="@string/title_video_camera"
         tools:layout="@layout/fragment_video_camera" />
 
     <fragment
         android:id="@+id/navigation_image"
-        android:name="com.neuralnetwork.imageinference.ui.image.ImageFragment"
+        android:name="com.neuralnetwork.visioninference.ui.image.ImageFragment"
         android:label="@string/title_image"
         tools:layout="@layout/fragment_image" />
     <fragment
         android:id="@+id/navigation_menu"
-        android:name="com.neuralnetwork.imageinference.ui.menu.MenuFragment"
+        android:name="com.neuralnetwork.visioninference.ui.menu.MenuFragment"
         android:label="@string/title_menu"
         tools:layout="@layout/fragment_menu" />
 </navigation>

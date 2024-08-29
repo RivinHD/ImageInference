@@ -10,7 +10,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="com.neuralnetwork.imageinference.ui.photoCamera.PhotoCameraFragment">
+    tools:context="com.neuralnetwork.visioninference.ui.photoCamera.PhotoCameraFragment">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -90,7 +90,7 @@
 
             <androidx.fragment.app.FragmentContainerView
                 android:id="@+id/fragment_view_details"
-                android:name="com.neuralnetwork.imageinference.ui.details.DetailsFragment"
+                android:name="com.neuralnetwork.visioninference.ui.details.DetailsFragment"
                 android:layout_width="0dp"
                 android:layout_height="0dp"
                 android:layout_marginTop="4dp"

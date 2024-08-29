@@ -5,7 +5,7 @@
   -->
 
 <resources>
-    <string name="app_name">ImageInference</string>
+    <string name="app_name">Vision Inference</string>
     <string name="title_photo_camera">Photo Camera</string>
     <string name="title_video_camera">Video Camera</string>
     <string name="title_image">Image</string>

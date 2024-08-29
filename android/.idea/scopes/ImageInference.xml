@@ -1,3 +1,0 @@
-<component name="DependencyValidationManager">
-  <scope name="ImageInference" pattern="(file[ImageInference]:*/||file[ImageInference*]:*//*||file[ImageInference.app.main]:*/||file[ImageInference.app]:*/)&amp;&amp;!file[ImageInference.app.main]:java/com/neuralnetwork/imageinference/model/TensorImageUtils.java&amp;&amp;!file[executorch*]:*//*&amp;&amp;!file[executorch]:*/&amp;&amp;!ext:*/&amp;&amp;!file[ImageInference]:gradlew" />
-</component>

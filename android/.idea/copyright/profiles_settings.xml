@@ -1,7 +1,7 @@
 <component name="CopyrightManager">
   <settings default="GPL-3.0-or-later">
     <module2copyright>
-      <element module="ImageInference" copyright="GPL-3.0-or-later" />
+      <element module="VisionInference" copyright="GPL-3.0-or-later" />
     </module2copyright>
   </settings>
 </component>

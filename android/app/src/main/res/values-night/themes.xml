@@ -6,7 +6,7 @@
 
 <resources>
     <!-- Base application theme. -->
-    <style name="Theme.ImageInference" parent="Theme.Material3.Dark.NoActionBar">
+    <style name="Theme.VisionInference" parent="Theme.Material3.Dark.NoActionBar">
         <!-- Primary brand color. -->
         <item name="colorPrimary">@color/purple_200</item>
         <item name="colorPrimaryVariant">@color/purple_700</item>
