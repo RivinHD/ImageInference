@@ -54,10 +54,16 @@ data class ModelDetails(val modelInputType: ModelInputType) {
      * Gets the evaluation time of the model as a string in milliseconds.
      */
     val evaluationTimeString: String get() {
-        val time = evaluationTimeMillisecond
-        return if (time != null) {
-            when (time){
-                in 0..<500 -> {
+        val timeNano = evaluationTimeNano
+        return if (timeNano != null) {
+            when (val time = timeNano / 1_000_000){
+                in 0..<10 -> {
+                    "${"%.2f".format(timeNano / 1_000_000f)} ms"
+                }
+                in 10..<100 -> {
+                    "${"%.1f".format(timeNano / 1_000_000f)} ms"
+                }
+                in 100..<500 -> {
                     "${time} ms"
                 }
                 in 500..<1000 -> {
