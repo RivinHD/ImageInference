@@ -16,6 +16,16 @@
 #   public *;
 #}
 
+# For common use cases for the hybrid pattern, keep symbols which may reference only from C++.
+-keepclasseswithmembers class * {
+    com.facebook.jni.HybridData *;
+    <init>(com.facebook.jni.HybridData);
+}
+
+-keepclasseswithmembers class * {
+    com.facebook.jni.HybridData *;
+}
+
 # Keep our interfaces so they can be used by other ProGuard rules.
 -keep,allowobfuscation @interface com.facebook.jni.annotations.DoNotStrip
 
@@ -23,6 +33,11 @@
 -keep @com.facebook.jni.annotations.DoNotStrip class *
 -keepclassmembers class * {
     @com.facebook.jni.annotations.DoNotStrip *;
+}
+
+-keep class com.facebook.jni.** { *; }
+-keepclasseswithmembers class * {
+    native <methods>;
 }
 
 # Uncomment this to preserve the line number information for
