@@ -64,6 +64,13 @@ sed -i 's/torchaudio=="2.2.0.${NIGHTLY_VERSION}"/torchaudio=="2.4.0.${NIGHTLY_VE
 
 # Install the requiered software for executorch
 ./install_requirements.sh
+if [ $? -ne 0 ]; then
+  echo "install_requirements.sh failed, retrying..."
+  if [ -f "pip-out/temp.linux-x86_64-cpython-310/cmake-out/buck2-bin/buck2-3bbde7daa94987db468d021ad625bc93dc62ba7fcb16945cb09b64aab077f284" ]; then
+      pip-out/temp.linux-x86_64-cpython-310/cmake-out/buck2-bin/buck2-3bbde7daa94987db468d021ad625bc93dc62ba7fcb16945cb09b64aab077f284 clean
+  fi
+  ./install_requirements.sh
+fi
 
 # Fix excutorch installation which has some missing modules
 yes | cp backends/ "${BasePath}/miniconda3/envs/imageinfernce/lib/python3.10/site-packages/executorch/" -r &> /dev/null
