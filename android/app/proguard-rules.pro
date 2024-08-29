@@ -40,6 +40,8 @@
     native <methods>;
 }
 
+-keep class * extends com.google.protobuf.GeneratedMessageLite { *; }
+
 # Uncomment this to preserve the line number information for
 # debugging stack traces.
 #-keepattributes SourceFile,LineNumberTable
